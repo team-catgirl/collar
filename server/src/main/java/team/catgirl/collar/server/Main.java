@@ -1,9 +1,12 @@
 package team.catgirl.collar.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoDatabase;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.profiles.ProfileService;
 import team.catgirl.collar.utils.Utils;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage.CreateGroupResponse;
@@ -41,9 +44,11 @@ public class Main {
         }
 
         // Services
+        MongoDatabase database = Mongo.database();
         ObjectMapper mapper = Utils.createObjectMapper();
         SessionManager sessions = new SessionManager(mapper);
         GroupManager groups = new GroupManager(sessions);
+        ProfileService profiles = new ProfileService(database);
 
         // Always serialize objects returned as JSON
         defaultResponseTransformer(mapper::writeValueAsString);

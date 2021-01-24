@@ -61,6 +61,12 @@
                 <artifactId>okhttp</artifactId>
                 <version>4.7.2</version>
             </dependency>
+            <!-- if u like mysql that is too bad for you -->
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>4.1.0</version>
+            </dependency>
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>

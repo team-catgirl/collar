@@ -13,7 +13,7 @@ import java.util.UUID;
  * An in memory {@link PlayerIdentityStore}
  * <b>NOT FOR PRODUCTION USE</b>
  */
-public class MemoryPlayerIdentityStore implements PlayerIdentityStore {
+public final class MemoryPlayerIdentityStore implements PlayerIdentityStore {
 
     private final Map<UUID, KeyPair> keyPairs = new HashMap<>();
 

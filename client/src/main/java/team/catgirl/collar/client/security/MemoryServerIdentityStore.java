@@ -2,12 +2,15 @@ package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.security.ServerIdentity;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class MemoryServerIdentityStore extends AbstractServerIdentityStore {
+/**
+ * An in memory {@link MemoryServerIdentityStore}
+ * <b>NOT FOR PRODUCTION USE</b>
+ */
+public final class MemoryServerIdentityStore extends AbstractServerIdentityStore {
 
     private final Map<UUID, ServerIdentity> identities = new HashMap<>();
 

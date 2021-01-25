@@ -136,6 +136,26 @@ public final class CollarClient {
         return me;
     }
 
+    public void identify() {
+        MessageCrypter crypter = keyRingManager.crypter();
+
+        IdentifyRequest req;
+        try {
+            req = new IdentifyRequest(me, crypter.encryptString(TokenGenerator.stringToken(), me, null));
+        } catch (MessageCrypterException e) {
+            LOGGER.log(Level.SEVERE, "Could not crypt token. Closing client", e);
+            disconnect();
+            return;
+        }
+        ClientMessage message = new ClientMessage(req, null, null, null, null, null, null);
+        try {
+            send(message);
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Could not send identity. Closing client", e);
+            disconnect();
+        }
+    }
+
     public void createGroup(List<UUID> players, Position position) throws IOException {
         CreateGroupRequest req = new CreateGroupRequest(me, players, position);
         send(new ClientMessage(null, req, null, null, null, null, null));
@@ -174,24 +194,6 @@ public final class CollarClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.info("onOpen is called");
             super.onOpen(webSocket, response);
-
-            MessageCrypter crypter = keyRingManager.crypter();
-
-            IdentifyRequest req;
-            try {
-                req = new IdentifyRequest(me, crypter.encryptString(TokenGenerator.stringToken(), client.me, null));
-            } catch (MessageCrypterException e) {
-                LOGGER.log(Level.SEVERE, "Could not crypt token. Closing client", e);
-                disconnect();
-                return;
-            }
-            ClientMessage message = new ClientMessage(req, null, null, null, null, null, null);
-            try {
-                send(message);
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Could not send identity. Closing client", e);
-                disconnect();
-            }
         }
 
         @Override
@@ -299,8 +301,8 @@ public final class CollarClient {
         }
 
         @Override
-        public void onGroupMembershipRequested(CollarClient client, ServerMessage.GroupMembershipRequest resp) {
-            listener.onGroupMembershipRequested(client, resp);
+        public void onGroupMembershipRequested(CollarClient client, ServerMessage.GroupMembershipRequest req) {
+            listener.onGroupMembershipRequested(client, req);
         }
 
         @Override

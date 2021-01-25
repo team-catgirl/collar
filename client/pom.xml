@@ -54,27 +54,35 @@
                     <relocations>
                         <relocation>
                             <pattern>kotlin</pattern>
-                            <shadedPattern>team.catgirl.collar.coordshare.kotlin</shadedPattern>
+                            <shadedPattern>team.catgirl.collar.kotlin</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>okhttp3</pattern>
-                            <shadedPattern>team.catgirl.collar.coordshare.okhttp3</shadedPattern>
+                            <shadedPattern>team.catgirl.collar.okhttp3</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>okio</pattern>
-                            <shadedPattern>team.catgirl.collar.coordshare.okio</shadedPattern>
+                            <shadedPattern>team.catgirl.collar.okio</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.jetbrains</pattern>
-                            <shadedPattern>team.catgirl.collar.coordshare.org.jetbrains</shadedPattern>
+                            <shadedPattern>team.catgirl.collar.org.jetbrains</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.intellij</pattern>
-                            <shadedPattern>team.catgirl.collar.coordshare.org.intellij</shadedPattern>
+                            <shadedPattern>team.catgirl.collar.org.intellij</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.fasterxml</pattern>
-                            <shadedPattern>team.catgirl.collar.coordshare.org.fasterxml</shadedPattern>
+                            <shadedPattern>team.catgirl.collar.org.fasterxml</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>name.neuhalfen.projects</pattern>
+                            <shadedPattern>team.catgirl.collar.name.neuhalfen.projects</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.bouncycastle</pattern>
+                            <shadedPattern>team.catgirl.collar.org.bouncycastle</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>

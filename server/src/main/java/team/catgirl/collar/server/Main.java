@@ -4,6 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.security.KeyPair;
+import team.catgirl.collar.security.KeyPairGenerator;
+import team.catgirl.collar.security.KeyPairGeneratorException;
+import team.catgirl.collar.server.common.ServerVersion;
+import team.catgirl.collar.server.security.MemoryServerKeyPairProvider;
+import team.catgirl.collar.server.security.ServerKeyPairProvider;
 import team.catgirl.collar.utils.Utils;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage.CreateGroupResponse;
@@ -16,6 +22,8 @@ import team.catgirl.collar.server.managers.SessionManager;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -29,10 +37,11 @@ public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) throws Exception {
+        Utils.registerGPGProvider();
         startServer();
     }
 
-    public static void startServer() throws NoSuchAlgorithmException {
+    public static void startServer() throws IOException, NoSuchAlgorithmException, KeyPairGeneratorException {
         String portValue = System.getenv("PORT");
         if (portValue != null) {
             port(Integer.parseInt(portValue));
@@ -40,10 +49,14 @@ public class Main {
             port(3000);
         }
 
+        // Load the server version
+        ServerVersion version = ServerVersion.version();
+
         // Services
         ObjectMapper mapper = Utils.createObjectMapper();
         SessionManager sessions = new SessionManager(mapper);
         GroupManager groups = new GroupManager(sessions);
+        ServerKeyPairProvider serverKeyPairProvider = new MemoryServerKeyPairProvider();
 
         // Always serialize objects returned as JSON
         defaultResponseTransformer(mapper::writeValueAsString);
@@ -54,13 +67,28 @@ public class Main {
 
         // Setup WebSockets
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
-        webSocket("/api/1/coordshare/listen", new WebSocketHandler(mapper, sessions, groups));
+        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups));
 
-        // Start routes
-        get("/api/1/status/", (request, response) -> "OK");
-        get("/", (request, response) -> {
-            return "OwO";
+        // Version routes
+        path("/api/1", () -> {
+            // Used to test if API is available
+            get("/", (request, response) -> new ServerStatusResponse("OK"));
+            // The servers current identity
+            get("/identity", (request, response) -> serverKeyPairProvider.get().publicKey);
         });
+
+        // Server routes
+
+        // Reports server version
+        get("/api/version", (request, response) -> version);
+        // Query this route to discover what version of the APIs are supported
+        get("/api/version/discover", (request, response) -> {
+            List<Integer> apiVersions = new ArrayList<>();
+            apiVersions.add(1);
+            return apiVersions;
+        });
+        // Return nothing
+        get("/", (request, response) -> "", Object::toString);
     }
 
 
@@ -145,6 +173,14 @@ public class Main {
             } catch (IOException e) {
                 manager.stopSession(session, "Could not send message to client", e);
             }
+        }
+    }
+
+    private static class ServerStatusResponse {
+        public final String status;
+
+        public ServerStatusResponse(String status) {
+            this.status = status;
         }
     }
 }

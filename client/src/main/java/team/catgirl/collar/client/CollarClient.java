@@ -23,6 +23,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class CollarClient {
+    static {
+        Utils.registerGPGProvider();
+    }
 
     private static final Logger LOGGER = Logger.getLogger(CollarClient.class.getName());
 
@@ -53,7 +56,7 @@ public final class CollarClient {
         }
         this.listener = new DelegatingListener(listener); // TODO: wrap in delegating listener that catches and logs exceptions
         this.me = identity;
-        Request request = new Request.Builder().url(baseUrl + "coordshare/listen").build();
+        Request request = new Request.Builder().url(baseUrl + "listen").build();
         webSocket = http.newWebSocket(request, new WebSocketListenerImpl(this));
         http.dispatcher().executorService().shutdown();
         keepAliveScheduler = Executors.newScheduledThreadPool(1);

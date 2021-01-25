@@ -1,9 +1,14 @@
 package team.catgirl.collar.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoDatabase;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.security.keyring.KeyRingManager;
+import team.catgirl.collar.security.keyring.MemoryKeyRingManager;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.profiles.ProfileService;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 import team.catgirl.collar.security.keyring.KeyRingManager;
@@ -11,6 +16,8 @@ import team.catgirl.collar.security.keyring.MemoryKeyRingManager;
 import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 import team.catgirl.collar.security.messages.MessageCrypterException;
 import team.catgirl.collar.server.common.ServerVersion;
+import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
+import team.catgirl.collar.server.security.ServerIdentityProvider;
 import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
 import team.catgirl.collar.server.security.ServerIdentityProvider;
 import team.catgirl.collar.utils.Utils;
@@ -44,7 +51,7 @@ public class Main {
         startServer();
     }
 
-    public static void startServer() throws IOException, NoSuchAlgorithmException, KeyPairGeneratorException {
+    public static void startServer() throws Exception {
         String portValue = System.getenv("PORT");
         if (portValue != null) {
             port(Integer.parseInt(portValue));
@@ -56,9 +63,11 @@ public class Main {
         ServerVersion version = ServerVersion.version();
 
         // Services
+        MongoDatabase database = Mongo.database();
         ObjectMapper mapper = Utils.createObjectMapper();
         SessionManager sessions = new SessionManager(mapper);
         GroupManager groups = new GroupManager(sessions);
+        ProfileService profiles = new ProfileService(database);
         KeyRingManager keyRingManager = new MemoryKeyRingManager();
         ServerIdentityProvider serverIdentityProvider = new MemoryServerIdentityProvider();
 

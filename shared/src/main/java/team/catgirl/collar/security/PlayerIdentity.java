@@ -7,6 +7,9 @@ import team.catgirl.collar.security.keys.KeyPair.PublicKey;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Identifies the player
+ */
 public final class PlayerIdentity implements Identity {
 
     @JsonProperty("player")

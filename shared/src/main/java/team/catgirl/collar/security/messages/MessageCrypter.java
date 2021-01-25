@@ -26,20 +26,20 @@ public final class MessageCrypter {
         this.keyringConfig = keyringConfig;
     }
 
-    public String encryptString(Identity sender, Identity recipient, String message) throws IOException, MessageCrypterException {
-        return encryptString(sender, ImmutableList.of(recipient), message);
+    public String encryptString(String message, Identity sender, Identity recipient) throws MessageCrypterException {
+        return encryptStringWithMultipleRecipients(message, sender, ImmutableList.of(recipient));
     }
 
-    public String encryptString(Identity sender, List<Identity> recipients, String message) throws IOException, MessageCrypterException {
-        byte[] bytes = encryptBytes(sender, recipients, message.getBytes(StandardCharsets.UTF_8));
+    public String encryptStringWithMultipleRecipients(String message, Identity sender, List<Identity> recipients) throws MessageCrypterException {
+        byte[] bytes = encryptBytesWithMultipleRecipients(message.getBytes(StandardCharsets.UTF_8), sender, recipients);
         return BaseEncoding.base64().encode(bytes);
     }
 
-    public byte[] encryptBytes(Identity sender, Identity recipient, byte[] message) throws IOException, MessageCrypterException {
-        return encryptBytes(sender, ImmutableList.of(recipient), message);
+    public byte[] encryptBytes(byte[] message, Identity sender, Identity recipient) throws MessageCrypterException {
+        return encryptBytesWithMultipleRecipients(message, sender, ImmutableList.of(recipient));
     }
 
-    public byte[] encryptBytes(Identity sender, List<Identity> recipients, byte[] message) throws IOException, MessageCrypterException {
+    public byte[] encryptBytesWithMultipleRecipients(byte[] message, Identity sender, List<Identity> recipients) throws MessageCrypterException {
         try (ByteArrayOutputStream result = new ByteArrayOutputStream()) {
             try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(result)) {
                 try (OutputStream outputStream = BouncyGPG
@@ -58,15 +58,17 @@ public final class MessageCrypter {
                 }
             }
             return result.toByteArray();
+        } catch (IOException e) {
+            throw new MessageCrypterException("IO problem", e);
         }
     }
 
-    public String decryptString(Identity sender, String message) throws IOException, MessageCrypterException {
-        byte[] bytes = decryptBytes(sender, BaseEncoding.base64().decode(message));
+    public String decryptString(String message, Identity sender) throws MessageCrypterException {
+        byte[] bytes = decryptBytes(BaseEncoding.base64().decode(message), sender);
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    public byte[] decryptBytes(Identity sender, byte[] message) throws IOException, MessageCrypterException {
+    public byte[] decryptBytes(byte[] message, Identity sender) throws MessageCrypterException {
         try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             try (InputStream cipherTextStream = new ByteArrayInputStream(message)) {
                 try (BufferedOutputStream bufferedOut = new BufferedOutputStream(output)) {
@@ -82,6 +84,8 @@ public final class MessageCrypter {
                 }
             }
             return output.toByteArray();
+        } catch (IOException e) {
+            throw new MessageCrypterException("IO problem", e);
         }
     }
 }

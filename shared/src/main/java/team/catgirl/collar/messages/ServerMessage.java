@@ -52,9 +52,11 @@ public class ServerMessage {
     public static final class ServerConnectedResponse {
         @JsonProperty("serverIdentity")
         public final ServerIdentity serverIdentity;
+        public final String token;
 
-        public ServerConnectedResponse(@JsonProperty("serverIdentity") ServerIdentity serverIdentity) {
+        public ServerConnectedResponse(@JsonProperty("serverIdentity") ServerIdentity serverIdentity, String token) {
             this.serverIdentity = serverIdentity;
+            this.token = token;
         }
 
         public ServerMessage serverMessage() {

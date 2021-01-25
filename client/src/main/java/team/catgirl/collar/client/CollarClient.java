@@ -3,7 +3,6 @@ package team.catgirl.collar.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfigs;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,17 +10,19 @@ import team.catgirl.collar.client.CollarClientException.CollarConnectionExceptio
 import team.catgirl.collar.client.CollarClientException.CollarStateException;
 import team.catgirl.collar.client.security.PlayerIdentityStore;
 import team.catgirl.collar.client.security.ServerIdentityStore;
-import team.catgirl.collar.client.security.TokenGenerator;
+import team.catgirl.collar.security.TokenGenerator;
+import team.catgirl.collar.messages.ServerMessage.ServerConnectedResponse;
 import team.catgirl.collar.models.*;
 import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.keyring.KeyRingManager;
 import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 import team.catgirl.collar.security.messages.MessageCrypter;
+import team.catgirl.collar.security.messages.MessageCrypterException;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -45,17 +46,17 @@ public final class CollarClient {
     private final OkHttpClient http;
     private final PlayerIdentityStore playerIdentityStore;
     private final ServerIdentityStore serverIdentityStore;
-    private final MessageCrypter messageCrypter;
+    private final KeyRingManager keyRingManager;
     private PlayerIdentity me;
     private WebSocket webSocket;
     private DelegatingListener listener;
     private boolean connected;
     private ScheduledExecutorService keepAliveScheduler;
 
-    public CollarClient(String baseUrl, PlayerIdentityStore playerIdentityStore, ServerIdentityStore server) {
+    public CollarClient(String baseUrl, PlayerIdentityStore playerIdentityStore, ServerIdentityStore server, KeyRingManager keyRingManager) {
         this.playerIdentityStore = playerIdentityStore;
         this.serverIdentityStore = server;
-        this.messageCrypter = new MessageCrypter(null);
+        this.keyRingManager = keyRingManager;
         if (Strings.isNullOrEmpty(baseUrl)) {
             throw new IllegalArgumentException("baseUrl was not set");
         }
@@ -73,7 +74,7 @@ public final class CollarClient {
         }
         this.listener = new DelegatingListener(listener); // TODO: wrap in delegating listener that catches and logs exceptions
         try {
-            this.me = playerIdentityStore.createIdentity(player);
+            this.me = playerIdentityStore.createIdentity(player, keyRingManager);
         } catch (IOException|KeyPairGeneratorException e) {
             throw new CollarConnectionException("Problem creating identity", e);
         }
@@ -173,7 +174,17 @@ public final class CollarClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.info("onOpen is called");
             super.onOpen(webSocket, response);
-            IdentifyRequest req = new IdentifyRequest(me, messageCrypter.encryptString(client.me, client.serverIdentity, TokenGenerator.stringToken()));
+
+            MessageCrypter crypter = keyRingManager.crypter();
+
+            IdentifyRequest req;
+            try {
+                req = new IdentifyRequest(me, crypter.encryptString(TokenGenerator.stringToken(), client.me, null));
+            } catch (MessageCrypterException e) {
+                LOGGER.log(Level.SEVERE, "Could not crypt token. Closing client", e);
+                disconnect();
+                return;
+            }
             ClientMessage message = new ClientMessage(req, null, null, null, null, null, null);
             try {
                 send(message);
@@ -194,7 +205,7 @@ public final class CollarClient {
                 return;
             }
             if (message.serverConnectedResponse != null) {
-                listener.onConnected(client, message.serverConnectedResponse.serverIdentity);
+                listener.onConnected(client, message.serverConnectedResponse);
             }
             if (message.identificationSuccessful != null) {
                 listener.onSessionCreated(client);
@@ -248,9 +259,27 @@ public final class CollarClient {
         }
 
         @Override
-        public void onConnected(CollarClient client, ServerIdentity reportedServerIdentity) {
-            this.serverIdentity = serverIdentity;
-            listener.onConnected(client, reportedServerIdentity);
+        public void onConnected(CollarClient client, ServerConnectedResponse resp) {
+            // We've never seen the server before
+            if (!serverIdentityStore.isIdentityKnown(resp.serverIdentity)) {
+                listener.onNewServerIdentity(client, resp.serverIdentity);
+                return;
+            }
+            // The servers fingerprint has changed
+            if (!serverIdentityStore.fingerprintMatch(resp.serverIdentity)) {
+                this.onFingerPrintMismatch(client, resp.serverIdentity);
+                return;
+            }
+            ServerIdentity identity = serverIdentityStore.getIdentity(resp.serverIdentity.server);
+            // Try to crypt a message between client and server
+            MessageCrypter crypter = keyRingManager.crypter();
+            try {
+                crypter.encryptString(resp.token, resp.serverIdentity, identity);
+            } catch (MessageCrypterException e) {
+                this.onFingerPrintMismatch(client, resp.serverIdentity);
+                return;
+            }
+            listener.onConnected(client, resp);
         }
 
         @Override
@@ -297,6 +326,11 @@ public final class CollarClient {
         @Override
         public void onGroupInvitesSent(CollarClient client, ServerMessage.GroupInviteResponse resp) {
             listener.onGroupInvitesSent(client, resp);
+        }
+
+        @Override
+        public void onFingerPrintMismatch(CollarClient client, ServerIdentity serverIdentity) {
+            listener.onFingerPrintMismatch(client, serverIdentity);
         }
     }
 }

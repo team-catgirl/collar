@@ -1,8 +1,13 @@
 package team.catgirl.collar.client.security;
 
+import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.keys.KeyPair;
 
+import java.util.UUID;
+
 public interface ServerIdentityStore {
-    KeyPair.PublicKey getIdentity(String server);
-    KeyPair.PublicKey saveIdentity(String server);
+    ServerIdentity getIdentity(UUID server);
+    ServerIdentity saveIdentity(ServerIdentity identity);
+    boolean fingerprintMatch(ServerIdentity identity);
+    boolean isIdentityKnown(ServerIdentity identity);
 }

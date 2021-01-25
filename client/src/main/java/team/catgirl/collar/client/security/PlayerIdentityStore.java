@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.security.keyring.KeyRingManager;
 import team.catgirl.collar.security.keys.KeyPair;
 import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 
@@ -18,7 +19,7 @@ public interface PlayerIdentityStore {
 
     /**
      * Create a new {@link KeyPair} for the specified player
-     * @param player
+     * @param player id of player
      * @return keypair for the player
      * @throws KeyPairGeneratorException on generation error
      * @throws IOException on create error
@@ -32,11 +33,12 @@ public interface PlayerIdentityStore {
      * @throws IOException on error
      * @throws KeyPairGeneratorException on generation error
      */
-    default PlayerIdentity createIdentity(UUID player) throws IOException, KeyPairGeneratorException {
+    default PlayerIdentity createIdentity(UUID player, KeyRingManager keyRingManager) throws IOException, KeyPairGeneratorException {
         KeyPair keyPair = keyPair(player);
         if (keyPair == null) {
             keyPair = createKeyPair(player);
         }
+        keyRingManager.publicAndPrivateKey(keyPair.publicKey, keyPair.privateKey);
         return new PlayerIdentity(player, keyPair.publicKey);
     }
 }

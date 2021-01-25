@@ -10,15 +10,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-public class FilePlayerIdentityStore implements PlayerIdentityStore {
+public class FileSystemPlayerIdentityStore implements PlayerIdentityStore {
 
     private final File profilesDir;
 
     /**
      * Create a new FileIdentity Provider for the user
-     * @param baseDir
+     * @param baseDir e.g. minecraft home
      */
-    public FilePlayerIdentityStore(File baseDir) {
+    public FileSystemPlayerIdentityStore(File baseDir) {
         this.profilesDir = new File(baseDir,"collar/profiles/");
     }
 

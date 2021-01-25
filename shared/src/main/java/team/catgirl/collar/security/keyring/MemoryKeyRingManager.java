@@ -5,7 +5,6 @@ import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.Keyring
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import team.catgirl.collar.security.keys.KeyPair;
 import team.catgirl.collar.security.keys.KeyPair.PrivateKey;
 import team.catgirl.collar.security.keys.KeyPair.PublicKey;
 import team.catgirl.collar.security.messages.MessageCrypter;

@@ -4,34 +4,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoDatabase;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
+import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.keyring.KeyRingManager;
-import team.catgirl.collar.security.keyring.MemoryKeyRingManager;
-import team.catgirl.collar.server.mongo.Mongo;
-import team.catgirl.collar.server.profiles.ProfileService;
+import team.catgirl.collar.messages.ServerMessage.*;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 import team.catgirl.collar.security.keyring.KeyRingManager;
 import team.catgirl.collar.security.keyring.MemoryKeyRingManager;
-import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 import team.catgirl.collar.security.messages.MessageCrypterException;
 import team.catgirl.collar.server.common.ServerVersion;
-import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
-import team.catgirl.collar.server.security.ServerIdentityProvider;
-import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
-import team.catgirl.collar.server.security.ServerIdentityProvider;
-import team.catgirl.collar.utils.Utils;
-import team.catgirl.collar.messages.ClientMessage;
-import team.catgirl.collar.messages.ServerMessage.CreateGroupResponse;
-import team.catgirl.collar.messages.ServerMessage.IdentificationSuccessful;
-import team.catgirl.collar.messages.ServerMessage.LeaveGroupResponse;
-import team.catgirl.collar.messages.ServerMessage.UpdatePlayerStateResponse;
 import team.catgirl.collar.server.http.HttpException;
 import team.catgirl.collar.server.managers.GroupManager;
 import team.catgirl.collar.server.managers.SessionManager;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.profiles.ProfileService;
+import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
+import team.catgirl.collar.server.security.ServerIdentityProvider;
+import team.catgirl.collar.server.security.ServerKeyRingManager;
+import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -40,7 +32,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static spark.Spark.*;
-import static team.catgirl.collar.messages.ServerMessage.*;
 
 public class Main {
 
@@ -130,14 +121,6 @@ public class Main {
             try {
                 identity = serverIdentityProvider.getIdentity(keyRingManager);
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Problem getting server identity. Closing connection...");
-                session.close();
-                return;
-            }
-            String token;
-            try {
-                token = keyRingManager.crypter().encryptString(TokenGenerator.stringToken(), identity, null);
-            } catch (MessageCrypterException e) {
                 LOGGER.log(Level.SEVERE, "Problem getting server identity. Closing connection...");
                 session.close();
                 return;

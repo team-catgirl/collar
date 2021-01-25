@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,7 +28,11 @@ public final class MessageCrypter {
     }
 
     public String encryptString(String message, Identity sender, Identity recipient) throws MessageCrypterException {
-        return encryptStringWithMultipleRecipients(message, sender, ImmutableList.of(recipient));
+        ArrayList<Identity> identities = new ArrayList<>();
+        if (recipient != null) {
+            identities.add(recipient);
+        }
+        return encryptStringWithMultipleRecipients(message, sender, identities);
     }
 
     public String encryptStringWithMultipleRecipients(String message, Identity sender, List<Identity> recipients) throws MessageCrypterException {

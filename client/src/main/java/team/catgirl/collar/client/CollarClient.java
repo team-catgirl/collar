@@ -331,6 +331,11 @@ public final class CollarClient {
         }
 
         @Override
+        public void onNewServerIdentity(CollarClient client, ServerIdentity serverIdentity) {
+            listener.onNewServerIdentity(client, serverIdentity);
+        }
+
+        @Override
         public void onFingerPrintMismatch(CollarClient client, ServerIdentity serverIdentity) {
             listener.onFingerPrintMismatch(client, serverIdentity);
         }

@@ -1,8 +1,8 @@
 package team.catgirl.collar.client.security;
 
-import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.KeyPairGenerator;
-import team.catgirl.collar.security.KeyPairGeneratorException;
+import team.catgirl.collar.security.keys.KeyPair;
+import team.catgirl.collar.security.keys.KeyPairGenerator;
+import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 
 import java.io.IOException;
 import java.util.HashMap;

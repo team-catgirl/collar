@@ -3,13 +3,14 @@ package team.catgirl.collar.messages;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.models.Group;
-import team.catgirl.collar.security.PublicKey;
+import team.catgirl.collar.security.ServerIdentity;
 
 import java.util.List;
 import java.util.UUID;
 
 public class ServerMessage {
-
+    @JsonProperty("serverConnectedResponse")
+    public final ServerConnectedResponse serverConnectedResponse;
     @JsonProperty("identificationSuccessful")
     public final IdentificationSuccessful identificationSuccessful;
     @JsonProperty("createGroupResponse")
@@ -28,6 +29,7 @@ public class ServerMessage {
     public final GroupInviteResponse groupInviteResponse;
 
     public ServerMessage(
+            @JsonProperty("serverConnectedResponse") ServerConnectedResponse serverConnectedResponse,
             @JsonProperty("identificationSuccessful") IdentificationSuccessful identificationSuccessful,
             @JsonProperty("createGroupResponse") CreateGroupResponse createGroupResponse,
             @JsonProperty("groupMembershipRequest") GroupMembershipRequest groupMembershipRequest,
@@ -36,6 +38,7 @@ public class ServerMessage {
             @JsonProperty("updatePlayerStateResponse") UpdatePlayerStateResponse updatePlayerStateResponse,
             @JsonProperty("pong") Pong pong,
             @JsonProperty("groupInviteResponse") GroupInviteResponse groupInviteResponse) {
+        this.serverConnectedResponse = serverConnectedResponse;
         this.identificationSuccessful = identificationSuccessful;
         this.createGroupResponse = createGroupResponse;
         this.groupMembershipRequest = groupMembershipRequest;
@@ -46,24 +49,32 @@ public class ServerMessage {
         this.groupInviteResponse = groupInviteResponse;
     }
 
+    public static final class ServerConnectedResponse {
+        @JsonProperty("serverIdentity")
+        public final ServerIdentity serverIdentity;
+
+        public ServerConnectedResponse(@JsonProperty("serverIdentity") ServerIdentity serverIdentity) {
+            this.serverIdentity = serverIdentity;
+        }
+
+        public ServerMessage serverMessage() {
+            return new ServerMessage(this,null, null, null, null, null, null, null, null);
+        }
+    }
+
     public static final class Pong {
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, null, this, null);
+            return new ServerMessage(null, null, null, null, null, null, null, this, null);
         }
     }
 
     public static final class IdentificationSuccessful {
-        @JsonProperty("serverPublicKey")
-        public final PublicKey serverPublicKey;
-
-        public IdentificationSuccessful(@JsonProperty("serverPublicKey") PublicKey serverPublicKey) {
-            this.serverPublicKey = serverPublicKey;
-        }
+        public IdentificationSuccessful() {}
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(this, null, null, null, null, null, null, null);
+            return new ServerMessage(null, this, null, null, null, null, null, null, null);
         }
     }
 
@@ -83,7 +94,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, this, null, null, null, null, null);
+            return new ServerMessage(null, null, null, this, null, null, null, null, null);
         }
     }
 
@@ -97,7 +108,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, this, null, null, null, null, null, null);
+            return new ServerMessage(null, null, this, null, null, null, null, null, null);
         }
     }
 
@@ -111,7 +122,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, this, null, null, null, null);
+            return new ServerMessage(null, null, null, null, this, null, null, null, null);
         }
     }
 
@@ -125,7 +136,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, this, null, null, null);
+            return new ServerMessage(null, null, null, null, null, this, null, null, null);
         }
     }
 
@@ -139,7 +150,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, this, null, null);
+            return new ServerMessage(null, null, null, null, null, null, this, null, null);
         }
     }
 
@@ -156,7 +167,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, null, null, this);
+            return new ServerMessage(null, null, null, null, null, null, null, null, this);
         }
     }
 }

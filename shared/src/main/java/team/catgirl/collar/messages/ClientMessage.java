@@ -2,7 +2,7 @@ package team.catgirl.collar.messages;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.models.Group.MembershipState;
-import team.catgirl.collar.models.Identity;
+import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.models.Position;
 
 import java.util.List;
@@ -45,24 +45,24 @@ public final class ClientMessage {
     public static final class Ping {}
 
     public static final class IdentifyRequest {
-        public final Identity identity;
+        public final PlayerIdentity playerIdentity;
         public final String token;
 
-        public IdentifyRequest(@JsonProperty("identity") Identity identity, @JsonProperty("token") String token) {
-            this.identity = identity;
+        public IdentifyRequest(@JsonProperty("identity") PlayerIdentity playerIdentity, @JsonProperty("token") String token) {
+            this.playerIdentity = playerIdentity;
             this.token = token;
         }
     }
 
     public static final class CreateGroupRequest {
         @JsonProperty("me")
-        public final Identity me;
+        public final PlayerIdentity me;
         @JsonProperty("players")
         public final List<UUID> players;
         @JsonProperty("position")
         public Position position;
 
-        public CreateGroupRequest(@JsonProperty("me") Identity me, @JsonProperty("players") List<UUID> players, @JsonProperty("position") Position position) {
+        public CreateGroupRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("players") List<UUID> players, @JsonProperty("position") Position position) {
             this.me = me;
             this.players = players;
         }
@@ -70,14 +70,14 @@ public final class ClientMessage {
 
     public static final class AcceptGroupMembershipRequest {
         @JsonProperty("me")
-        public final Identity me;
+        public final PlayerIdentity me;
         @JsonProperty("groupId")
         public final String groupId;
         @JsonProperty("state")
         public final MembershipState state;
 
         public AcceptGroupMembershipRequest(
-                @JsonProperty("me") Identity me,
+                @JsonProperty("me") PlayerIdentity me,
                 @JsonProperty("groupId") String groupId,
                 @JsonProperty("state") MembershipState state) {
             this.me = me;
@@ -93,11 +93,11 @@ public final class ClientMessage {
 
     public static final class LeaveGroupRequest {
         @JsonProperty("me")
-        public final Identity me;
+        public final PlayerIdentity me;
         @JsonProperty("groupId")
         public final String groupId;
 
-        public LeaveGroupRequest(@JsonProperty("me") Identity me, @JsonProperty("groupId") String groupId) {
+        public LeaveGroupRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("groupId") String groupId) {
             this.me = me;
             this.groupId = groupId;
         }
@@ -105,11 +105,11 @@ public final class ClientMessage {
 
     public static final class UpdatePlayerStateRequest {
         @JsonProperty("me")
-        public final Identity me;
+        public final PlayerIdentity me;
         @JsonProperty("position")
         public final Position position;
 
-        public UpdatePlayerStateRequest(@JsonProperty("me") Identity me, @JsonProperty("position") Position position) {
+        public UpdatePlayerStateRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("position") Position position) {
             this.me = me;
             this.position = position;
         }
@@ -117,13 +117,13 @@ public final class ClientMessage {
 
     public static final class GroupInviteRequest {
         @JsonProperty("me")
-        public final Identity me;
+        public final PlayerIdentity me;
         @JsonProperty("groupId")
         public final String groupId;
         @JsonProperty("players")
         public final List<UUID> players;
 
-        public GroupInviteRequest(@JsonProperty("me") Identity me, @JsonProperty("groupId") String groupId, @JsonProperty("players") List<UUID> players) {
+        public GroupInviteRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("groupId") String groupId, @JsonProperty("players") List<UUID> players) {
             this.me = me;
             this.groupId = groupId;
             this.players = players;

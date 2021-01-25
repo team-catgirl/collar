@@ -1,8 +1,8 @@
 package team.catgirl.collar.client.security;
 
-import team.catgirl.collar.security.PublicKey;
+import team.catgirl.collar.security.keys.KeyPair;
 
 public interface ServerIdentityStore {
-    PublicKey getIdentity(String server);
-    PublicKey saveIdentity(String server);
+    KeyPair.PublicKey getIdentity(String server);
+    KeyPair.PublicKey saveIdentity(String server);
 }

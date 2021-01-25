@@ -3,10 +3,9 @@ package team.catgirl.collar.server.managers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
-import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.IdentifyRequest;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.models.Identity;
+import team.catgirl.collar.security.PlayerIdentity;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -22,9 +21,9 @@ public final class SessionManager {
 
     private static final Logger LOGGER = Logger.getLogger(SessionManager.class.getName());
 
-    private final ConcurrentMap<Session, Identity> sessionToIdentity = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Identity, Session> identityToSession = new ConcurrentHashMap<>();
-    private final ConcurrentMap<UUID, Identity> playerToIdentity = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Session, PlayerIdentity> sessionToIdentity = new ConcurrentHashMap<>();
+    private final ConcurrentMap<PlayerIdentity, Session> identityToSession = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, PlayerIdentity> playerToIdentity = new ConcurrentHashMap<>();
 
     private final ObjectMapper mapper;
 
@@ -35,16 +34,16 @@ public final class SessionManager {
     public void identify(Session session, IdentifyRequest identifyRequest) {
         // TODO: register the identity if we haven't seen it before
         // TODO: otherwise, check that the client is really them by verifying the signature
-        sessionToIdentity.put(session, identifyRequest.identity);
-        identityToSession.put(identifyRequest.identity, session);
-        playerToIdentity.put(identifyRequest.identity.player, identifyRequest.identity);
+        sessionToIdentity.put(session, identifyRequest.playerIdentity);
+        identityToSession.put(identifyRequest.playerIdentity, session);
+        playerToIdentity.put(identifyRequest.playerIdentity.player, identifyRequest.playerIdentity);
     }
 
     public void stopSession(Session session, String reason, IOException e) {
-        Identity identity = sessionToIdentity.remove(session);
-        if (identity != null) {
-            playerToIdentity.remove(identity.player);
-            identityToSession.remove(identity);
+        PlayerIdentity playerIdentity = sessionToIdentity.remove(session);
+        if (playerIdentity != null) {
+            playerToIdentity.remove(playerIdentity.player);
+            identityToSession.remove(playerIdentity);
         }
         session.close(1000, reason);
         LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
@@ -55,12 +54,12 @@ public final class SessionManager {
     }
 
     public Session getSession(UUID player) {
-        Identity playerIdentity = playerToIdentity.get(player);
+        PlayerIdentity playerIdentity = playerToIdentity.get(player);
         return playerIdentity == null ? null : identityToSession.get(playerIdentity);
     }
 
     public UUID getPlayer(Session session) {
-        Identity identity = sessionToIdentity.get(session);
-        return identity == null ? null : identity.player;
+        PlayerIdentity playerIdentity = sessionToIdentity.get(session);
+        return playerIdentity == null ? null : playerIdentity.player;
     }
 }

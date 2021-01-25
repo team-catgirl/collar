@@ -2,6 +2,7 @@ package team.catgirl.collar.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import team.catgirl.collar.security.PlayerIdentity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +23,7 @@ public final class Group {
         this.members = members;
     }
 
-    public static Group newGroup(String id, Identity owner, Position ownerPosition, List<UUID> members) {
+    public static Group newGroup(String id, PlayerIdentity owner, Position ownerPosition, List<UUID> members) {
         ImmutableMap.Builder<UUID, Member> state = ImmutableMap.<UUID, Member>builder()
                 .put(owner.player, new Member(owner.player, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerPosition));
         members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, null)));

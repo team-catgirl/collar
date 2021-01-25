@@ -2,9 +2,10 @@ package team.catgirl.collar.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import team.catgirl.collar.security.keys.KeyPair;
+import team.catgirl.collar.security.keys.KeyPairGenerator;
 import team.catgirl.collar.utils.Utils;
 
 import java.util.UUID;

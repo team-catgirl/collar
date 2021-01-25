@@ -1,4 +1,4 @@
-package team.catgirl.collar.security;
+package team.catgirl.collar.security.keys;
 
 import name.neuhalfen.projects.crypto.bouncycastle.openpgp.BouncyGPG;
 import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.generation.type.length.RsaLength;
@@ -51,7 +51,7 @@ public class KeyPairGenerator {
         KeyringConfig rsaKeyRing = BouncyGPG.createSimpleKeyring().simpleRsaKeyRing(userId, RsaLength.RSA_2048_BIT);
         PGPPublicKey publicKey = rsaKeyRing.getPublicKeyRings().getKeyRings().next().getPublicKey();
         PGPSecretKey privateKey = rsaKeyRing.getSecretKeyRings().getKeyRings().next().getSecretKey();
-        return new KeyPair(new PublicKey(publicKey.getFingerprint(), publicKey.getEncoded()), new PrivateKey(privateKey.getEncoded()));
+        return new KeyPair(new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.getEncoded()), new KeyPair.PrivateKey(privateKey.getEncoded()));
     }
 
     private KeyPairGenerator() {}

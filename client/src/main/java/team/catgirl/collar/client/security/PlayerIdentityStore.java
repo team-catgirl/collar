@@ -1,8 +1,8 @@
 package team.catgirl.collar.client.security;
 
-import team.catgirl.collar.models.Identity;
-import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.KeyPairGeneratorException;
+import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.security.keys.KeyPair;
+import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -32,11 +32,11 @@ public interface PlayerIdentityStore {
      * @throws IOException on error
      * @throws KeyPairGeneratorException on generation error
      */
-    default Identity createIdentity(UUID player) throws IOException, KeyPairGeneratorException {
+    default PlayerIdentity createIdentity(UUID player) throws IOException, KeyPairGeneratorException {
         KeyPair keyPair = keyPair(player);
         if (keyPair == null) {
             keyPair = createKeyPair(player);
         }
-        return new Identity(player, keyPair.publicKey);
+        return new PlayerIdentity(player, keyPair.publicKey);
     }
 }

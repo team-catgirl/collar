@@ -3,6 +3,7 @@ package team.catgirl.collar.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfigs;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,12 +11,17 @@ import team.catgirl.collar.client.CollarClientException.CollarConnectionExceptio
 import team.catgirl.collar.client.CollarClientException.CollarStateException;
 import team.catgirl.collar.client.security.PlayerIdentityStore;
 import team.catgirl.collar.client.security.ServerIdentityStore;
+import team.catgirl.collar.client.security.TokenGenerator;
 import team.catgirl.collar.models.*;
 import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.KeyPairGeneratorException;
+import team.catgirl.collar.security.Identity;
+import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.keys.KeyPairGeneratorException;
+import team.catgirl.collar.security.messages.MessageCrypter;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -39,7 +45,8 @@ public final class CollarClient {
     private final OkHttpClient http;
     private final PlayerIdentityStore playerIdentityStore;
     private final ServerIdentityStore serverIdentityStore;
-    private Identity me;
+    private final MessageCrypter messageCrypter;
+    private PlayerIdentity me;
     private WebSocket webSocket;
     private DelegatingListener listener;
     private boolean connected;
@@ -48,6 +55,7 @@ public final class CollarClient {
     public CollarClient(String baseUrl, PlayerIdentityStore playerIdentityStore, ServerIdentityStore server) {
         this.playerIdentityStore = playerIdentityStore;
         this.serverIdentityStore = server;
+        this.messageCrypter = new MessageCrypter(null);
         if (Strings.isNullOrEmpty(baseUrl)) {
             throw new IllegalArgumentException("baseUrl was not set");
         }
@@ -102,10 +110,10 @@ public final class CollarClient {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        Identity oldIdentity = me;
+        PlayerIdentity oldPlayerIdentity = me;
         CollarListener oldListener = listener;
         disconnect();
-        connect(oldIdentity.player, oldListener);
+        connect(oldPlayerIdentity.player, oldListener);
     }
 
     public boolean isConnected() {
@@ -123,7 +131,7 @@ public final class CollarClient {
         }
     }
 
-    public Identity getMe() {
+    public PlayerIdentity getMe() {
         return me;
     }
 
@@ -165,7 +173,8 @@ public final class CollarClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.info("onOpen is called");
             super.onOpen(webSocket, response);
-            ClientMessage message = new ClientMessage(new IdentifyRequest(me, ), null, null, null, null, null, null);
+            IdentifyRequest req = new IdentifyRequest(me, messageCrypter.encryptString(client.me, client.serverIdentity, TokenGenerator.stringToken()));
+            ClientMessage message = new ClientMessage(req, null, null, null, null, null, null);
             try {
                 send(message);
             } catch (IOException e) {
@@ -183,6 +192,9 @@ public final class CollarClient {
                 LOGGER.log(Level.SEVERE, "Couldn't parse server message", e);
                 disconnect();
                 return;
+            }
+            if (message.serverConnectedResponse != null) {
+                listener.onConnected(client, message.serverConnectedResponse.serverIdentity);
             }
             if (message.identificationSuccessful != null) {
                 listener.onSessionCreated(client);
@@ -236,6 +248,12 @@ public final class CollarClient {
         }
 
         @Override
+        public void onConnected(CollarClient client, ServerIdentity reportedServerIdentity) {
+            this.serverIdentity = serverIdentity;
+            listener.onConnected(client, reportedServerIdentity);
+        }
+
+        @Override
         public void onSessionCreated(CollarClient client) {
             listener.onSessionCreated(client);
             connected = true;
@@ -274,7 +292,6 @@ public final class CollarClient {
         @Override
         public void onPongReceived(ServerMessage.Pong pong) {
             listener.onPongReceived(pong);
-            LOGGER.log(Level.FINE, "Received ping");
         }
 
         @Override

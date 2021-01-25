@@ -1,9 +1,9 @@
 package team.catgirl.collar.client.security;
 
 import org.jetbrains.annotations.NotNull;
-import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.KeyPairGenerator;
-import team.catgirl.collar.security.KeyPairGeneratorException;
+import team.catgirl.collar.security.keys.KeyPair;
+import team.catgirl.collar.security.keys.KeyPairGenerator;
+import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;

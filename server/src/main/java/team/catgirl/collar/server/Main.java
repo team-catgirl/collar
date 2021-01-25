@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.KeyPairGeneratorException;
+import team.catgirl.collar.security.keys.KeyPairGeneratorException;
 import team.catgirl.collar.server.common.ServerVersion;
-import team.catgirl.collar.server.security.MemoryServerKeyPairProvider;
-import team.catgirl.collar.server.security.ServerKeyPairProvider;
+import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
+import team.catgirl.collar.server.security.ServerIdentityProvider;
 import team.catgirl.collar.utils.Utils;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage.CreateGroupResponse;
@@ -54,7 +54,7 @@ public class Main {
         ObjectMapper mapper = Utils.createObjectMapper();
         SessionManager sessions = new SessionManager(mapper);
         GroupManager groups = new GroupManager(sessions);
-        ServerKeyPairProvider serverKeyPairProvider = new MemoryServerKeyPairProvider();
+        ServerIdentityProvider serverIdentityProvider = new MemoryServerIdentityProvider();
 
         // Always serialize objects returned as JSON
         defaultResponseTransformer(mapper::writeValueAsString);
@@ -65,14 +65,14 @@ public class Main {
 
         // Setup WebSockets
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
-        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups, serverKeyPairProvider));
+        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups, serverIdentityProvider));
 
         // Version routes
         path("/api/1", () -> {
             // Used to test if API is available
             get("/", (request, response) -> new ServerStatusResponse("OK"));
             // The servers current identity
-            get("/identity", (request, response) -> serverKeyPairProvider.get().publicKey);
+            get("/identity", (request, response) -> serverIdentityProvider.getIdentity());
         });
 
         // Server routes
@@ -97,18 +97,19 @@ public class Main {
         private final ObjectMapper mapper;
         private final SessionManager manager;
         private final GroupManager groups;
-        private final ServerKeyPairProvider serverKeyPairProvider;
+        private final ServerIdentityProvider serverIdentityProvider;
 
-        public WebSocketHandler(ObjectMapper mapper, SessionManager manager, GroupManager groups, ServerKeyPairProvider serverKeyPairProvider) {
+        public WebSocketHandler(ObjectMapper mapper, SessionManager manager, GroupManager groups, ServerIdentityProvider serverIdentityProvider) {
             this.mapper = mapper;
             this.manager = manager;
             this.groups = groups;
-            this.serverKeyPairProvider = serverKeyPairProvider;
+            this.serverIdentityProvider = serverIdentityProvider;
         }
 
         @OnWebSocketConnect
         public void connected(Session session) {
             LOGGER.log(Level.INFO, "New session started");
+            send(session, new ServerConnectedResponse(serverIdentityProvider.getIdentity()).serverMessage());
         }
 
         @OnWebSocketClose
@@ -130,12 +131,12 @@ public class Main {
         public void message(Session session, String value) throws IOException {
             ClientMessage message = mapper.readValue(value, ClientMessage.class);
             if (message.identifyRequest != null) {
-                if (message.identifyRequest.identity == null) {
+                if (message.identifyRequest.playerIdentity == null) {
                     manager.stopSession(session, "No valid identity", null);
                 } else {
-                    LOGGER.log(Level.INFO, "Identifying player " + message.identifyRequest.identity.player);
+                    LOGGER.log(Level.INFO, "Identifying player " + message.identifyRequest.playerIdentity.player);
                     manager.identify(session, message.identifyRequest);
-                    send(session, new IdentificationSuccessful(serverKeyPairProvider.get().publicKey).serverMessage());
+                    send(session, new IdentificationSuccessful(serverIdentityProvider.getIdentity()).serverMessage());
                 }
             }
             if (message.createGroupRequest != null) {

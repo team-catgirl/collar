@@ -2,8 +2,10 @@ package team.catgirl.collar.client;
 
 import team.catgirl.collar.messages.ServerMessage;
 import team.catgirl.collar.messages.ServerMessage.*;
+import team.catgirl.collar.security.ServerIdentity;
 
 public interface CollarListener {
+    default void onConnected(CollarClient client, ServerIdentity serverIdentity) {};
     default void onSessionCreated(CollarClient client) {}
     default void onDisconnect(CollarClient client) {}
     default void onGroupCreated(CollarClient client, CreateGroupResponse resp) {};

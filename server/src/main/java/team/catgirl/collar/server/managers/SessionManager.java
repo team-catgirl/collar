@@ -3,6 +3,8 @@ package team.catgirl.collar.server.managers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.messages.ClientMessage;
+import team.catgirl.collar.messages.ClientMessage.IdentifyRequest;
 import team.catgirl.collar.messages.ServerMessage;
 import team.catgirl.collar.models.Identity;
 
@@ -30,10 +32,12 @@ public final class SessionManager {
         this.mapper = mapper;
     }
 
-    public void identify(Session session, Identity identity) {
-        sessionToIdentity.put(session, identity);
-        identityToSession.put(identity, session);
-        playerToIdentity.put(identity.player, identity);
+    public void identify(Session session, IdentifyRequest identifyRequest) {
+        // TODO: register the identity if we haven't seen it before
+        // TODO: otherwise, check that the client is really them by verifying the signature
+        sessionToIdentity.put(session, identifyRequest.identity);
+        identityToSession.put(identifyRequest.identity, session);
+        playerToIdentity.put(identifyRequest.identity.player, identifyRequest.identity);
     }
 
     public void stopSession(Session session, String reason, IOException e) {

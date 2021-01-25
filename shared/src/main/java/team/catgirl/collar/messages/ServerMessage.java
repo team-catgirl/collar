@@ -3,6 +3,7 @@ package team.catgirl.collar.messages;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.models.Group;
+import team.catgirl.collar.security.PublicKey;
 
 import java.util.List;
 import java.util.UUID;
@@ -53,6 +54,13 @@ public class ServerMessage {
     }
 
     public static final class IdentificationSuccessful {
+        @JsonProperty("serverPublicKey")
+        public final PublicKey serverPublicKey;
+
+        public IdentificationSuccessful(@JsonProperty("serverPublicKey") PublicKey serverPublicKey) {
+            this.serverPublicKey = serverPublicKey;
+        }
+
         @JsonIgnore
         public ServerMessage serverMessage() {
             return new ServerMessage(this, null, null, null, null, null, null, null);

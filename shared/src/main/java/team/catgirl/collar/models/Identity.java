@@ -1,36 +1,22 @@
 package team.catgirl.collar.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
+import team.catgirl.collar.security.Principal;
+import team.catgirl.collar.security.PublicKey;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class Identity {
+public final class Identity implements Principal {
 
-    @JsonProperty("id")
-    public final String id;
     @JsonProperty("player")
     public final UUID player;
+    @JsonProperty("publicKey")
+    private final PublicKey publicKey;
 
-    private Identity(@JsonProperty("id") String id, @JsonProperty("player") UUID player) {
-        this.id = id;
+    public Identity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey) {
         this.player = player;
-    }
-
-    /**
-     * Create a unique identity based on the minecraft sessionId and player UUID
-     * @param sessionId of the minecraft client
-     * @param playerId of the players id
-     * @return identity for use over network
-     */
-    public static Identity from(String sessionId, UUID playerId) {
-        if (sessionId == null) throw new IllegalArgumentException("sessionId not supplied");
-        if (playerId == null) throw new IllegalArgumentException("playerId not supplied");
-        byte[] bytes = Hashing.sha512().hashString(sessionId + playerId.toString(), StandardCharsets.UTF_8).asBytes();
-        return new Identity(BaseEncoding.base64().encode(bytes), playerId);
+        this.publicKey = publicKey;
     }
 
     @Override
@@ -38,11 +24,17 @@ public final class Identity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Identity identity = (Identity) o;
-        return id.equals(identity.id);
+        return player.equals(identity.player) &&
+                publicKey.equals(identity.publicKey);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(player, publicKey);
+    }
+
+    @Override
+    public String getName() {
+        return player.toString();
     }
 }

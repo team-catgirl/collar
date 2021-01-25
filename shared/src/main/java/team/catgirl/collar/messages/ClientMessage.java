@@ -46,9 +46,11 @@ public final class ClientMessage {
 
     public static final class IdentifyRequest {
         public final Identity identity;
+        public final String token;
 
-        public IdentifyRequest(@JsonProperty("identity") Identity identity) {
+        public IdentifyRequest(@JsonProperty("identity") Identity identity, @JsonProperty("token") String token) {
             this.identity = identity;
+            this.token = token;
         }
     }
 

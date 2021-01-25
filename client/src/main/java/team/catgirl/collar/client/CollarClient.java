@@ -6,11 +6,16 @@ import com.google.common.base.Strings;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import team.catgirl.collar.client.CollarClientException.CollarConnectionException;
+import team.catgirl.collar.client.CollarClientException.CollarStateException;
+import team.catgirl.collar.client.security.PlayerIdentityStore;
+import team.catgirl.collar.client.security.ServerIdentityStore;
 import team.catgirl.collar.models.*;
 import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.security.KeyPairGeneratorException;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -32,13 +37,17 @@ public final class CollarClient {
     private final ObjectMapper mapper = Utils.createObjectMapper();
     private final String baseUrl;
     private final OkHttpClient http;
+    private final PlayerIdentityStore playerIdentityStore;
+    private final ServerIdentityStore serverIdentityStore;
     private Identity me;
     private WebSocket webSocket;
     private DelegatingListener listener;
     private boolean connected;
     private ScheduledExecutorService keepAliveScheduler;
 
-    public CollarClient(String baseUrl) {
+    public CollarClient(String baseUrl, PlayerIdentityStore playerIdentityStore, ServerIdentityStore server) {
+        this.playerIdentityStore = playerIdentityStore;
+        this.serverIdentityStore = server;
         if (Strings.isNullOrEmpty(baseUrl)) {
             throw new IllegalArgumentException("baseUrl was not set");
         }
@@ -50,12 +59,16 @@ public final class CollarClient {
         this.http = new OkHttpClient();
     }
 
-    public void connect(Identity identity, CollarListener listener) {
+    public void connect(UUID player, CollarListener listener) {
         if (this.connected) {
             throw new IllegalStateException("Is already connected");
         }
         this.listener = new DelegatingListener(listener); // TODO: wrap in delegating listener that catches and logs exceptions
-        this.me = identity;
+        try {
+            this.me = playerIdentityStore.createIdentity(player);
+        } catch (IOException|KeyPairGeneratorException e) {
+            throw new CollarConnectionException("Problem creating identity", e);
+        }
         Request request = new Request.Builder().url(baseUrl + "listen").build();
         webSocket = http.newWebSocket(request, new WebSocketListenerImpl(this));
         http.dispatcher().executorService().shutdown();
@@ -71,7 +84,7 @@ public final class CollarClient {
 
     public void disconnect() {
         if (!this.connected) {
-            throw new IllegalStateException("Is already disconnected");
+            throw new CollarStateException("Is already disconnected");
         }
         webSocket.close(1000, "Disconnected");
         CollarListener listener = this.listener;
@@ -83,12 +96,16 @@ public final class CollarClient {
         this.keepAliveScheduler = null;
     }
 
-    public void reconnect() throws InterruptedException {
-        Thread.sleep(TimeUnit.SECONDS.toMillis(30));
+    public void reconnect() {
+        try {
+            Thread.sleep(TimeUnit.SECONDS.toMillis(30));
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         Identity oldIdentity = me;
         CollarListener oldListener = listener;
         disconnect();
-        connect(oldIdentity, oldListener);
+        connect(oldIdentity.player, oldListener);
     }
 
     public boolean isConnected() {
@@ -97,7 +114,7 @@ public final class CollarClient {
 
     public boolean isServerUp() {
         Request request = new Request.Builder()
-                .url(baseUrl + "/status")
+                .url(baseUrl)
                 .build();
         try (Response response = http.newCall(request).execute()) {
             return response.code() == 200;
@@ -148,7 +165,7 @@ public final class CollarClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.info("onOpen is called");
             super.onOpen(webSocket, response);
-            ClientMessage message = new ClientMessage(new IdentifyRequest(me), null, null, null, null, null, null);
+            ClientMessage message = new ClientMessage(new IdentifyRequest(me, ), null, null, null, null, null, null);
             try {
                 send(message);
             } catch (IOException e) {

@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.KeyPairGenerator;
 import team.catgirl.collar.security.KeyPairGeneratorException;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.security.MemoryServerKeyPairProvider;
@@ -67,7 +65,7 @@ public class Main {
 
         // Setup WebSockets
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
-        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups));
+        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups, serverKeyPairProvider));
 
         // Version routes
         path("/api/1", () -> {
@@ -99,11 +97,13 @@ public class Main {
         private final ObjectMapper mapper;
         private final SessionManager manager;
         private final GroupManager groups;
+        private final ServerKeyPairProvider serverKeyPairProvider;
 
-        public WebSocketHandler(ObjectMapper mapper, SessionManager manager, GroupManager groups) {
+        public WebSocketHandler(ObjectMapper mapper, SessionManager manager, GroupManager groups, ServerKeyPairProvider serverKeyPairProvider) {
             this.mapper = mapper;
             this.manager = manager;
             this.groups = groups;
+            this.serverKeyPairProvider = serverKeyPairProvider;
         }
 
         @OnWebSocketConnect
@@ -130,12 +130,12 @@ public class Main {
         public void message(Session session, String value) throws IOException {
             ClientMessage message = mapper.readValue(value, ClientMessage.class);
             if (message.identifyRequest != null) {
-                if (message.identifyRequest.identity == null || message.identifyRequest.identity.id == null || message.identifyRequest.identity.player == null) {
+                if (message.identifyRequest.identity == null) {
                     manager.stopSession(session, "No valid identity", null);
                 } else {
                     LOGGER.log(Level.INFO, "Identifying player " + message.identifyRequest.identity.player);
-                    manager.identify(session, message.identifyRequest.identity);
-                    send(session, new IdentificationSuccessful().serverMessage());
+                    manager.identify(session, message.identifyRequest);
+                    send(session, new IdentificationSuccessful(serverKeyPairProvider.get().publicKey).serverMessage());
                 }
             }
             if (message.createGroupRequest != null) {

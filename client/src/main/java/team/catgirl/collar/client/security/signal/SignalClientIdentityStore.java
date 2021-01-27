@@ -9,10 +9,12 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.client.HomeDirectory;
-import team.catgirl.collar.client.security.PlayerIdentityStore;
-import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
+import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.signal.SignalCypher;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
@@ -21,13 +23,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
-public final class SignalPlayerIdentityStore implements PlayerIdentityStore {
+public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     private final UUID player;
     private final SignalProtocolStore store;
     private final State state;
 
-    public SignalPlayerIdentityStore(UUID player, SignalProtocolStore store, State state) {
+    public SignalClientIdentityStore(UUID player, SignalProtocolStore store, State state) {
         this.player = player;
         this.store = store;
         this.state = state;
@@ -57,8 +59,13 @@ public final class SignalPlayerIdentityStore implements PlayerIdentityStore {
         }
     }
 
+    @Override
+    public Cypher createCypher() {
+        return new SignalCypher(store);
+    }
+
     private SignalProtocolAddress signalProtocolAddressFrom(ServerIdentity serverIdentity) {
-        return new SignalProtocolAddress(serverIdentity.serverId.toString(), serverIdentity.registrationId);
+        return new SignalProtocolAddress(serverIdentity.serverId.toString(), 1);
     }
 
     private static IdentityKey identityKeyFrom(ServerIdentity identity) {
@@ -81,7 +88,7 @@ public final class SignalPlayerIdentityStore implements PlayerIdentityStore {
         }
     }
 
-    public static PlayerIdentityStore from(UUID player, HomeDirectory homeDirectory, BiConsumer<SignedPreKeyRecord, List<PreKeyRecord>> onInstall) throws IOException {
+    public static ClientIdentityStore from(UUID player, HomeDirectory homeDirectory, BiConsumer<SignedPreKeyRecord, List<PreKeyRecord>> onInstall) throws IOException {
         SignalProtocolStore store = ClientSignalProtocolStore.from(homeDirectory);
         File file = new File(homeDirectory.security(), "identity.json");
         State state;
@@ -106,7 +113,7 @@ public final class SignalPlayerIdentityStore implements PlayerIdentityStore {
             // fire the on install consumer
             onInstall.accept(signedPreKey, preKeys);
         }
-        return new SignalPlayerIdentityStore(player, store, state);
+        return new SignalClientIdentityStore(player, store, state);
     }
 
     private static void writeState(File file, State state) throws IOException {

@@ -1,24 +1,26 @@
 package team.catgirl.collar.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.google.common.io.BaseEncoding;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import team.catgirl.collar.client.security.PlayerIdentityStore;
-import team.catgirl.collar.client.security.signal.SignalPlayerIdentityStore;
-import team.catgirl.collar.messages.ServerMessage.*;
-import team.catgirl.collar.models.*;
-import team.catgirl.collar.models.Group.MembershipState;
+import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.messages.ServerMessage.*;
+import team.catgirl.collar.models.Group;
+import team.catgirl.collar.models.Group.MembershipState;
+import team.catgirl.collar.models.Position;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -34,7 +36,8 @@ public final class CollarClient {
     private final String baseUrl;
     private final OkHttpClient http;
     private final HomeDirectory homeDirectory;
-    private PlayerIdentityStore identityStore;
+    private ClientIdentityStore identityStore;
+    private ServerIdentity serverIdentity;
     private WebSocket webSocket;
     private DelegatingListener listener;
     private ClientState state = ClientState.DISCONNECTED;
@@ -61,7 +64,7 @@ public final class CollarClient {
         }
         state = ClientState.CONNECTING;
         // Setup the identity store for this player
-        this.identityStore = SignalPlayerIdentityStore.from(player, homeDirectory, (signedPreKeyRecord, preKeyRecords) -> {
+        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (signedPreKeyRecord, preKeyRecords) -> {
             createIdentityRequest = CreateIdentityRequest.from(signedPreKeyRecord, preKeyRecords);
         });
         this.listener = new DelegatingListener(listener);
@@ -79,6 +82,7 @@ public final class CollarClient {
         CollarListener listener = this.listener;
         this.listener = null;
         this.identityStore = null;
+        this.serverIdentity = null;
         stopKeepAlive();
         this.state = ClientState.DISCONNECTED;
         listener.onDisconnect(this);
@@ -129,7 +133,13 @@ public final class CollarClient {
 
     private void send(ClientMessage o) throws IOException {
         String message = mapper.writeValueAsString(o);
-        webSocket.send(message);
+        if (state == ClientState.CONNECTED) {
+            byte[] bytes = identityStore.createCypher().crypt(serverIdentity, message.getBytes(StandardCharsets.UTF_8));
+            webSocket.send(BaseEncoding.base64().encode(bytes));
+        } else {
+            // End non-encrypted message
+            webSocket.send(message);
+        }
     }
 
     private void startKeepAlive() {
@@ -180,8 +190,15 @@ public final class CollarClient {
         public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
             ServerMessage message;
             try {
-                message = mapper.readValue(text, ServerMessage.class);
-            } catch (JsonProcessingException e) {
+                // If the client is connected we are speaking signal
+                if (state == ClientState.CONNECTED) {
+                    byte[] bytes = identityStore.createCypher().decrypt(serverIdentity, BaseEncoding.base64().decode(text));
+                    message = mapper.readValue(bytes, ServerMessage.class);
+                } else {
+                    // Otherwise we are communicating in plain text
+                    message = mapper.readValue(text, ServerMessage.class);
+                }
+            } catch (IOException e) {
                 LOGGER.log(Level.SEVERE, "Couldn't parse server message", e);
                 disconnect();
                 return;
@@ -194,7 +211,9 @@ public final class CollarClient {
                     listener.onSessionCreated(client);
                 } else {
                     identityStore.trustIdentity(message.identity);
+                    listener.onSessionCreated(client);
                 }
+                serverIdentity = message.identity;
             }
             if (message.groupMembershipRequest != null) {
                 listener.onGroupMembershipRequested(client, message.groupMembershipRequest);
@@ -230,6 +249,7 @@ public final class CollarClient {
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
             LOGGER.log(Level.SEVERE, "Communications failure", t);
+            disconnect();
         }
 
         @Override
@@ -248,13 +268,14 @@ public final class CollarClient {
 
         @Override
         public void onConnected(CollarClient client, ServerIdentity reportedServerIdentity) {
+            serverIdentity = reportedServerIdentity;
             listener.onConnected(client, reportedServerIdentity);
         }
 
         @Override
         public void onSessionCreated(CollarClient client) {
-            listener.onSessionCreated(client);
             state = ClientState.CONNECTED;
+            listener.onSessionCreated(client);
         }
 
         @Override

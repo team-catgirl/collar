@@ -1,9 +1,10 @@
 package team.catgirl.collar.client.security;
 
+import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
-public interface PlayerIdentityStore {
+public interface ClientIdentityStore {
     /**
      * @return the players identity
      */
@@ -21,4 +22,6 @@ public interface PlayerIdentityStore {
      * @param identity to trust
      */
     void trustIdentity(ServerIdentity identity);
+
+    Cypher createCypher();
 }

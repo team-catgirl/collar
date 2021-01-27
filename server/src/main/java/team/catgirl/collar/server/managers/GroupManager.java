@@ -1,9 +1,6 @@
 package team.catgirl.collar.server.managers;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.BaseEncoding;
-import com.mongodb.connection.ServerId;
-import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
@@ -12,10 +9,10 @@ import team.catgirl.collar.models.Group;
 import team.catgirl.collar.models.Group.Member;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.TokenGenerator;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,14 +29,12 @@ public final class GroupManager {
 
     private final ServerIdentity serverIdentity;
     private final SessionManager sessionManager;
-    private final SecureRandom random;
 
     private final ConcurrentMap<String, Group> groupsById = new ConcurrentHashMap<>();
 
     public GroupManager(ServerIdentity serverIdentity, SessionManager sessionManager) throws NoSuchAlgorithmException {
         this.serverIdentity = serverIdentity;
         this.sessionManager = sessionManager;
-        this.random = SecureRandom.getInstance("SHA1PRNG");
     }
 
     /**
@@ -48,7 +43,7 @@ public final class GroupManager {
      * @return response to send to client
      */
     public CreateGroupResponse createGroup(PlayerIdentity identity, CreateGroupRequest req) {
-        Group group = Group.newGroup(uniqueId(), identity, req.position, req.players);
+        Group group = Group.newGroup(TokenGenerator.stringToken(), identity, req.position, req.players);
         synchronized (group.id) {
             refreshGroupState(group);
         }
@@ -177,7 +172,7 @@ public final class GroupManager {
         return new UpdatePlayerStateResponse(findGroupsForPlayer(identity.player));
     }
 
-    public void updateGroup(String groupId) {
+    private void updateGroup(String groupId) {
         Group group = groupsById.get(groupId);
         if (group != null) {
             synchronized (group.id) {
@@ -223,11 +218,5 @@ public final class GroupManager {
                 updateGroup(group.id);
             }
         }
-    }
-
-    private String uniqueId() {
-        byte[] bytes = new byte[64];
-        random.nextBytes(bytes);
-        return BaseEncoding.base64().encode(bytes);
     }
 }

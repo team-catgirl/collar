@@ -1,4 +1,4 @@
-package team.catgirl.collar.client.security;
+package team.catgirl.collar.security;
 
 import com.google.common.io.BaseEncoding;
 

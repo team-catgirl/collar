@@ -3,7 +3,6 @@ package team.catgirl.collar.server.managers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
-import team.catgirl.collar.messages.ClientMessage.IdentifyRequest;
 import team.catgirl.collar.messages.ServerMessage;
 import team.catgirl.collar.security.PlayerIdentity;
 
@@ -37,6 +36,10 @@ public final class SessionManager {
         sessionToIdentity.put(session, identity);
         identityToSession.put(identity, session);
         playerToIdentity.put(identity.player, identity);
+    }
+
+    public boolean isIdentified(Session session) {
+        return sessionToIdentity.containsKey(session);
     }
 
     public void stopSession(Session session, String reason, IOException e) {

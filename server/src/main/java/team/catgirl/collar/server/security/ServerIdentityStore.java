@@ -1,7 +1,7 @@
 package team.catgirl.collar.server.security;
 
-import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.CreateIdentityRequest;
+import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
@@ -24,4 +24,6 @@ public interface ServerIdentityStore {
      * @return trusted or not
      */
     boolean isTrustedIdentity(PlayerIdentity identity);
+
+    Cypher createCypher();
 }

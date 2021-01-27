@@ -12,15 +12,15 @@ import java.util.UUID;
 public final class ServerIdentity {
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
-    @JsonProperty("registrationId")
-    public final int registrationId;
     @JsonProperty("serverId")
     public final UUID serverId;
+    @JsonProperty("preKeyBundle")
+    public byte[] preKeyBundle;
 
-    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId, @JsonProperty("serverId") UUID serverId) {
+    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("serverId") UUID serverId, @JsonProperty("preKeyBundle") byte[] preKeyBundle) {
         this.publicKey = publicKey;
-        this.registrationId = registrationId;
         this.serverId = serverId;
+        this.preKeyBundle = preKeyBundle;
     }
 
     @Override

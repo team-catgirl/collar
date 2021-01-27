@@ -65,4 +65,6 @@ public class PreKeyBundles {
         }
         return bytes;
     }
+
+    private PreKeyBundles() {}
 }

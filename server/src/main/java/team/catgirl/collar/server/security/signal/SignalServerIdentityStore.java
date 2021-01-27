@@ -33,6 +33,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     public SignalServerIdentityStore(MongoDatabase db) {
         this.store = ServerSignalProtocolStore.from(db);
         this.serverIdentitySupplier = Suppliers.memoize(() -> {
+            // TODO: signal client identity store uses the same code - make this common
             IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
             IdentityKey publicKey = identityKeyPair.getPublicKey();
             int registrationId = store.getLocalRegistrationId();

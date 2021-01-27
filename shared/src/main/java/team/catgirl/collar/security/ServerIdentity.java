@@ -9,7 +9,7 @@ import java.util.UUID;
 /**
  * Identifies the server
  */
-public final class ServerIdentity {
+public final class ServerIdentity implements Identity {
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
     @JsonProperty("serverId")
@@ -21,6 +21,16 @@ public final class ServerIdentity {
         this.publicKey = publicKey;
         this.serverId = serverId;
         this.preKeyBundle = preKeyBundle;
+    }
+
+    @Override
+    public UUID id() {
+        return serverId;
+    }
+
+    @Override
+    public byte[] preKeyBundle() {
+        return preKeyBundle;
     }
 
     @Override

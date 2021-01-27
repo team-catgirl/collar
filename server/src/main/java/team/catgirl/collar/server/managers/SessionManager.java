@@ -65,4 +65,8 @@ public final class SessionManager {
         PlayerIdentity playerIdentity = sessionToIdentity.get(session);
         return playerIdentity == null ? null : playerIdentity.player;
     }
+
+    public PlayerIdentity getIdentity(Session session) {
+        return sessionToIdentity.get(session);
+    }
 }

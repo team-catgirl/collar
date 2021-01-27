@@ -6,7 +6,7 @@ import team.catgirl.collar.security.KeyPair.PublicKey;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class PlayerIdentity {
+public final class PlayerIdentity implements Identity {
 
     @JsonProperty("player")
     public final UUID player;
@@ -14,11 +14,24 @@ public final class PlayerIdentity {
     public final PublicKey publicKey;
     @JsonProperty("registrationId")
     public final int registrationId;
+    @JsonProperty("preKeyBundle")
+    public final byte[] preKeyBundle;
 
-    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId) {
+    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId, @JsonProperty("preKeyBundle") byte[] preKeyBundle) {
         this.player = player;
         this.publicKey = publicKey;
         this.registrationId = registrationId;
+        this.preKeyBundle = preKeyBundle;
+    }
+
+    @Override
+    public UUID id() {
+        return player;
+    }
+
+    @Override
+    public byte[] preKeyBundle() {
+        return preKeyBundle;
     }
 
     @Override

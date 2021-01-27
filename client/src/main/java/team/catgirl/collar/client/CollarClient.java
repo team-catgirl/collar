@@ -192,7 +192,7 @@ public final class CollarClient {
             try {
                 // If the client is connected we are speaking signal
                 if (state == ClientState.CONNECTED) {
-                    byte[] bytes = identityStore.createCypher().decrypt(serverIdentity, BaseEncoding.base64().decode(text));
+                    byte[] bytes = identityStore.createCypher().decrypt(client.identity(), BaseEncoding.base64().decode(text));
                     message = mapper.readValue(bytes, ServerMessage.class);
                 } else {
                     // Otherwise we are communicating in plain text

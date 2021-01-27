@@ -6,6 +6,7 @@ import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.server.managers.GroupManager;
 import team.catgirl.collar.server.managers.SessionManager;
 import team.catgirl.collar.server.security.ServerIdentityStore;
@@ -113,8 +114,9 @@ public class Collar {
     }
 
     private ClientMessage decodeMessage(Session session, String value) throws IOException {
-        if (sessions.isIdentified(session) || BaseEncoding.base64().canDecode(value)) {
-            byte[] decrypt = identityStore.createCypher().decrypt(identityStore.getIdentity(), BaseEncoding.base64().decode(value));
+        if (BaseEncoding.base64().canDecode(value)) {
+            PlayerIdentity playerIdentity = sessions.getIdentity(session);
+            byte[] decrypt = identityStore.createCypher().decrypt(playerIdentity, BaseEncoding.base64().decode(value));
             return mapper.readValue(decrypt, ClientMessage.class);
         } else {
             return mapper.readValue(value, ClientMessage.class);

@@ -4,22 +4,28 @@ import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.state.PreKeyBundle;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
+import org.whispersystems.libsignal.util.Medium;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.signal.PreKeyBundles;
 import team.catgirl.collar.security.signal.SignalCypher;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -38,10 +44,33 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     @Override
     public PlayerIdentity currentIdentity() {
         try {
-            IdentityKeyPair identityKeyPair = new IdentityKeyPair(state.identityKeyPair);
-            return new PlayerIdentity(player, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()), state.registrationId);
-        } catch (InvalidKeyException e) {
-            throw new IllegalStateException("keypair was invalid", e);
+            IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
+            ECKeyPair signedPreKey = Curve.generateKeyPair();
+            int signedPreKeyId = new Random().nextInt(Medium.MAX_VALUE);
+            ECKeyPair unsignedPreKey = Curve.generateKeyPair();
+            int unsighnedPreKeyId = new Random().nextInt(Medium.MAX_VALUE);
+            byte[] signature;
+            try {
+                signature = Curve.calculateSignature(store.getIdentityKeyPair().getPrivateKey(), signedPreKey.getPublicKey().serialize());
+            } catch (InvalidKeyException e) {
+                throw new IllegalStateException("invalid key");
+            }
+            PreKeyBundle preKeyBundle = new PreKeyBundle(
+                    store.getLocalRegistrationId(),
+                    1,
+                    unsighnedPreKeyId,
+                    unsignedPreKey.getPublicKey(),
+                    signedPreKeyId,
+                    signedPreKey.getPublicKey(),
+                    signature,
+                    store.getIdentityKeyPair().getPublicKey());
+
+            store.storeSignedPreKey(signedPreKeyId, new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), signedPreKey, signature));
+            store.storePreKey(unsighnedPreKeyId, new PreKeyRecord(unsighnedPreKeyId, unsignedPreKey));
+            byte[] bytes = PreKeyBundles.serialize(preKeyBundle);
+            return new PlayerIdentity(player, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()), state.registrationId, bytes);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
         }
     }
 

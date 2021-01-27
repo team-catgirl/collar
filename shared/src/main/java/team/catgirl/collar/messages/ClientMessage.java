@@ -1,15 +1,21 @@
 package team.catgirl.collar.messages;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.whispersystems.libsignal.state.PreKeyRecord;
+import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.models.Position;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public final class ClientMessage {
-
+    @JsonProperty("identity")
+    public final PlayerIdentity identity;
+    @JsonProperty("createIdentityRequest")
+    public final CreateIdentityRequest createIdentityRequest;
     @JsonProperty("identify")
     public final IdentifyRequest identifyRequest;
     @JsonProperty("createGroupRequest")
@@ -26,13 +32,16 @@ public final class ClientMessage {
     public final GroupInviteRequest groupInviteRequest;
 
     public ClientMessage(
-            @JsonProperty("identify") IdentifyRequest identifyRequest,
+            @JsonProperty("identity") PlayerIdentity identity,
+            @JsonProperty("createIdentityRequest") CreateIdentityRequest createIdentityRequest, @JsonProperty("identify") IdentifyRequest identifyRequest,
             @JsonProperty("createGroupRequest") CreateGroupRequest createGroupRequest,
             @JsonProperty("groupMembershipRequest") AcceptGroupMembershipRequest acceptGroupMembershipRequest,
             @JsonProperty("leaveGroupRequest") LeaveGroupRequest leaveGroupRequest,
             @JsonProperty("updatePlayerStateRequest") UpdatePlayerStateRequest updatePlayerStateRequest,
             @JsonProperty("ping") Ping ping,
             @JsonProperty("groupInviteRequest") GroupInviteRequest groupInviteRequest) {
+        this.identity = identity;
+        this.createIdentityRequest = createIdentityRequest;
         this.identifyRequest = identifyRequest;
         this.createGroupRequest = createGroupRequest;
         this.acceptGroupMembershipRequest = acceptGroupMembershipRequest;
@@ -42,45 +51,44 @@ public final class ClientMessage {
         this.groupInviteRequest = groupInviteRequest;
     }
 
-    public static final class Ping {}
+    public static final class Ping {
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, null, null, null, null, null, this, null);
+        }
+    }
 
     public static final class IdentifyRequest {
-        public final PlayerIdentity playerIdentity;
-        public final String token;
+        public IdentifyRequest() {}
 
-        public IdentifyRequest(@JsonProperty("identity") PlayerIdentity playerIdentity, @JsonProperty("token") String token) {
-            this.playerIdentity = playerIdentity;
-            this.token = token;
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, this, null, null, null, null, null, null);
         }
     }
 
     public static final class CreateGroupRequest {
-        @JsonProperty("me")
-        public final PlayerIdentity me;
         @JsonProperty("players")
         public final List<UUID> players;
         @JsonProperty("position")
         public Position position;
 
-        public CreateGroupRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("players") List<UUID> players, @JsonProperty("position") Position position) {
-            this.me = me;
+        public CreateGroupRequest(@JsonProperty("players") List<UUID> players, @JsonProperty("position") Position position) {
             this.players = players;
+        }
+
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, null, this, null, null, null, null, null);
         }
     }
 
     public static final class AcceptGroupMembershipRequest {
-        @JsonProperty("me")
-        public final PlayerIdentity me;
         @JsonProperty("groupId")
         public final String groupId;
         @JsonProperty("state")
         public final MembershipState state;
 
         public AcceptGroupMembershipRequest(
-                @JsonProperty("me") PlayerIdentity me,
                 @JsonProperty("groupId") String groupId,
                 @JsonProperty("state") MembershipState state) {
-            this.me = me;
             this.groupId = groupId;
             this.state = state;
         }
@@ -89,44 +97,71 @@ public final class ClientMessage {
             ACCEPT,
             DECLINE
         }
+
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, null, null, this, null, null, null, null);
+        }
     }
 
     public static final class LeaveGroupRequest {
-        @JsonProperty("me")
-        public final PlayerIdentity me;
         @JsonProperty("groupId")
         public final String groupId;
 
-        public LeaveGroupRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("groupId") String groupId) {
-            this.me = me;
+        public LeaveGroupRequest(@JsonProperty("groupId") String groupId) {
             this.groupId = groupId;
+        }
+
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, null, null, null, this, null, null, null);
         }
     }
 
     public static final class UpdatePlayerStateRequest {
-        @JsonProperty("me")
-        public final PlayerIdentity me;
         @JsonProperty("position")
         public final Position position;
 
-        public UpdatePlayerStateRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("position") Position position) {
-            this.me = me;
+        public UpdatePlayerStateRequest(@JsonProperty("position") Position position) {
             this.position = position;
+        }
+
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, null, null, null, null, this, null, null);
         }
     }
 
     public static final class GroupInviteRequest {
-        @JsonProperty("me")
-        public final PlayerIdentity me;
         @JsonProperty("groupId")
         public final String groupId;
         @JsonProperty("players")
         public final List<UUID> players;
 
-        public GroupInviteRequest(@JsonProperty("me") PlayerIdentity me, @JsonProperty("groupId") String groupId, @JsonProperty("players") List<UUID> players) {
-            this.me = me;
+        public GroupInviteRequest(@JsonProperty("groupId") String groupId, @JsonProperty("players") List<UUID> players) {
             this.groupId = groupId;
             this.players = players;
+        }
+
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, null, null, null, null, null, null, null, this);
+        }
+    }
+
+    public static class CreateIdentityRequest {
+        @JsonProperty("signedPreKey")
+        public final byte[] signedPreKey;
+        @JsonProperty("preKeys")
+        public final List<byte[]> preKeys;
+
+        public CreateIdentityRequest(@JsonProperty("signedPreKey") byte[] signedPreKey, @JsonProperty("preKeys") List<byte[]> preKeys) {
+            this.signedPreKey = signedPreKey;
+            this.preKeys = preKeys;
+        }
+
+        public static CreateIdentityRequest from(SignedPreKeyRecord signedPreKeyRecord, List<PreKeyRecord> preKeyRecords) {
+            return new CreateIdentityRequest(signedPreKeyRecord.serialize(), preKeyRecords.stream().map(PreKeyRecord::serialize).collect(Collectors.toList()));
+        }
+
+        public ClientMessage clientMessage(PlayerIdentity identity) {
+            return new ClientMessage(identity, this, null, null, null, null, null, null, null);
         }
     }
 }

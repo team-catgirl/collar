@@ -3,25 +3,19 @@ package team.catgirl.collar.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfigs;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import team.catgirl.collar.client.CollarClientException.CollarConnectionException;
-import team.catgirl.collar.client.CollarClientException.CollarStateException;
 import team.catgirl.collar.client.security.PlayerIdentityStore;
-import team.catgirl.collar.client.security.ServerIdentityStore;
-import team.catgirl.collar.client.security.TokenGenerator;
+import team.catgirl.collar.client.security.signal.SignalPlayerIdentityStore;
+import team.catgirl.collar.messages.ServerMessage.*;
 import team.catgirl.collar.models.*;
 import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.keys.KeyPairGeneratorException;
-import team.catgirl.collar.security.messages.MessageCrypter;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -43,19 +37,16 @@ public final class CollarClient {
     private final ObjectMapper mapper = Utils.createObjectMapper();
     private final String baseUrl;
     private final OkHttpClient http;
-    private final PlayerIdentityStore playerIdentityStore;
-    private final ServerIdentityStore serverIdentityStore;
-    private final MessageCrypter messageCrypter;
-    private PlayerIdentity me;
+    private final HomeDirectory homeDirectory;
+    private PlayerIdentityStore identityStore;
     private WebSocket webSocket;
     private DelegatingListener listener;
-    private boolean connected;
+    private ClientState state = ClientState.DISCONNECTED;
     private ScheduledExecutorService keepAliveScheduler;
+    private CreateIdentityRequest createIdentityRequest;
 
-    public CollarClient(String baseUrl, PlayerIdentityStore playerIdentityStore, ServerIdentityStore server) {
-        this.playerIdentityStore = playerIdentityStore;
-        this.serverIdentityStore = server;
-        this.messageCrypter = new MessageCrypter(null);
+    public CollarClient(String baseUrl, HomeDirectory homeDirectory) {
+        this.homeDirectory = homeDirectory;
         if (Strings.isNullOrEmpty(baseUrl)) {
             throw new IllegalArgumentException("baseUrl was not set");
         }
@@ -67,60 +58,41 @@ public final class CollarClient {
         this.http = new OkHttpClient();
     }
 
-    public void connect(UUID player, CollarListener listener) {
-        if (this.connected) {
-            throw new IllegalStateException("Is already connected");
+    public void connect(UUID player, CollarListener listener) throws IOException {
+        // Do not run if we are already connected
+        if (state != ClientState.DISCONNECTED) {
+            throw new IllegalStateException("Client is in state " + state);
         }
-        this.listener = new DelegatingListener(listener); // TODO: wrap in delegating listener that catches and logs exceptions
-        try {
-            this.me = playerIdentityStore.createIdentity(player);
-        } catch (IOException|KeyPairGeneratorException e) {
-            throw new CollarConnectionException("Problem creating identity", e);
-        }
+        state = ClientState.CONNECTING;
+        // Setup the identity store for this player
+        this.identityStore = SignalPlayerIdentityStore.from(player, homeDirectory, (signedPreKeyRecord, preKeyRecords) -> {
+            createIdentityRequest = CreateIdentityRequest.from(signedPreKeyRecord, preKeyRecords);
+        });
+        this.listener = new DelegatingListener(listener);
         Request request = new Request.Builder().url(baseUrl + "listen").build();
         webSocket = http.newWebSocket(request, new WebSocketListenerImpl(this));
         http.dispatcher().executorService().shutdown();
-        keepAliveScheduler = Executors.newScheduledThreadPool(1);
-        keepAliveScheduler.scheduleAtFixedRate((Runnable) () -> {
-            try {
-                send(new ClientMessage(null, null, null, null, null, new Ping(), null));
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Couldn't send ping");
-            }
-        }, 0, 10, TimeUnit.SECONDS);
+        startKeepAlive();
     }
 
     public void disconnect() {
-        if (!this.connected) {
-            throw new CollarStateException("Is already disconnected");
+        if (state == ClientState.DISCONNECTED) {
+            throw new IllegalStateException("Client is in state " + state);
         }
-        webSocket.close(1000, "Disconnected");
+        webSocket.close(1000, "Collar was disconnected by the client");
         CollarListener listener = this.listener;
         this.listener = null;
-        this.me = null;
-        this.connected = false;
+        this.identityStore = null;
+        stopKeepAlive();
+        this.state = ClientState.DISCONNECTED;
         listener.onDisconnect(this);
-        this.keepAliveScheduler.shutdown();
-        this.keepAliveScheduler = null;
     }
 
-    public void reconnect() {
-        try {
-            Thread.sleep(TimeUnit.SECONDS.toMillis(30));
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        PlayerIdentity oldPlayerIdentity = me;
-        CollarListener oldListener = listener;
-        disconnect();
-        connect(oldPlayerIdentity.player, oldListener);
+    public ClientState getState() {
+        return state;
     }
 
-    public boolean isConnected() {
-        return connected;
-    }
-
-    public boolean isServerUp() {
+    public boolean isServerAvailable() {
         Request request = new Request.Builder()
                 .url(baseUrl)
                 .build();
@@ -131,34 +103,53 @@ public final class CollarClient {
         }
     }
 
-    public PlayerIdentity getMe() {
-        return me;
+    /**
+     * @return the players identity or null if not identified
+     */
+    public PlayerIdentity identity() {
+        return identityStore != null ? identityStore.currentIdentity() : null;
     }
 
     public void createGroup(List<UUID> players, Position position) throws IOException {
-        CreateGroupRequest req = new CreateGroupRequest(me, players, position);
-        send(new ClientMessage(null, req, null, null, null, null, null));
+        CreateGroupRequest req = new CreateGroupRequest(players, position);
+        send(req.clientMessage(identity()));
     }
 
     public void acceptGroupRequest(String groupId, MembershipState state) throws IOException {
-        send(new ClientMessage(null, null, new AcceptGroupMembershipRequest(me, groupId, state), null, null, null, null));
+        send(new AcceptGroupMembershipRequest(groupId, state).clientMessage(identity()));
     }
 
     public void leaveGroup(Group group) throws IOException {
-        send(new ClientMessage(null, null, null, new LeaveGroupRequest(me, group.id), null, null, null));
+        send(new LeaveGroupRequest(group.id).clientMessage(identity()));
     }
 
     public void updatePosition(Position position) throws IOException {
-        send(new ClientMessage(null, null, null, null, new UpdatePlayerStateRequest(me, position), null, null));
+        send(new UpdatePlayerStateRequest(position).clientMessage(identity()));
     }
 
     public void invite(Group group, List<UUID> players) throws IOException {
-        send(new ClientMessage(null, null, null, null, null, null, new GroupInviteRequest(me, group.id, players)));
+        send(new GroupInviteRequest(group.id, players).clientMessage(identity()));
     }
 
     private void send(ClientMessage o) throws IOException {
         String message = mapper.writeValueAsString(o);
         webSocket.send(message);
+    }
+
+    private void startKeepAlive() {
+        keepAliveScheduler = Executors.newScheduledThreadPool(1);
+        keepAliveScheduler.scheduleAtFixedRate(() -> {
+            try {
+                send(new Ping().clientMessage(identity()));
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, "Couldn't send ping");
+            }
+        }, 0, 10, TimeUnit.SECONDS);
+    }
+
+    private void stopKeepAlive() {
+        keepAliveScheduler.shutdown();
+        keepAliveScheduler = null;
     }
 
     class WebSocketListenerImpl extends WebSocketListener {
@@ -173,12 +164,18 @@ public final class CollarClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.info("onOpen is called");
             super.onOpen(webSocket, response);
-            IdentifyRequest req = new IdentifyRequest(me, messageCrypter.encryptString(client.me, client.serverIdentity, TokenGenerator.stringToken()));
-            ClientMessage message = new ClientMessage(req, null, null, null, null, null, null);
+            ClientMessage message;
+            if (createIdentityRequest == null) {
+                // This is an exiting client installation
+                message = new IdentifyRequest().clientMessage(identity());
+            } else {
+                // This is a brand new client installation
+                message = createIdentityRequest.clientMessage(identity());
+            }
             try {
                 send(message);
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Could not send identity. Closing client", e);
+                LOGGER.log(Level.SEVERE, "Could not send. Closing client", e);
                 disconnect();
             }
         }
@@ -194,10 +191,14 @@ public final class CollarClient {
                 return;
             }
             if (message.serverConnectedResponse != null) {
-                listener.onConnected(client, message.serverConnectedResponse.serverIdentity);
+                listener.onConnected(client, message.identity);
             }
-            if (message.identificationSuccessful != null) {
-                listener.onSessionCreated(client);
+            if (message.identificationResponse != null) {
+                if (identityStore.isTrustedIdentity(message.identity)) {
+                    listener.onSessionCreated(client);
+                } else {
+                    identityStore.trustIdentity(message.identity);
+                }
             }
             if (message.groupMembershipRequest != null) {
                 listener.onGroupMembershipRequested(client, message.groupMembershipRequest);
@@ -225,7 +226,9 @@ public final class CollarClient {
         @Override
         public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
             LOGGER.log(Level.INFO, "Connection closing...");
-            disconnect();
+            if (state != ClientState.DISCONNECTED) {
+                disconnect();
+            }
         }
 
         @Override
@@ -249,14 +252,13 @@ public final class CollarClient {
 
         @Override
         public void onConnected(CollarClient client, ServerIdentity reportedServerIdentity) {
-            this.serverIdentity = serverIdentity;
             listener.onConnected(client, reportedServerIdentity);
         }
 
         @Override
         public void onSessionCreated(CollarClient client) {
             listener.onSessionCreated(client);
-            connected = true;
+            state = ClientState.CONNECTED;
         }
 
         @Override
@@ -265,27 +267,27 @@ public final class CollarClient {
         }
 
         @Override
-        public void onGroupCreated(CollarClient client, ServerMessage.CreateGroupResponse resp) {
+        public void onGroupCreated(CollarClient client, CreateGroupResponse resp) {
             listener.onGroupCreated(client, resp);
         }
 
         @Override
-        public void onGroupMembershipRequested(CollarClient client, ServerMessage.GroupMembershipRequest resp) {
+        public void onGroupMembershipRequested(CollarClient client, GroupMembershipRequest resp) {
             listener.onGroupMembershipRequested(client, resp);
         }
 
         @Override
-        public void onGroupJoined(CollarClient client, ServerMessage.AcceptGroupMembershipResponse acceptGroupMembershipResponse) {
+        public void onGroupJoined(CollarClient client, AcceptGroupMembershipResponse acceptGroupMembershipResponse) {
             listener.onGroupJoined(client, acceptGroupMembershipResponse);
         }
 
         @Override
-        public void onGroupLeft(CollarClient client, ServerMessage.LeaveGroupResponse resp) {
+        public void onGroupLeft(CollarClient client, LeaveGroupResponse resp) {
             listener.onGroupLeft(client, resp);
         }
 
         @Override
-        public void onGroupUpdated(CollarClient client, ServerMessage.UpdatePlayerStateResponse updatePlayerStateResponse) {
+        public void onGroupUpdated(CollarClient client, UpdatePlayerStateResponse updatePlayerStateResponse) {
             listener.onGroupUpdated(client, updatePlayerStateResponse);
         }
 
@@ -295,8 +297,14 @@ public final class CollarClient {
         }
 
         @Override
-        public void onGroupInvitesSent(CollarClient client, ServerMessage.GroupInviteResponse resp) {
+        public void onGroupInvitesSent(CollarClient client, GroupInviteResponse resp) {
             listener.onGroupInvitesSent(client, resp);
         }
+    }
+
+    public enum ClientState {
+        DISCONNECTED,
+        CONNECTING,
+        CONNECTED
     }
 }

@@ -1,17 +1,19 @@
 package team.catgirl.collar.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoDatabase;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.security.keys.KeyPairGeneratorException;
+import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.server.common.ServerVersion;
-import team.catgirl.collar.server.security.MemoryServerIdentityProvider;
-import team.catgirl.collar.server.security.ServerIdentityProvider;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.security.ServerIdentityStore;
+import team.catgirl.collar.server.security.signal.SignalServerIdentityStore;
 import team.catgirl.collar.utils.Utils;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage.CreateGroupResponse;
-import team.catgirl.collar.messages.ServerMessage.IdentificationSuccessful;
+import team.catgirl.collar.messages.ServerMessage.IdentificationResponse;
 import team.catgirl.collar.messages.ServerMessage.LeaveGroupResponse;
 import team.catgirl.collar.messages.ServerMessage.UpdatePlayerStateResponse;
 import team.catgirl.collar.server.http.HttpException;
@@ -39,7 +41,7 @@ public class Main {
         startServer();
     }
 
-    public static void startServer() throws IOException, NoSuchAlgorithmException, KeyPairGeneratorException {
+    public static void startServer() throws IOException, NoSuchAlgorithmException {
         String portValue = System.getenv("PORT");
         if (portValue != null) {
             port(Integer.parseInt(portValue));
@@ -51,10 +53,13 @@ public class Main {
         ServerVersion version = ServerVersion.version();
 
         // Services
+        MongoDatabase db = Mongo.database();
+
         ObjectMapper mapper = Utils.createObjectMapper();
         SessionManager sessions = new SessionManager(mapper);
-        GroupManager groups = new GroupManager(sessions);
-        ServerIdentityProvider serverIdentityProvider = new MemoryServerIdentityProvider();
+        ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
+        ServerIdentity identity = serverIdentityStore.getIdentity();
+        GroupManager groups = new GroupManager(identity, sessions);
 
         // Always serialize objects returned as JSON
         defaultResponseTransformer(mapper::writeValueAsString);
@@ -65,14 +70,14 @@ public class Main {
 
         // Setup WebSockets
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
-        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups, serverIdentityProvider));
+        webSocket("/api/1/listen", new WebSocketHandler(mapper, sessions, groups, serverIdentityStore));
 
         // Version routes
         path("/api/1", () -> {
             // Used to test if API is available
             get("/", (request, response) -> new ServerStatusResponse("OK"));
             // The servers current identity
-            get("/identity", (request, response) -> serverIdentityProvider.getIdentity());
+            get("/identity", (request, response) -> identity);
         });
 
         // Server routes
@@ -97,19 +102,19 @@ public class Main {
         private final ObjectMapper mapper;
         private final SessionManager manager;
         private final GroupManager groups;
-        private final ServerIdentityProvider serverIdentityProvider;
+        private final ServerIdentityStore identityStore;
 
-        public WebSocketHandler(ObjectMapper mapper, SessionManager manager, GroupManager groups, ServerIdentityProvider serverIdentityProvider) {
+        public WebSocketHandler(ObjectMapper mapper, SessionManager manager, GroupManager groups, ServerIdentityStore identityStore) {
             this.mapper = mapper;
             this.manager = manager;
             this.groups = groups;
-            this.serverIdentityProvider = serverIdentityProvider;
+            this.identityStore = identityStore;
         }
 
         @OnWebSocketConnect
         public void connected(Session session) {
             LOGGER.log(Level.INFO, "New session started");
-            send(session, new ServerConnectedResponse(serverIdentityProvider.getIdentity()).serverMessage());
+            send(session, new ServerConnectedResponse().serverMessage(identityStore.getIdentity()));
         }
 
         @OnWebSocketClose
@@ -130,40 +135,57 @@ public class Main {
         @OnWebSocketMessage
         public void message(Session session, String value) throws IOException {
             ClientMessage message = mapper.readValue(value, ClientMessage.class);
-            if (message.identifyRequest != null) {
-                if (message.identifyRequest.playerIdentity == null) {
-                    manager.stopSession(session, "No valid identity", null);
+            if (message.createIdentityRequest != null) {
+                IdentificationResponse.Status status;
+                if (identityStore.isTrustedIdentity(message.identity)) {
+                    status = IdentificationResponse.Status.FAILURE;
                 } else {
-                    LOGGER.log(Level.INFO, "Identifying player " + message.identifyRequest.playerIdentity.player);
-                    manager.identify(session, message.identifyRequest);
-                    send(session, new IdentificationSuccessful(serverIdentityProvider.getIdentity()).serverMessage());
+                    identityStore.createIdentity(message.identity, message.createIdentityRequest);
+                    status = IdentificationResponse.Status.SUCCESSS;
+                }
+                send(session, new IdentificationResponse(status).serverMessage(identityStore.getIdentity()));
+                if (status == IdentificationResponse.Status.FAILURE) {
+                    manager.stopSession(session, "Identity is already trusted", null);
+                }
+            }
+            if (message.identifyRequest != null) {
+                IdentificationResponse.Status status;
+                if (identityStore.isTrustedIdentity(message.identity)) {
+                    status = IdentificationResponse.Status.SUCCESSS;
+                    manager.identify(session, message.identity);
+                    send(session, new IdentificationResponse(status).serverMessage(identityStore.getIdentity()));
+                } else {
+                    status = IdentificationResponse.Status.FAILURE;
+                }
+                if (status == IdentificationResponse.Status.FAILURE) {
+                    manager.stopSession(session, "Identity is already trusted", null);
                 }
             }
             if (message.createGroupRequest != null) {
-                CreateGroupResponse resp = groups.createGroup(message.createGroupRequest);
-                send(session, resp.serverMessage());
-                groups.sendMembershipRequests(message.createGroupRequest.me.player, resp.group, null);
+                CreateGroupResponse resp = groups.createGroup(message.identity, message.createGroupRequest);
+                send(session, resp.serverMessage(identityStore.getIdentity()));
+                groups.sendMembershipRequests(message.identity, resp.group, null);
             }
             if (message.acceptGroupMembershipRequest != null) {
-                AcceptGroupMembershipResponse resp = groups.acceptMembership(message.acceptGroupMembershipRequest);
-                send(session, resp.serverMessage());
+                AcceptGroupMembershipResponse resp = groups.acceptMembership(message.identity, message.acceptGroupMembershipRequest);
+                send(session, resp.serverMessage(identityStore.getIdentity()));
             }
             if (message.leaveGroupRequest != null) {
-                LeaveGroupResponse resp = groups.leaveGroup(message.leaveGroupRequest);
-                send(session, resp.serverMessage());
+                LeaveGroupResponse resp = groups.leaveGroup(message.identity, message.leaveGroupRequest);
+                send(session, resp.serverMessage(identityStore.getIdentity()));
                 groups.updateGroup(message.leaveGroupRequest.groupId);
             }
             if (message.updatePlayerStateRequest != null) {
-                UpdatePlayerStateResponse resp = groups.updatePosition(message.updatePlayerStateRequest);
-                send(session, resp.serverMessage());
+                UpdatePlayerStateResponse resp = groups.updatePosition(message.identity, message.updatePlayerStateRequest);
+                send(session, resp.serverMessage(identityStore.getIdentity()));
             }
             if (message.groupInviteRequest != null) {
-                GroupInviteResponse resp = groups.invite(message.groupInviteRequest);
-                send(session, resp.serverMessage());
+                GroupInviteResponse resp = groups.invite(message.identity, message.groupInviteRequest);
+                send(session, resp.serverMessage(identityStore.getIdentity()));
             }
             if (message.ping != null) {
                 LOGGER.log(Level.FINE, "Ping received");
-                send(session, new Pong().serverMessage());
+                send(session, new Pong().serverMessage(identityStore.getIdentity()));
             }
         }
 

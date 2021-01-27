@@ -1,5 +1,6 @@
-package team.catgirl.collar.client.security.signal;
+package team.catgirl.collar.server.security.signal;
 
+import com.mongodb.client.MongoDatabase;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyIdException;
@@ -8,22 +9,29 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
-import team.catgirl.collar.client.HomeDirectory;
 
-import java.io.IOException;
 import java.util.List;
 
-public class ClientSignalProtocolStore implements SignalProtocolStore {
-    private final ClientIdentityKeyStore identityKeyStore;
-    private final ClientPreKeyStore clientPreKeyStore;
-    private final ClientSessionStore clientSessionStore;
-    private final ClientSignedPreKeyStore clientSignedPreKeyStore;
+public class ServerSignalProtocolStore implements SignalProtocolStore {
+    private final ServerIdentityKeyStore identityKeyStore;
+    private final ServerPreKeyStore serverPreKeyStore;
+    private final ServerSessionStore sessionStore;
+    private final ServerSignedPreKeyStore preKeyStore;
 
-    public ClientSignalProtocolStore(ClientIdentityKeyStore identityKeyStore, ClientPreKeyStore clientPreKeyStore, ClientSessionStore clientSessionStore, ClientSignedPreKeyStore clientSignedPreKeyStore) {
+    private ServerSignalProtocolStore(ServerIdentityKeyStore identityKeyStore, ServerPreKeyStore serverPreKeyStore, ServerSessionStore sessionStore, ServerSignedPreKeyStore preKeyStore) {
         this.identityKeyStore = identityKeyStore;
-        this.clientPreKeyStore = clientPreKeyStore;
-        this.clientSessionStore = clientSessionStore;
-        this.clientSignedPreKeyStore = clientSignedPreKeyStore;
+        this.serverPreKeyStore = serverPreKeyStore;
+        this.sessionStore = sessionStore;
+        this.preKeyStore = preKeyStore;
+    }
+
+    public static ServerSignalProtocolStore from(MongoDatabase db) {
+        return new ServerSignalProtocolStore(
+                new ServerIdentityKeyStore(db),
+                new ServerPreKeyStore(db),
+                new ServerSessionStore(db),
+                new ServerSignedPreKeyStore(db)
+        );
     }
 
     @Override
@@ -48,85 +56,76 @@ public class ClientSignalProtocolStore implements SignalProtocolStore {
 
     @Override
     public PreKeyRecord loadPreKey(int preKeyId) throws InvalidKeyIdException {
-        return clientPreKeyStore.loadPreKey(preKeyId);
+        return serverPreKeyStore.loadPreKey(preKeyId);
     }
 
     @Override
     public void storePreKey(int preKeyId, PreKeyRecord record) {
-        clientPreKeyStore.storePreKey(preKeyId, record);
+        serverPreKeyStore.storePreKey(preKeyId, record);
     }
 
     @Override
     public boolean containsPreKey(int preKeyId) {
-        return clientPreKeyStore.containsPreKey(preKeyId);
+        return serverPreKeyStore.containsPreKey(preKeyId);
     }
 
     @Override
     public void removePreKey(int preKeyId) {
-        clientPreKeyStore.removePreKey(preKeyId);
+        serverPreKeyStore.removePreKey(preKeyId);
     }
 
     @Override
     public SessionRecord loadSession(SignalProtocolAddress address) {
-        return clientSessionStore.loadSession(address);
+        return sessionStore.loadSession(address);
     }
 
     @Override
     public List<Integer> getSubDeviceSessions(String name) {
-        return clientSessionStore.getSubDeviceSessions(name);
+        return sessionStore.getSubDeviceSessions(name);
     }
 
     @Override
     public void storeSession(SignalProtocolAddress address, SessionRecord record) {
-        clientSessionStore.storeSession(address, record);
+        sessionStore.storeSession(address, record);
     }
 
     @Override
     public boolean containsSession(SignalProtocolAddress address) {
-        return clientSessionStore.containsSession(address);
+        return sessionStore.containsSession(address);
     }
 
     @Override
     public void deleteSession(SignalProtocolAddress address) {
-        clientSessionStore.deleteSession(address);
+        sessionStore.deleteSession(address);
     }
 
     @Override
     public void deleteAllSessions(String name) {
-        clientSessionStore.deleteAllSessions(name);
+        sessionStore.deleteAllSessions(name);
     }
 
     @Override
     public SignedPreKeyRecord loadSignedPreKey(int signedPreKeyId) throws InvalidKeyIdException {
-        return clientSignedPreKeyStore.loadSignedPreKey(signedPreKeyId);
+        return preKeyStore.loadSignedPreKey(signedPreKeyId);
     }
 
     @Override
     public List<SignedPreKeyRecord> loadSignedPreKeys() {
-        return clientSignedPreKeyStore.loadSignedPreKeys();
+        return preKeyStore.loadSignedPreKeys();
     }
 
     @Override
     public void storeSignedPreKey(int signedPreKeyId, SignedPreKeyRecord record) {
-        clientSignedPreKeyStore.storeSignedPreKey(signedPreKeyId, record);
+        preKeyStore.storeSignedPreKey(signedPreKeyId, record);
     }
 
     @Override
     public boolean containsSignedPreKey(int signedPreKeyId) {
-        return clientSignedPreKeyStore.containsSignedPreKey(signedPreKeyId);
+        return preKeyStore.containsSignedPreKey(signedPreKeyId);
     }
 
     @Override
     public void removeSignedPreKey(int signedPreKeyId) {
-        clientSignedPreKeyStore.removeSignedPreKey(signedPreKeyId);
-    }
-
-    public static ClientSignalProtocolStore from(HomeDirectory home) throws IOException {
-        return new ClientSignalProtocolStore(
-                ClientIdentityKeyStore.from(home),
-                ClientPreKeyStore.from(home),
-                ClientSessionStore.from(home),
-                ClientSignedPreKeyStore.from(home)
-        );
+        preKeyStore.removeSignedPreKey(signedPreKeyId);
     }
 }

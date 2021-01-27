@@ -1,22 +1,24 @@
 package team.catgirl.collar.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.security.keys.KeyPair;
-import team.catgirl.collar.security.keys.KeyPair.PublicKey;
+import team.catgirl.collar.security.KeyPair.PublicKey;
 
 import java.util.Objects;
 import java.util.UUID;
 
-public final class PlayerIdentity implements Identity {
+public final class PlayerIdentity {
 
     @JsonProperty("player")
     public final UUID player;
     @JsonProperty("publicKey")
-    private final PublicKey publicKey;
+    public final PublicKey publicKey;
+    @JsonProperty("sessionId")
+    public final int sessionId;
 
-    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey) {
+    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("sessionId") int sessionId) {
         this.player = player;
         this.publicKey = publicKey;
+        this.sessionId = sessionId;
     }
 
     @Override
@@ -31,10 +33,5 @@ public final class PlayerIdentity implements Identity {
     @Override
     public int hashCode() {
         return Objects.hash(player, publicKey);
-    }
-
-    @Override
-    public String getName() {
-        return player.toString();
     }
 }

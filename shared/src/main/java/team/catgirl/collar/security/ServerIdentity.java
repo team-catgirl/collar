@@ -1,28 +1,21 @@
 package team.catgirl.collar.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.security.keys.KeyPair;
+import team.catgirl.collar.security.KeyPair.PublicKey;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Identifies the server
  */
-public final class ServerIdentity implements Identity {
-    @JsonProperty("server")
-    public final UUID server;
+public final class ServerIdentity {
     @JsonProperty("publicKey")
-    public final KeyPair.PublicKey publicKey;
+    public final PublicKey publicKey;
+    public final int id;
 
-    public ServerIdentity(@JsonProperty("server") UUID server, @JsonProperty("publicKey") KeyPair.PublicKey publicKey) {
-        this.server = server;
+    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("id") int id) {
         this.publicKey = publicKey;
-    }
-
-    @Override
-    public String getName() {
-        return server.toString();
+        this.id = id;
     }
 
     @Override
@@ -30,12 +23,11 @@ public final class ServerIdentity implements Identity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ServerIdentity that = (ServerIdentity) o;
-        return server.equals(that.server) &&
-                publicKey.equals(that.publicKey);
+        return publicKey.equals(that.publicKey);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(server, publicKey);
+        return Objects.hash(publicKey);
     }
 }

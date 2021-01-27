@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.UUID;
 
 public class ServerMessage {
+    @JsonProperty("identity")
+    public final ServerIdentity identity;
     @JsonProperty("serverConnectedResponse")
     public final ServerConnectedResponse serverConnectedResponse;
     @JsonProperty("identificationSuccessful")
-    public final IdentificationSuccessful identificationSuccessful;
+    public final IdentificationResponse identificationResponse;
     @JsonProperty("createGroupResponse")
     public final CreateGroupResponse createGroupResponse;
     @JsonProperty("groupMembershipRequest")
@@ -29,8 +31,9 @@ public class ServerMessage {
     public final GroupInviteResponse groupInviteResponse;
 
     public ServerMessage(
+            @JsonProperty("identity") ServerIdentity identity,
             @JsonProperty("serverConnectedResponse") ServerConnectedResponse serverConnectedResponse,
-            @JsonProperty("identificationSuccessful") IdentificationSuccessful identificationSuccessful,
+            @JsonProperty("identificationSuccessful") IdentificationResponse identificationResponse,
             @JsonProperty("createGroupResponse") CreateGroupResponse createGroupResponse,
             @JsonProperty("groupMembershipRequest") GroupMembershipRequest groupMembershipRequest,
             @JsonProperty("acceptGroupMembershipResponse") AcceptGroupMembershipResponse acceptGroupMembershipResponse,
@@ -38,8 +41,9 @@ public class ServerMessage {
             @JsonProperty("updatePlayerStateResponse") UpdatePlayerStateResponse updatePlayerStateResponse,
             @JsonProperty("pong") Pong pong,
             @JsonProperty("groupInviteResponse") GroupInviteResponse groupInviteResponse) {
+        this.identity = identity;
         this.serverConnectedResponse = serverConnectedResponse;
-        this.identificationSuccessful = identificationSuccessful;
+        this.identificationResponse = identificationResponse;
         this.createGroupResponse = createGroupResponse;
         this.groupMembershipRequest = groupMembershipRequest;
         this.acceptGroupMembershipResponse = acceptGroupMembershipResponse;
@@ -50,31 +54,36 @@ public class ServerMessage {
     }
 
     public static final class ServerConnectedResponse {
-        @JsonProperty("serverIdentity")
-        public final ServerIdentity serverIdentity;
+        public ServerConnectedResponse() {}
 
-        public ServerConnectedResponse(@JsonProperty("serverIdentity") ServerIdentity serverIdentity) {
-            this.serverIdentity = serverIdentity;
-        }
-
-        public ServerMessage serverMessage() {
-            return new ServerMessage(this,null, null, null, null, null, null, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, this,null, null, null, null, null, null, null, null);
         }
     }
 
     public static final class Pong {
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, null, null, this, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, null, null, null, null, null, this, null);
         }
     }
 
-    public static final class IdentificationSuccessful {
-        public IdentificationSuccessful() {}
+    public static final class IdentificationResponse {
+        @JsonProperty("status")
+        public final Status status;
+
+        public IdentificationResponse(@JsonProperty("status") Status status) {
+            this.status = status;
+        }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, this, null, null, null, null, null, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, this, null, null, null, null, null, null, null);
+        }
+
+        public static enum Status {
+            SUCCESSS,
+            FAILURE
         }
     }
 
@@ -93,8 +102,8 @@ public class ServerMessage {
         }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, this, null, null, null, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, null, this, null, null, null, null, null);
         }
     }
 
@@ -107,8 +116,8 @@ public class ServerMessage {
         }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, this, null, null, null, null, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, this, null, null, null, null, null, null);
         }
     }
 
@@ -121,8 +130,8 @@ public class ServerMessage {
         }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, this, null, null, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, null, null, this, null, null, null, null);
         }
     }
 
@@ -135,8 +144,8 @@ public class ServerMessage {
         }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, this, null, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, null, null, null, this, null, null, null);
         }
     }
 
@@ -149,8 +158,8 @@ public class ServerMessage {
         }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, null, this, null, null);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, null, null, null, null, this, null, null);
         }
     }
 
@@ -160,14 +169,14 @@ public class ServerMessage {
         @JsonProperty("players")
         public final List<UUID> players;
 
-        public GroupInviteResponse(@JsonProperty("groupId") String groupId, List<UUID> players) {
+        public GroupInviteResponse(@JsonProperty("groupId") String groupId, @JsonProperty("players")  List<UUID> players) {
             this.groupId = groupId;
             this.players = players;
         }
 
         @JsonIgnore
-        public ServerMessage serverMessage() {
-            return new ServerMessage(null, null, null, null, null, null, null, null, this);
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, null, null, null, null, null, null, null, null, this);
         }
     }
 }

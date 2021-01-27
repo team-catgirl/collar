@@ -1,42 +1,24 @@
 package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.security.PlayerIdentity;
-import team.catgirl.collar.security.keys.KeyPair;
-import team.catgirl.collar.security.keys.KeyPairGeneratorException;
-
-import java.io.IOException;
-import java.util.UUID;
+import team.catgirl.collar.security.ServerIdentity;
 
 public interface PlayerIdentityStore {
     /**
-     * Gets the current {@link KeyPair}
-     * @param player id of player
-     * @return null keypair or null if no key pair exists
-     * @throws IOException on read error
+     * @return the players identity
      */
-    KeyPair keyPair(UUID player) throws IOException;
+    PlayerIdentity currentIdentity();
 
     /**
-     * Create a new {@link KeyPair} for the specified player
-     * @param player
-     * @return keypair for the player
-     * @throws KeyPairGeneratorException on generation error
-     * @throws IOException on create error
+     * Tests if the server identity is trusted
+     * @param identity to test
+     * @return trusted or not
      */
-    KeyPair createKeyPair(UUID player) throws KeyPairGeneratorException, IOException;
+    boolean isTrustedIdentity(ServerIdentity identity);
 
     /**
-     * Create a new identity for the specified player
-     * @param player id
-     * @return a new identity object
-     * @throws IOException on error
-     * @throws KeyPairGeneratorException on generation error
+     * Trust the server identity
+     * @param identity to trust
      */
-    default PlayerIdentity createIdentity(UUID player) throws IOException, KeyPairGeneratorException {
-        KeyPair keyPair = keyPair(player);
-        if (keyPair == null) {
-            keyPair = createKeyPair(player);
-        }
-        return new PlayerIdentity(player, keyPair.publicKey);
-    }
+    void trustIdentity(ServerIdentity identity);
 }

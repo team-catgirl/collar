@@ -31,12 +31,12 @@ public final class SessionManager {
         this.mapper = mapper;
     }
 
-    public void identify(Session session, IdentifyRequest identifyRequest) {
+    public void identify(Session session, PlayerIdentity identity) {
         // TODO: register the identity if we haven't seen it before
         // TODO: otherwise, check that the client is really them by verifying the signature
-        sessionToIdentity.put(session, identifyRequest.playerIdentity);
-        identityToSession.put(identifyRequest.playerIdentity, session);
-        playerToIdentity.put(identifyRequest.playerIdentity.player, identifyRequest.playerIdentity);
+        sessionToIdentity.put(session, identity);
+        identityToSession.put(identity, session);
+        playerToIdentity.put(identity.player, identity);
     }
 
     public void stopSession(Session session, String reason, IOException e) {

@@ -3,11 +3,44 @@ package team.catgirl.collar.security.signal;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.state.PreKeyBundle;
+import org.whispersystems.libsignal.state.PreKeyRecord;
+import org.whispersystems.libsignal.state.SignalProtocolStore;
+import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import org.whispersystems.libsignal.util.Medium;
 
 import java.io.*;
+import java.util.Random;
 
 public class PreKeyBundles {
+
+    public static PreKeyBundle generate(SignalProtocolStore store) {
+        ECKeyPair signedPreKey = Curve.generateKeyPair();
+        int signedPreKeyId = new Random().nextInt(Medium.MAX_VALUE);
+        ECKeyPair unsignedPreKey = Curve.generateKeyPair();
+        int unsighnedPreKeyId = new Random().nextInt(Medium.MAX_VALUE);
+        byte[] signature;
+        try {
+            signature = Curve.calculateSignature(store.getIdentityKeyPair().getPrivateKey(), signedPreKey.getPublicKey().serialize());
+        } catch (InvalidKeyException e) {
+            throw new IllegalStateException("invalid key");
+        }
+        PreKeyBundle preKeyBundle = new PreKeyBundle(
+                store.getLocalRegistrationId(),
+                1,
+                unsighnedPreKeyId,
+                unsignedPreKey.getPublicKey(),
+                signedPreKeyId,
+                signedPreKey.getPublicKey(),
+                signature,
+                store.getIdentityKeyPair().getPublicKey());
+
+        store.storeSignedPreKey(signedPreKeyId, new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), signedPreKey, signature));
+        store.storePreKey(unsighnedPreKeyId, new PreKeyRecord(unsighnedPreKeyId, unsignedPreKey));
+        return preKeyBundle;
+    }
+
     public static byte[] serialize(PreKeyBundle bundle) throws IOException {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             try (ObjectOutputStream os = new ObjectOutputStream(bos)) {
@@ -57,7 +90,7 @@ public class PreKeyBundles {
         }
     }
 
-    public static byte[] readBytes(ObjectInputStream is) throws IOException {
+    private static byte[] readBytes(ObjectInputStream is) throws IOException {
         int length = is.read();
         byte[] bytes = new byte[length];
         for (int i = 0; i < length; i++) {

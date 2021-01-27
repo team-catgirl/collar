@@ -5,9 +5,6 @@ import org.whispersystems.libsignal.protocol.PreKeySignalMessage;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
-import team.catgirl.collar.security.ServerIdentity;
-
-import java.io.IOException;
 
 public class SignalCypher implements Cypher {
 
@@ -19,24 +16,12 @@ public class SignalCypher implements Cypher {
 
     @Override
     public byte[] crypt(Identity identity, byte[] bytes) {
-        SessionBuilder sessionBuilder = new SessionBuilder(store, signalProtocolAddressFrom(identity));
-        try {
-            sessionBuilder.process(PreKeyBundles.deserialize(identity.preKeyBundle()));
-        } catch (InvalidKeyException | UntrustedIdentityException | IOException e) {
-            throw new IllegalStateException(e);
-        }
         SessionCipher sessionCipher = new SessionCipher(store, signalProtocolAddressFrom(identity));
         return sessionCipher.encrypt(bytes).serialize();
     }
 
     @Override
     public byte[] decrypt(Identity identity, byte[] bytes) {
-        SessionBuilder sessionBuilder = new SessionBuilder(store, signalProtocolAddressFrom(identity));
-        try {
-            sessionBuilder.process(PreKeyBundles.deserialize(identity.preKeyBundle()));
-        } catch (InvalidKeyException | UntrustedIdentityException | IOException e) {
-            throw new IllegalStateException(e);
-        }
         SessionCipher sessionCipher = new SessionCipher(store, signalProtocolAddressFrom(identity));
         try {
             return sessionCipher.decrypt(new PreKeySignalMessage(bytes));

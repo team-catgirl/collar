@@ -14,24 +14,16 @@ public final class PlayerIdentity implements Identity {
     public final PublicKey publicKey;
     @JsonProperty("registrationId")
     public final int registrationId;
-    @JsonProperty("preKeyBundle")
-    public final byte[] preKeyBundle;
 
-    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId, @JsonProperty("preKeyBundle") byte[] preKeyBundle) {
+    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId) {
         this.player = player;
         this.publicKey = publicKey;
         this.registrationId = registrationId;
-        this.preKeyBundle = preKeyBundle;
     }
 
     @Override
     public UUID id() {
         return player;
-    }
-
-    @Override
-    public byte[] preKeyBundle() {
-        return preKeyBundle;
     }
 
     @Override

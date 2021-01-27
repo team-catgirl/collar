@@ -31,8 +31,6 @@ public final class SessionManager {
     }
 
     public void identify(Session session, PlayerIdentity identity) {
-        // TODO: register the identity if we haven't seen it before
-        // TODO: otherwise, check that the client is really them by verifying the signature
         sessionToIdentity.put(session, identity);
         identityToSession.put(identity, session);
         playerToIdentity.put(identity.player, identity);
@@ -59,11 +57,6 @@ public final class SessionManager {
     public Session getSession(UUID player) {
         PlayerIdentity playerIdentity = playerToIdentity.get(player);
         return playerIdentity == null ? null : identityToSession.get(playerIdentity);
-    }
-
-    public UUID getPlayer(Session session) {
-        PlayerIdentity playerIdentity = sessionToIdentity.get(session);
-        return playerIdentity == null ? null : playerIdentity.player;
     }
 
     public PlayerIdentity getIdentity(Session session) {

@@ -1,15 +1,15 @@
 package team.catgirl.collar.messages;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.whispersystems.libsignal.state.PreKeyRecord;
-import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import org.whispersystems.libsignal.state.PreKeyBundle;
 import team.catgirl.collar.models.Group.MembershipState;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.models.Position;
+import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.security.signal.PreKeyBundles;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public final class ClientMessage {
     @JsonProperty("identity")
@@ -27,7 +27,7 @@ public final class ClientMessage {
     @JsonProperty("updatePlayerStateRequest")
     public final UpdatePlayerStateRequest updatePlayerStateRequest;
     @JsonProperty("ping")
-    public final Ping ping;
+    public final Ping pingRequest;
     @JsonProperty("groupInviteRequest")
     public final GroupInviteRequest groupInviteRequest;
 
@@ -38,7 +38,7 @@ public final class ClientMessage {
             @JsonProperty("groupMembershipRequest") AcceptGroupMembershipRequest acceptGroupMembershipRequest,
             @JsonProperty("leaveGroupRequest") LeaveGroupRequest leaveGroupRequest,
             @JsonProperty("updatePlayerStateRequest") UpdatePlayerStateRequest updatePlayerStateRequest,
-            @JsonProperty("ping") Ping ping,
+            @JsonProperty("ping") Ping pingRequest,
             @JsonProperty("groupInviteRequest") GroupInviteRequest groupInviteRequest) {
         this.identity = identity;
         this.createIdentityRequest = createIdentityRequest;
@@ -47,7 +47,7 @@ public final class ClientMessage {
         this.acceptGroupMembershipRequest = acceptGroupMembershipRequest;
         this.leaveGroupRequest = leaveGroupRequest;
         this.updatePlayerStateRequest = updatePlayerStateRequest;
-        this.ping = ping;
+        this.pingRequest = pingRequest;
         this.groupInviteRequest = groupInviteRequest;
     }
 
@@ -146,18 +146,19 @@ public final class ClientMessage {
     }
 
     public static class CreateIdentityRequest {
-        @JsonProperty("signedPreKey")
-        public final byte[] signedPreKey;
-        @JsonProperty("preKeys")
-        public final List<byte[]> preKeys;
+        @JsonProperty("signedPreKeyBundle")
+        public byte[] signedPreKeyBundle;
 
-        public CreateIdentityRequest(@JsonProperty("signedPreKey") byte[] signedPreKey, @JsonProperty("preKeys") List<byte[]> preKeys) {
-            this.signedPreKey = signedPreKey;
-            this.preKeys = preKeys;
+        public CreateIdentityRequest(@JsonProperty("signedPreKeyBundle") byte[] signedPreKeyBundle) {
+            this.signedPreKeyBundle = signedPreKeyBundle;
         }
 
-        public static CreateIdentityRequest from(SignedPreKeyRecord signedPreKeyRecord, List<PreKeyRecord> preKeyRecords) {
-            return new CreateIdentityRequest(signedPreKeyRecord.serialize(), preKeyRecords.stream().map(PreKeyRecord::serialize).collect(Collectors.toList()));
+        public static CreateIdentityRequest from(PreKeyBundle bundle) {
+            try {
+                return new CreateIdentityRequest(PreKeyBundles.serialize(bundle));
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         public ClientMessage clientMessage(PlayerIdentity identity) {

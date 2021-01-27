@@ -26,6 +26,11 @@ public class AuthorizationExample {
             }
 
             @Override
+            public void onIdentityCreated(CollarClient client, ServerMessage.CreateIdentityResponse resp) {
+//                client.identify()
+            }
+
+            @Override
             public void onSessionCreated(CollarClient client) {
                 System.out.println("onSessionCreated");
                 try {

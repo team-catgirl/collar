@@ -2,15 +2,20 @@ package team.catgirl.collar.messages;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.whispersystems.libsignal.state.PreKeyBundle;
 import team.catgirl.collar.models.Group;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.signal.PreKeyBundles;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
 public class ServerMessage {
     @JsonProperty("identity")
     public final ServerIdentity identity;
+    @JsonProperty("createIdentityResponse")
+    public final CreateIdentityResponse createIdentityResponse;
     @JsonProperty("serverConnectedResponse")
     public final ServerConnectedResponse serverConnectedResponse;
     @JsonProperty("identificationSuccessful")
@@ -25,13 +30,14 @@ public class ServerMessage {
     public final LeaveGroupResponse leaveGroupResponse;
     @JsonProperty("updatePlayerStateResponse")
     public final UpdatePlayerStateResponse updatePlayerStateResponse;
-    @JsonProperty("pong")
-    public final Pong pong;
+    @JsonProperty("pongResponse")
+    public final PongResponse pongResponse;
     @JsonProperty("groupInviteResponse")
     public final GroupInviteResponse groupInviteResponse;
 
     public ServerMessage(
             @JsonProperty("identity") ServerIdentity identity,
+            @JsonProperty("createIdentityResponse") CreateIdentityResponse createIdentityResponse,
             @JsonProperty("serverConnectedResponse") ServerConnectedResponse serverConnectedResponse,
             @JsonProperty("identificationSuccessful") IdentificationResponse identificationResponse,
             @JsonProperty("createGroupResponse") CreateGroupResponse createGroupResponse,
@@ -39,9 +45,10 @@ public class ServerMessage {
             @JsonProperty("acceptGroupMembershipResponse") AcceptGroupMembershipResponse acceptGroupMembershipResponse,
             @JsonProperty("leaveGroupResponse") LeaveGroupResponse leaveGroupResponse,
             @JsonProperty("updatePlayerStateResponse") UpdatePlayerStateResponse updatePlayerStateResponse,
-            @JsonProperty("pong") Pong pong,
+            @JsonProperty("pongResponse") PongResponse pongResponse,
             @JsonProperty("groupInviteResponse") GroupInviteResponse groupInviteResponse) {
         this.identity = identity;
+        this.createIdentityResponse = createIdentityResponse;
         this.serverConnectedResponse = serverConnectedResponse;
         this.identificationResponse = identificationResponse;
         this.createGroupResponse = createGroupResponse;
@@ -49,7 +56,7 @@ public class ServerMessage {
         this.acceptGroupMembershipResponse = acceptGroupMembershipResponse;
         this.leaveGroupResponse = leaveGroupResponse;
         this.updatePlayerStateResponse = updatePlayerStateResponse;
-        this.pong = pong;
+        this.pongResponse = pongResponse;
         this.groupInviteResponse = groupInviteResponse;
     }
 
@@ -57,14 +64,31 @@ public class ServerMessage {
         public ServerConnectedResponse() {}
 
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, this,null, null, null, null, null, null, null, null);
+            return new ServerMessage(identity, null,this,null, null, null, null, null, null, null, null);
         }
     }
 
-    public static final class Pong {
+    public static final class PongResponse {
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, null, null, null, null, null, this, null);
+            return new ServerMessage(identity, null, null,null, null, null, null, null, null, this, null);
+        }
+    }
+
+    public static final class CreateIdentityResponse {
+        @JsonProperty("preKeyBundle")
+        public final byte[] preKeyBundle;
+
+        public CreateIdentityResponse(@JsonProperty("preKeyBundle") byte[] preKeyBundle) {
+            this.preKeyBundle = preKeyBundle;
+        }
+
+        public static CreateIdentityResponse from(PreKeyBundle bundle) throws IOException {
+            return new CreateIdentityResponse(PreKeyBundles.serialize(bundle));
+        }
+
+        public ServerMessage serverMessage(ServerIdentity identity) {
+            return new ServerMessage(identity, this, null,null, null, null, null, null, null, null, null);
         }
     }
 
@@ -78,7 +102,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, this, null, null, null, null, null, null, null);
+            return new ServerMessage(identity, null, null,this, null, null, null, null, null, null, null);
         }
 
         public static enum Status {
@@ -103,7 +127,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, null, this, null, null, null, null, null);
+            return new ServerMessage(identity, null, null, null, null,this, null, null, null, null, null);
         }
     }
 
@@ -117,7 +141,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, this, null, null, null, null, null, null);
+            return new ServerMessage(identity, null, null, null,this, null, null, null, null, null, null);
         }
     }
 
@@ -131,7 +155,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, null, null, this, null, null, null, null);
+            return new ServerMessage(identity, null, null, null, null, null,this, null, null, null, null);
         }
     }
 
@@ -145,7 +169,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, null, null, null, this, null, null, null);
+            return new ServerMessage(identity, null, null, null, null, null, null,this, null, null, null);
         }
     }
 
@@ -159,7 +183,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, null, null, null, null, this, null, null);
+            return new ServerMessage(identity, null, null, null, null, null, null, null,this, null, null);
         }
     }
 
@@ -176,7 +200,7 @@ public class ServerMessage {
 
         @JsonIgnore
         public ServerMessage serverMessage(ServerIdentity identity) {
-            return new ServerMessage(identity, null, null, null, null, null, null, null, null, this);
+            return new ServerMessage(identity, null, null, null, null, null, null, null, null,null, this);
         }
     }
 }

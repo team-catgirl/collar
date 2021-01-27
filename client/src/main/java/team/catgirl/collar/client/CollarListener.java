@@ -1,11 +1,11 @@
 package team.catgirl.collar.client;
 
-import team.catgirl.collar.messages.ServerMessage;
 import team.catgirl.collar.messages.ServerMessage.*;
 import team.catgirl.collar.security.ServerIdentity;
 
 public interface CollarListener {
     default void onConnected(CollarClient client, ServerIdentity serverIdentity) {};
+    default void onIdentityCreated(CollarClient client, CreateIdentityResponse resp) {};
     default void onSessionCreated(CollarClient client) {}
     default void onDisconnect(CollarClient client) {}
     default void onGroupCreated(CollarClient client, CreateGroupResponse resp) {};
@@ -14,5 +14,5 @@ public interface CollarListener {
     default void onGroupLeft(CollarClient client, LeaveGroupResponse resp) {};
     default void onGroupUpdated(CollarClient client, UpdatePlayerStateResponse resp) {};
     default void onGroupInvitesSent(CollarClient client, GroupInviteResponse resp) {};
-    default void onPongReceived(ServerMessage.Pong pong) {};
+    default void onPongReceived(PongResponse pongResponse) {};
 }

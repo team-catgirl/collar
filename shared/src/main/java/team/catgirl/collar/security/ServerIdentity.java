@@ -14,23 +14,15 @@ public final class ServerIdentity implements Identity {
     public final PublicKey publicKey;
     @JsonProperty("serverId")
     public final UUID serverId;
-    @JsonProperty("preKeyBundle")
-    public byte[] preKeyBundle;
 
-    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("serverId") UUID serverId, @JsonProperty("preKeyBundle") byte[] preKeyBundle) {
+    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("serverId") UUID serverId) {
         this.publicKey = publicKey;
         this.serverId = serverId;
-        this.preKeyBundle = preKeyBundle;
     }
 
     @Override
     public UUID id() {
         return serverId;
-    }
-
-    @Override
-    public byte[] preKeyBundle() {
-        return preKeyBundle;
     }
 
     @Override

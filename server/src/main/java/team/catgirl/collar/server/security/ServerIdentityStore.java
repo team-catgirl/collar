@@ -26,4 +26,6 @@ public interface ServerIdentityStore {
     boolean isTrustedIdentity(PlayerIdentity identity);
 
     Cypher createCypher();
+
+    byte[] generatePreKeyBundle();
 }

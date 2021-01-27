@@ -1,19 +1,14 @@
 package team.catgirl.collar.client.security.signal;
 
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.state.PreKeyBundle;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
-import org.whispersystems.libsignal.util.Medium;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.messages.ServerMessage;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.security.PlayerIdentity;
@@ -25,7 +20,6 @@ import team.catgirl.collar.utils.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -43,35 +37,8 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public PlayerIdentity currentIdentity() {
-        try {
-            IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
-            ECKeyPair signedPreKey = Curve.generateKeyPair();
-            int signedPreKeyId = new Random().nextInt(Medium.MAX_VALUE);
-            ECKeyPair unsignedPreKey = Curve.generateKeyPair();
-            int unsighnedPreKeyId = new Random().nextInt(Medium.MAX_VALUE);
-            byte[] signature;
-            try {
-                signature = Curve.calculateSignature(store.getIdentityKeyPair().getPrivateKey(), signedPreKey.getPublicKey().serialize());
-            } catch (InvalidKeyException e) {
-                throw new IllegalStateException("invalid key");
-            }
-            PreKeyBundle preKeyBundle = new PreKeyBundle(
-                    store.getLocalRegistrationId(),
-                    1,
-                    unsighnedPreKeyId,
-                    unsignedPreKey.getPublicKey(),
-                    signedPreKeyId,
-                    signedPreKey.getPublicKey(),
-                    signature,
-                    store.getIdentityKeyPair().getPublicKey());
-
-            store.storeSignedPreKey(signedPreKeyId, new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), signedPreKey, signature));
-            store.storePreKey(unsighnedPreKeyId, new PreKeyRecord(unsighnedPreKeyId, unsignedPreKey));
-            byte[] bytes = PreKeyBundles.serialize(preKeyBundle);
-            return new PlayerIdentity(player, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()), state.registrationId, bytes);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
+        return new PlayerIdentity(player, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()), state.registrationId);
     }
 
     @Override
@@ -80,11 +47,19 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public void trustIdentity(ServerIdentity identity) {
-        SignalProtocolAddress address = signalProtocolAddressFrom(identity);
-        IdentityKey identityKey = identityKeyFrom(identity);
-        if (!isTrustedIdentity(identity)) {
-            store.saveIdentity(address, identityKey);
+    public void trustIdentity(ServerIdentity identity, ServerMessage.CreateIdentityResponse resp) {
+        PreKeyBundle bundle;
+        try {
+            bundle = PreKeyBundles.deserialize(resp.preKeyBundle);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+        store.saveIdentity(signalProtocolAddressFrom(identity), bundle.getIdentityKey());
+        SessionBuilder sessionBuilder = new SessionBuilder(store, signalProtocolAddressFrom(identity));
+        try {
+            sessionBuilder.process(bundle);
+        } catch (InvalidKeyException | UntrustedIdentityException e) {
+            throw new IllegalStateException(e);
         }
     }
 
@@ -117,7 +92,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         }
     }
 
-    public static ClientIdentityStore from(UUID player, HomeDirectory homeDirectory, BiConsumer<SignedPreKeyRecord, List<PreKeyRecord>> onInstall) throws IOException {
+    public static ClientIdentityStore from(UUID player, HomeDirectory homeDirectory, BiConsumer<SignalProtocolStore, PreKeyBundle> onInstall) throws IOException {
         SignalProtocolStore store = ClientSignalProtocolStore.from(homeDirectory);
         File file = new File(homeDirectory.security(), "identity.json");
         State state;
@@ -140,7 +115,9 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             // Save the identity state
             writeState(file, state);
             // fire the on install consumer
-            onInstall.accept(signedPreKey, preKeys);
+
+            PreKeyBundle preKeyBundle = PreKeyBundles.generate(store);
+            onInstall.accept(store, preKeyBundle);
         }
         return new SignalClientIdentityStore(player, store, state);
     }

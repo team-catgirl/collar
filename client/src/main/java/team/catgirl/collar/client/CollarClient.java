@@ -17,6 +17,7 @@ import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.models.Position;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.signal.PreKeyBundles;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -64,14 +65,13 @@ public final class CollarClient {
         }
         state = ClientState.CONNECTING;
         // Setup the identity store for this player
-        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (signedPreKeyRecord, preKeyRecords) -> {
-            createIdentityRequest = CreateIdentityRequest.from(signedPreKeyRecord, preKeyRecords);
+        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (store, bundle) -> {
+            createIdentityRequest = CreateIdentityRequest.from(PreKeyBundles.generate(store));
         });
         this.listener = new DelegatingListener(listener);
         Request request = new Request.Builder().url(baseUrl + "listen").build();
         webSocket = http.newWebSocket(request, new WebSocketListenerImpl(this));
         http.dispatcher().executorService().shutdown();
-        startKeepAlive();
     }
 
     public void disconnect() {
@@ -154,8 +154,10 @@ public final class CollarClient {
     }
 
     private void stopKeepAlive() {
-        keepAliveScheduler.shutdown();
-        keepAliveScheduler = null;
+        if (keepAliveScheduler != null) {
+            keepAliveScheduler.shutdown();
+            keepAliveScheduler = null;
+        }
     }
 
     class WebSocketListenerImpl extends WebSocketListener {
@@ -170,20 +172,6 @@ public final class CollarClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.info("onOpen is called");
             super.onOpen(webSocket, response);
-            ClientMessage message;
-            if (createIdentityRequest == null) {
-                // This is an exiting client installation
-                message = new IdentifyRequest().clientMessage(identity());
-            } else {
-                // This is a brand new client installation
-                message = createIdentityRequest.clientMessage(identity());
-            }
-            try {
-                send(message);
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Could not send. Closing client", e);
-                disconnect();
-            }
         }
 
         @Override
@@ -206,12 +194,14 @@ public final class CollarClient {
             if (message.serverConnectedResponse != null) {
                 listener.onConnected(client, message.identity);
             }
+            if (message.createIdentityResponse != null) {
+                identityStore.trustIdentity(message.identity, message.createIdentityResponse);
+            }
             if (message.identificationResponse != null) {
                 if (identityStore.isTrustedIdentity(message.identity)) {
                     listener.onSessionCreated(client);
                 } else {
-                    identityStore.trustIdentity(message.identity);
-                    listener.onSessionCreated(client);
+                    // TODO: handle untrusted
                 }
                 serverIdentity = message.identity;
             }
@@ -233,8 +223,8 @@ public final class CollarClient {
             if (message.acceptGroupMembershipResponse != null) {
                 listener.onGroupJoined(client, message.acceptGroupMembershipResponse);
             }
-            if (message.pong != null) {
-                listener.onPongReceived(message.pong);
+            if (message.pongResponse != null) {
+                listener.onPongReceived(message.pongResponse);
             }
         }
 
@@ -273,8 +263,28 @@ public final class CollarClient {
         }
 
         @Override
+        public void onIdentityCreated(CollarClient client, CreateIdentityResponse resp) {
+            listener.onIdentityCreated(client, resp);
+            ClientMessage message;
+            if (createIdentityRequest == null) {
+                // This is an exiting client installation
+                message = new IdentifyRequest().clientMessage(identity());
+            } else {
+                // This is a brand new client installation
+                message = createIdentityRequest.clientMessage(identity());
+            }
+            try {
+                send(message);
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, "Could not send. Closing client", e);
+                disconnect();
+            }
+        }
+
+        @Override
         public void onSessionCreated(CollarClient client) {
             state = ClientState.CONNECTED;
+            startKeepAlive();
             listener.onSessionCreated(client);
         }
 
@@ -309,8 +319,8 @@ public final class CollarClient {
         }
 
         @Override
-        public void onPongReceived(ServerMessage.Pong pong) {
-            listener.onPongReceived(pong);
+        public void onPongReceived(PongResponse pongResponse) {
+            listener.onPongReceived(pongResponse);
         }
 
         @Override

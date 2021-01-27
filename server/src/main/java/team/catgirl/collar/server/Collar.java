@@ -6,13 +6,14 @@ import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.messages.ServerMessage.CreateIdentityResponse;
+import team.catgirl.collar.messages.ServerMessage.IdentificationResponse;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.server.managers.GroupManager;
 import team.catgirl.collar.server.managers.SessionManager;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
-import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,9 +45,9 @@ public class Collar {
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason) {
         LOGGER.log(Level.INFO, "Session closed " + statusCode + " " + reason);
-        UUID player = sessions.getPlayer(session);
+        PlayerIdentity player = sessions.getIdentity(session);
         if (player != null) {
-            groups.removeUserFromAllGroups(player);
+            groups.removeUserFromAllGroups(player.player);
         }
         sessions.stopSession(session, "Session closed", null);
     }
@@ -59,24 +60,29 @@ public class Collar {
     @OnWebSocketMessage
     public void message(Session session, String value) throws IOException {
         ClientMessage message = decodeMessage(session, value);
-        if (message.ping != null) {
+        if (message.pingRequest != null) {
             LOGGER.log(Level.FINE, "Ping received");
-            send(session, new ServerMessage.Pong().serverMessage(identityStore.getIdentity()));
+            send(session, new ServerMessage.PongResponse().serverMessage(identityStore.getIdentity()));
         } else if (sessions.isIdentified(session)) {
             if (message.createGroupRequest != null) {
+                LOGGER.log(Level.INFO, "createGroupRequest");
                 ServerMessage.CreateGroupResponse resp = groups.createGroup(message.identity, message.createGroupRequest);
                 send(session, resp.serverMessage(identityStore.getIdentity()));
                 groups.sendMembershipRequests(message.identity, resp.group, null);
             } else if (message.acceptGroupMembershipRequest != null) {
+                LOGGER.log(Level.INFO, "acceptGroupMembershipRequest");
                 ServerMessage.AcceptGroupMembershipResponse resp = groups.acceptMembership(message.identity, message.acceptGroupMembershipRequest);
                 send(session, resp.serverMessage(identityStore.getIdentity()));
             } else if (message.leaveGroupRequest != null) {
+                LOGGER.log(Level.INFO, "leaveGroupRequest");
                 ServerMessage.LeaveGroupResponse resp = groups.leaveGroup(message.identity, message.leaveGroupRequest);
                 send(session, resp.serverMessage(identityStore.getIdentity()));
             } else if (message.updatePlayerStateRequest != null) {
+                LOGGER.log(Level.INFO, "updatePlayerStateRequest");
                 ServerMessage.UpdatePlayerStateResponse resp = groups.updatePosition(message.identity, message.updatePlayerStateRequest);
                 send(session, resp.serverMessage(identityStore.getIdentity()));
             } else if (message.groupInviteRequest != null) {
+                LOGGER.log(Level.INFO, "groupInviteRequest");
                 ServerMessage.GroupInviteResponse resp = groups.invite(message.identity, message.groupInviteRequest);
                 send(session, resp.serverMessage(identityStore.getIdentity()));
             } else {
@@ -84,27 +90,19 @@ public class Collar {
             }
         } else {
             if (message.createIdentityRequest != null) {
-                ServerMessage.IdentificationResponse.Status status;
-                if (identityStore.isTrustedIdentity(message.identity)) {
-                    status = ServerMessage.IdentificationResponse.Status.FAILURE;
-                } else {
-                    identityStore.createIdentity(message.identity, message.createIdentityRequest);
-                    status = ServerMessage.IdentificationResponse.Status.SUCCESSS;
-                }
-                send(session, new ServerMessage.IdentificationResponse(status).serverMessage(identityStore.getIdentity()));
-                if (status == ServerMessage.IdentificationResponse.Status.FAILURE) {
-                    sessions.stopSession(session, "Identity is already trusted", null);
-                }
+                LOGGER.log(Level.INFO, "createIdentityRequest");
+                send(session, new CreateIdentityResponse(identityStore.generatePreKeyBundle()).serverMessage(identityStore.getIdentity()));
             } else if (message.identifyRequest != null) {
-                ServerMessage.IdentificationResponse.Status status;
+                LOGGER.log(Level.INFO, "identifyRequest");
+                IdentificationResponse.Status status;
                 if (identityStore.isTrustedIdentity(message.identity)) {
-                    status = ServerMessage.IdentificationResponse.Status.SUCCESSS;
+                    status = IdentificationResponse.Status.SUCCESSS;
                     sessions.identify(session, message.identity);
-                    send(session, new ServerMessage.IdentificationResponse(status).serverMessage(identityStore.getIdentity()));
+                    send(session, new IdentificationResponse(status).serverMessage(identityStore.getIdentity()));
                 } else {
-                    status = ServerMessage.IdentificationResponse.Status.FAILURE;
+                    status = IdentificationResponse.Status.FAILURE;
                 }
-                if (status == ServerMessage.IdentificationResponse.Status.FAILURE) {
+                if (status == IdentificationResponse.Status.FAILURE) {
                     sessions.stopSession(session, "Identity is not trusted", null);
                 }
             } else {
@@ -116,6 +114,9 @@ public class Collar {
     private ClientMessage decodeMessage(Session session, String value) throws IOException {
         if (BaseEncoding.base64().canDecode(value)) {
             PlayerIdentity playerIdentity = sessions.getIdentity(session);
+            if (playerIdentity == null) {
+                throw new IllegalStateException("base64 message recieved before session was started. There is likely a bug in the client implementation.");
+            }
             byte[] decrypt = identityStore.createCypher().decrypt(playerIdentity, BaseEncoding.base64().decode(value));
             return mapper.readValue(decrypt, ClientMessage.class);
         } else {

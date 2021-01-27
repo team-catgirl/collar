@@ -1,9 +1,12 @@
 package team.catgirl.collar.server.mongo;
 
 import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import org.bson.UuidRepresentation;
+import org.bson.codecs.UuidCodec;
 
 public final class Mongo {
     private static MongoDatabase database;
@@ -18,7 +21,7 @@ public final class Mongo {
 
     public static MongoDatabase database(String mongoUrl) {
         ConnectionString uri = new ConnectionString(mongoUrl);
-        MongoClient mongoClient = MongoClients.create(uri);
+        MongoClient mongoClient = MongoClients.create(settings(uri));
         String db = uri.getDatabase();
         if (db == null) {
             throw new IllegalStateException("MONGODB_URI did not include database name");
@@ -26,8 +29,16 @@ public final class Mongo {
         return mongoClient.getDatabase(db);
     }
 
+    private static MongoClientSettings settings(ConnectionString uri) {
+        return MongoClientSettings.builder()
+                .applyConnectionString(uri)
+                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+    }
+
     private static MongoDatabase getDevelopmentDatabase() {
-        return MongoClients.create().getDatabase("backoffice-dev");
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+        return MongoClients.create(settings).getDatabase("collar-dev");
     }
 
     private Mongo() {}

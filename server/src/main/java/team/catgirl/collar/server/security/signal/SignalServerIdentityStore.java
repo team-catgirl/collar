@@ -7,12 +7,11 @@ import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.PreKeyRecord;
-import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import team.catgirl.collar.messages.ClientMessage.CreateIdentityRequest;
+import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
@@ -20,7 +19,7 @@ import java.util.function.Supplier;
 
 public class SignalServerIdentityStore implements ServerIdentityStore {
 
-    private final SignalProtocolStore store;
+    private final ServerSignalProtocolStore store;
     private final Supplier<ServerIdentity> serverIdentitySupplier;
 
     public SignalServerIdentityStore(MongoDatabase db) {
@@ -28,8 +27,8 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         this.serverIdentitySupplier = Suppliers.memoize(() -> {
             IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
             IdentityKey publicKey = identityKeyPair.getPublicKey();
-            int serverId = store.getLocalRegistrationId();
-            return new ServerIdentity(new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize()), serverId);
+            int registrationId = store.getLocalRegistrationId();
+            return new ServerIdentity(new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize()), registrationId, store.identityKeyStore.getServerId());
         });
     }
 
@@ -72,6 +71,6 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     private static SignalProtocolAddress signalProtocolAddressFrom(PlayerIdentity identity) {
-        return new SignalProtocolAddress(identity.player.toString(), identity.sessionId);
+        return new SignalProtocolAddress(identity.player.toString(), identity.registrationId);
     }
 }

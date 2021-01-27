@@ -12,13 +12,13 @@ public final class PlayerIdentity {
     public final UUID player;
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
-    @JsonProperty("sessionId")
-    public final int sessionId;
+    @JsonProperty("registrationId")
+    public final int registrationId;
 
-    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("sessionId") int sessionId) {
+    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId) {
         this.player = player;
         this.publicKey = publicKey;
-        this.sessionId = sessionId;
+        this.registrationId = registrationId;
     }
 
     @Override

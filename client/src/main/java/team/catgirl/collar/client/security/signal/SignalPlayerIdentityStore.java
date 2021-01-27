@@ -58,7 +58,7 @@ public final class SignalPlayerIdentityStore implements PlayerIdentityStore {
     }
 
     private SignalProtocolAddress signalProtocolAddressFrom(ServerIdentity serverIdentity) {
-        return new SignalProtocolAddress("collar", serverIdentity.id);
+        return new SignalProtocolAddress(serverIdentity.serverId.toString(), serverIdentity.registrationId);
     }
 
     private static IdentityKey identityKeyFrom(ServerIdentity identity) {

@@ -13,10 +13,10 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import java.util.List;
 
 public class ServerSignalProtocolStore implements SignalProtocolStore {
-    private final ServerIdentityKeyStore identityKeyStore;
-    private final ServerPreKeyStore serverPreKeyStore;
-    private final ServerSessionStore sessionStore;
-    private final ServerSignedPreKeyStore preKeyStore;
+    final ServerIdentityKeyStore identityKeyStore;
+    final ServerPreKeyStore serverPreKeyStore;
+    final ServerSessionStore sessionStore;
+    final ServerSignedPreKeyStore preKeyStore;
 
     private ServerSignalProtocolStore(ServerIdentityKeyStore identityKeyStore, ServerPreKeyStore serverPreKeyStore, ServerSessionStore sessionStore, ServerSignedPreKeyStore preKeyStore) {
         this.identityKeyStore = identityKeyStore;

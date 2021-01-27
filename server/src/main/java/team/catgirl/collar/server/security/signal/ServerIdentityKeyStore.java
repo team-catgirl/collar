@@ -14,6 +14,7 @@ import org.whispersystems.libsignal.util.KeyHelper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
@@ -23,6 +24,7 @@ public class ServerIdentityKeyStore implements IdentityKeyStore {
     private final IdentityKeyPair identityKeyPair;
     private final int registrationId;
     private final MongoCollection<Document> docs;
+    private final UUID serverId;
 
     public ServerIdentityKeyStore(MongoDatabase db) {
         MongoCollection<Document> serverIdentity = db.getCollection("signal_server_identity");
@@ -31,19 +33,26 @@ public class ServerIdentityKeyStore implements IdentityKeyStore {
         if (!serverIdentityCursor.hasNext()) {
             identityKeyPair = KeyHelper.generateIdentityKeyPair();
             registrationId = KeyHelper.generateRegistrationId(false);
+            serverId = UUID.randomUUID();
             Map<String, Object> state = new HashMap<>();
             state.put("registrationId", registrationId);
+            state.put("serverId", serverId);
             state.put("identityKeyPair", new Binary(identityKeyPair.serialize()));
             serverIdentity.insertOne(new Document(state));
         } else {
             Document document = serverIdentityCursor.next();
             this.registrationId = document.getInteger("registrationId");
+            this.serverId = document.get("serverId", UUID.class);
             try {
                 identityKeyPair = new IdentityKeyPair(document.get("identityKeyPair", Binary.class).getData());
             } catch (InvalidKeyException e) {
                 throw  new IllegalStateException("could not load identity key pair", e);
             }
         }
+    }
+
+    public UUID getServerId() {
+        return serverId;
     }
 
     @Override

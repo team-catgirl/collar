@@ -1,15 +1,24 @@
 package team.catgirl.collar.server.common;
 
+import com.github.zafarkhaja.semver.Version;
+import team.catgirl.collar.security.ServerIdentity;
+
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 public final class ServerVersion {
-    public final String version;
+    public final int major;
+    public final int minor;
+    public final int patch;
 
-    public ServerVersion(String version) {
-        this.version = version;
+    public ServerVersion(int major, int minor, int patch) {
+        this.major = major;
+        this.minor = minor;
+        this.patch = patch;
     }
 
     public static ServerVersion version() throws IOException {
-        return new ServerVersion("1.0-beta");
+        return new ServerVersion(1, 0, 0);
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Identifies the server
@@ -11,11 +12,15 @@ import java.util.Objects;
 public final class ServerIdentity {
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
-    public final int id;
+    @JsonProperty("registrationId")
+    public final int registrationId;
+    @JsonProperty("serverId")
+    public final UUID serverId;
 
-    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("id") int id) {
+    public ServerIdentity(@JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId, @JsonProperty("serverId") UUID serverId) {
         this.publicKey = publicKey;
-        this.id = id;
+        this.registrationId = registrationId;
+        this.serverId = serverId;
     }
 
     @Override

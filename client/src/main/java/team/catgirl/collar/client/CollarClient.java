@@ -28,10 +28,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class CollarClient {
-    static {
-        Utils.registerGPGProvider();
-    }
-
     private static final Logger LOGGER = Logger.getLogger(CollarClient.class.getName());
 
     private final ObjectMapper mapper = Utils.createObjectMapper();

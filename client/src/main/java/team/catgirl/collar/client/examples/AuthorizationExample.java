@@ -5,7 +5,6 @@ import team.catgirl.collar.client.CollarListener;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.security.ServerIdentity;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;

@@ -34,8 +34,8 @@
             <artifactId>mongodb-driver-sync</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.zafarkhaja</groupId>
-            <artifactId>java-semver</artifactId>
+            <groupId>org.whispersystems</groupId>
+            <artifactId>signal-service-java</artifactId>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

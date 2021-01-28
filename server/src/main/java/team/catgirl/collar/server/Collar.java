@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.BaseEncoding;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
+import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage;
 import team.catgirl.collar.messages.ServerMessage.CreateIdentityResponse;
@@ -28,12 +29,14 @@ public class Collar {
     private final SessionManager sessions;
     private final GroupManager groups;
     private final ServerIdentityStore identityStore;
+    private final SignalServiceAccountManager accountManager;
 
     public Collar(ObjectMapper mapper, SessionManager sessions, GroupManager groups, ServerIdentityStore identityStore) {
         this.mapper = mapper;
         this.sessions = sessions;
         this.groups = groups;
         this.identityStore = identityStore;
+        this.accountManager = new SignalServiceAccountManager()
     }
 
     @OnWebSocketConnect

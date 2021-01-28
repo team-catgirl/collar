@@ -4,18 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoDatabase;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.server.common.ServerVersion;
-import team.catgirl.collar.server.mongo.Mongo;
-import team.catgirl.collar.server.security.ServerIdentityStore;
-import team.catgirl.collar.server.security.signal.SignalServerIdentityStore;
-import team.catgirl.collar.utils.Utils;
 import team.catgirl.collar.server.http.HttpException;
 import team.catgirl.collar.server.managers.GroupManager;
 import team.catgirl.collar.server.managers.SessionManager;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.profiles.ProfileService;
+import team.catgirl.collar.server.profiles.ProfileService.CreateProfileRequest;
+import team.catgirl.collar.server.security.ServerIdentityStore;
+import team.catgirl.collar.server.security.signal.SignalServerIdentityStore;
+import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -41,6 +44,7 @@ public class Main {
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
         ServerIdentity identity = serverIdentityStore.getIdentity();
         GroupManager groups = new GroupManager(identity, sessions);
+        ProfileService profiles = new ProfileService(db);
 
         // Always serialize objects returned as JSON
         defaultResponseTransformer(mapper::writeValueAsString);
@@ -59,9 +63,24 @@ public class Main {
             get("/", (request, response) -> new ServerStatusResponse("OK"));
             // The servers current identity
             get("/identity", (request, response) -> identity);
+
+            path("/profile", () -> {
+                post("/", (request, response) -> {
+                    CreateProfileRequest req = mapper.readValue(request.bodyAsBytes(), CreateProfileRequest.class);
+                    return profiles.createProfile(req);
+                });
+                get("/:id", (request, response) -> {
+                    String id = request.params("id");
+                    UUID uuid = UUID.fromString(id);
+                    return profiles.getProfile(ProfileService.GetProfileRequest.byId(uuid));
+                });
+            });
         });
 
-        // Server routes
+
+        path("/signal/", () -> {
+
+        });
 
         // Reports server version
         get("/api/version", (request, response) -> ServerVersion.version());

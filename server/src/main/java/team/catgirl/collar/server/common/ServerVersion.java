@@ -1,11 +1,6 @@
 package team.catgirl.collar.server.common;
 
-import com.github.zafarkhaja.semver.Version;
-import team.catgirl.collar.security.ServerIdentity;
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
 
 public final class ServerVersion {
     public final int major;

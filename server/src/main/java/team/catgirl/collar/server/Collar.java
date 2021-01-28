@@ -91,6 +91,9 @@ public class Collar {
         } else {
             if (message.createIdentityRequest != null) {
                 LOGGER.log(Level.INFO, "createIdentityRequest");
+                if (!identityStore.isTrustedIdentity(message.identity)) {
+                    identityStore.trustIdentity(message.identity, message.createIdentityRequest);
+                }
                 send(session, new CreateIdentityResponse(identityStore.generatePreKeyBundle()).serverMessage(identityStore.getIdentity()));
             } else if (message.identifyRequest != null) {
                 LOGGER.log(Level.INFO, "identifyRequest");
@@ -112,10 +115,10 @@ public class Collar {
     }
 
     private ClientMessage decodeMessage(Session session, String value) throws IOException {
-        if (BaseEncoding.base64().canDecode(value)) {
+        if (BaseEncoding.base64().canDecode(value) && sessions.isIdentified(session)) {
             PlayerIdentity playerIdentity = sessions.getIdentity(session);
             if (playerIdentity == null) {
-                throw new IllegalStateException("base64 message recieved before session was started. There is likely a bug in the client implementation.");
+                throw new IllegalStateException("encrypted message received before session was started");
             }
             byte[] decrypt = identityStore.createCypher().decrypt(playerIdentity, BaseEncoding.base64().decode(value));
             return mapper.readValue(decrypt, ClientMessage.class);
@@ -126,12 +129,10 @@ public class Collar {
 
     public void send(Session session, ServerMessage serverMessage) throws IOException {
         String message;
-        if (sessions.isIdentified(session)) {
-            // Session is available, crypt a server messages
+        if (canUseCrypto(session, serverMessage)) {
             byte[] bytes = identityStore.createCypher().crypt(identityStore.getIdentity(), mapper.writeValueAsBytes(serverMessage));
             message = BaseEncoding.base64().encode(bytes);
         } else {
-            // No session is available - use plain text!
             message = mapper.writeValueAsString(serverMessage);
         }
         try {
@@ -140,5 +141,9 @@ public class Collar {
             sessions.stopSession(session, "Could not send message to client", e);
             throw e;
         }
+    }
+
+    private boolean canUseCrypto(Session session, ServerMessage serverMessage) {
+        return serverMessage.createIdentityResponse != null && serverMessage.identificationResponse != null && sessions.isIdentified(session);
     }
 }

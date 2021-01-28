@@ -5,7 +5,7 @@ import org.whispersystems.libsignal.state.PreKeyBundle;
 import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.models.Position;
 import team.catgirl.collar.security.PlayerIdentity;
-import team.catgirl.collar.security.signal.PreKeyBundles;
+import team.catgirl.collar.security.signal.PreKeys;
 
 import java.io.IOException;
 import java.util.List;
@@ -155,7 +155,7 @@ public final class ClientMessage {
 
         public static CreateIdentityRequest from(PreKeyBundle bundle) {
             try {
-                return new CreateIdentityRequest(PreKeyBundles.serialize(bundle));
+                return new CreateIdentityRequest(PreKeys.preKeyBundleToBytes(bundle));
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }

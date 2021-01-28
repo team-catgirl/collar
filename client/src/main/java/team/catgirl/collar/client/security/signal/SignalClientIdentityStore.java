@@ -13,7 +13,7 @@ import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.signal.PreKeyBundles;
+import team.catgirl.collar.security.signal.PreKeys;
 import team.catgirl.collar.security.signal.SignalCypher;
 import team.catgirl.collar.utils.Utils;
 
@@ -50,11 +50,10 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     public void trustIdentity(ServerIdentity identity, ServerMessage.CreateIdentityResponse resp) {
         PreKeyBundle bundle;
         try {
-            bundle = PreKeyBundles.deserialize(resp.preKeyBundle);
+            bundle = PreKeys.preKeyBundleFromBytes(resp.preKeyBundle);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-        store.saveIdentity(signalProtocolAddressFrom(identity), bundle.getIdentityKey());
         SessionBuilder sessionBuilder = new SessionBuilder(store, signalProtocolAddressFrom(identity));
         try {
             sessionBuilder.process(bundle);
@@ -69,7 +68,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     private SignalProtocolAddress signalProtocolAddressFrom(ServerIdentity serverIdentity) {
-        return new SignalProtocolAddress(serverIdentity.serverId.toString(), 1);
+        return new SignalProtocolAddress(serverIdentity.id().toString(), 1);
     }
 
     private static IdentityKey identityKeyFrom(ServerIdentity identity) {
@@ -116,7 +115,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             writeState(file, state);
             // fire the on install consumer
 
-            PreKeyBundle preKeyBundle = PreKeyBundles.generate(store);
+            PreKeyBundle preKeyBundle = PreKeys.generate(store, 1);
             onInstall.accept(store, preKeyBundle);
         }
         return new SignalClientIdentityStore(player, store, state);

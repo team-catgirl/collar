@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.security.signal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -8,11 +9,11 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.IdentityKeyStore;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.client.HomeDirectory;
-import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -22,25 +23,28 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
     private final File file;
     private final ReentrantReadWriteLock lock;
     private final State state;
+    private final ObjectMapper mapper;
 
-    private ClientIdentityKeyStore(State state, File file) {
+    private ClientIdentityKeyStore(State state, File file, ObjectMapper mapper) {
         this.state = state;
         this.file = file;
+        this.mapper = mapper;
         this.lock = new ReentrantReadWriteLock();
     }
 
-    public static ClientIdentityKeyStore from(HomeDirectory homeDirectory) throws IOException {
+    public static ClientIdentityKeyStore from(HomeDirectory homeDirectory, ObjectMapper mapper) throws IOException {
         File file = new File(homeDirectory.security(), "identityKeyStore.json");
         State state;
         if (file.exists()) {
-           state = Utils.createObjectMapper().readValue(file, State.class);
+           state = mapper.readValue(file, State.class);
         } else {
             IdentityKeyPair identityKeyPair = KeyHelper.generateIdentityKeyPair();
             int registrationId = KeyHelper.generateRegistrationId(false);
             state = new State(registrationId, identityKeyPair.serialize(), identityKeyPair.getPublicKey().getFingerprint(), new HashMap<>());
-            writeState(file, state);
         }
-        return new ClientIdentityKeyStore(state, file);
+        ClientIdentityKeyStore clientIdentityKeyStore = new ClientIdentityKeyStore(state, file, mapper);
+        clientIdentityKeyStore.writeState();
+        return clientIdentityKeyStore;
     }
 
     @Override
@@ -77,7 +81,7 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         try {
             writeLock.lockInterruptibly();
             this.state.trusted.put(StateKey.from(address), State.from(identityKey));
-            writeState(file, state);
+            writeState();
         } catch (IOException e) {
             throw new IllegalStateException("Could not save state", e);
         } catch (InterruptedException e) {
@@ -101,8 +105,8 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         }
     }
 
-    private static void writeState(File file, State state) throws IOException {
-        Utils.createObjectMapper().writeValue(file, state);
+    private void writeState() throws IOException {
+        mapper.writeValue(file, state);
     }
 
     private static final class State {

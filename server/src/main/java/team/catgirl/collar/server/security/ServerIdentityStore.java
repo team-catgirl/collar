@@ -16,7 +16,7 @@ public interface ServerIdentityStore {
      * @param identity to create
      * @param req to create
      */
-    void createIdentity(PlayerIdentity identity, CreateIdentityRequest req);
+    void trustIdentity(PlayerIdentity identity, CreateIdentityRequest req);
 
     /**
      * Tests if the identity trusted
@@ -25,7 +25,13 @@ public interface ServerIdentityStore {
      */
     boolean isTrustedIdentity(PlayerIdentity identity);
 
+    /**
+     * @return creates a new {@link Cypher}
+     */
     Cypher createCypher();
 
+    /**
+     * @return generates a new {@link org.whispersystems.libsignal.state.PreKeyBundle}
+     */
     byte[] generatePreKeyBundle();
 }

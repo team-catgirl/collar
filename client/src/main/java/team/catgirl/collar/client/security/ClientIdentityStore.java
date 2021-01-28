@@ -24,5 +24,8 @@ public interface ClientIdentityStore {
      */
     void trustIdentity(ServerIdentity identity, ServerMessage.CreateIdentityResponse resp);
 
+    /**
+     * @return creates a new {@link Cypher}
+     */
     Cypher createCypher();
 }

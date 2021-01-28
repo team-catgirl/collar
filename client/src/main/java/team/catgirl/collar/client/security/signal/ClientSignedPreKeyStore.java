@@ -1,5 +1,7 @@
 package team.catgirl.collar.client.security.signal;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyStore;
@@ -19,10 +21,12 @@ public class ClientSignedPreKeyStore implements SignedPreKeyStore {
     private final File file;
     private final State state;
     private final ReentrantReadWriteLock lock;
+    private final ObjectMapper mapper;
 
-    public ClientSignedPreKeyStore(File file, State state) {
+    public ClientSignedPreKeyStore(File file, State state, ObjectMapper mapper) {
         this.file = file;
         this.state = state;
+        this.mapper = mapper;
         this.lock = new ReentrantReadWriteLock();
     }
 
@@ -70,7 +74,7 @@ public class ClientSignedPreKeyStore implements SignedPreKeyStore {
         try {
             writeLock.lockInterruptibly();
             this.state.signedKeyRecords.put(signedPreKeyId, record.serialize());
-            saveState(file, state);
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -99,7 +103,7 @@ public class ClientSignedPreKeyStore implements SignedPreKeyStore {
         try {
             writeLock.lockInterruptibly();
             this.state.signedKeyRecords.remove(signedPreKeyId);
-            saveState(file, state);
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -109,26 +113,28 @@ public class ClientSignedPreKeyStore implements SignedPreKeyStore {
         }
     }
 
-    public static ClientSignedPreKeyStore from(HomeDirectory home) throws IOException {
+    public static ClientSignedPreKeyStore from(HomeDirectory home, ObjectMapper mapper) throws IOException {
         File file = new File(home.security(), "signedPreKeyStore.json");
         State state;
         if (file.exists()) {
             state = Utils.createObjectMapper().readValue(file, State.class);
         } else {
             state = new State(new HashMap<>());
-            saveState(file, state);
         }
-        return new ClientSignedPreKeyStore(file, state);
+        ClientSignedPreKeyStore clientSignedPreKeyStore = new ClientSignedPreKeyStore(file, state, mapper);
+        clientSignedPreKeyStore.writeState();
+        return clientSignedPreKeyStore;
     }
 
-    private static void saveState(File file, State state) throws IOException {
-        Utils.createObjectMapper().writeValue(file, state);
+    private void writeState() throws IOException {
+        mapper.writeValue(file, state);
     }
 
     private static class State {
+        @JsonProperty("signedKeyRecords")
         public final Map<Integer, byte[]> signedKeyRecords;
 
-        public State(Map<Integer, byte[]> signedKeyRecords) {
+        public State(@JsonProperty("signedKeyRecords") Map<Integer, byte[]> signedKeyRecords) {
             this.signedKeyRecords = signedKeyRecords;
         }
     }

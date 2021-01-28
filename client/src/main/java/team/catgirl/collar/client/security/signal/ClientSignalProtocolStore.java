@@ -1,5 +1,8 @@
 package team.catgirl.collar.client.security.signal;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyIdException;
@@ -9,6 +12,7 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
 import java.util.List;
@@ -122,11 +126,27 @@ public class ClientSignalProtocolStore implements SignalProtocolStore {
     }
 
     public static ClientSignalProtocolStore from(HomeDirectory home) throws IOException {
+        SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addKeyDeserializer(StateKey.class, new KeyDeserializer() {
+            @Override
+            public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
+                String name = key.substring(0, key.lastIndexOf(":"));
+                String id = key.substring(key.lastIndexOf(":") + 1);
+                return new StateKey(name, Integer.parseInt(id));
+            }
+        });
+        simpleModule.addKeySerializer(StateKey.class, new JsonSerializer<StateKey>() {
+            @Override
+            public void serialize(StateKey value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                gen.writeFieldName(value.name + ":" + value.deviceId);
+            }
+        });
+        ObjectMapper mapper = Utils.createObjectMapper().registerModule(simpleModule);
         return new ClientSignalProtocolStore(
-                ClientIdentityKeyStore.from(home),
-                ClientPreKeyStore.from(home),
-                ClientSessionStore.from(home),
-                ClientSignedPreKeyStore.from(home)
+                ClientIdentityKeyStore.from(home, mapper),
+                ClientPreKeyStore.from(home, mapper),
+                ClientSessionStore.from(home, mapper),
+                ClientSignedPreKeyStore.from(home, mapper)
         );
     }
 }

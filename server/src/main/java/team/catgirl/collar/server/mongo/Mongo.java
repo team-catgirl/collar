@@ -6,7 +6,6 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import org.bson.UuidRepresentation;
-import org.bson.codecs.UuidCodec;
 
 public final class Mongo {
     private static MongoDatabase database;
@@ -39,6 +38,12 @@ public final class Mongo {
         MongoClientSettings settings = MongoClientSettings.builder()
                 .uuidRepresentation(UuidRepresentation.STANDARD).build();
         return MongoClients.create(settings).getDatabase("collar-dev");
+    }
+
+    public static MongoDatabase getTestingDatabase() {
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+        return MongoClients.create(settings).getDatabase("collar-testing");
     }
 
     private Mongo() {}

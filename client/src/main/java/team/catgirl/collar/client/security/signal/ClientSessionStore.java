@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.security.signal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
@@ -9,7 +10,10 @@ import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -18,11 +22,13 @@ public class ClientSessionStore implements SessionStore {
     private final File file;
     private final State state;
     private final ReentrantReadWriteLock lock;
+    private final ObjectMapper mapper;
 
-    public ClientSessionStore(File file, State state) {
+    public ClientSessionStore(File file, State state, ObjectMapper mapper) {
         this.file = file;
         this.state = state;
         this.lock = new ReentrantReadWriteLock();
+        this.mapper = mapper;
     }
 
     @Override
@@ -56,8 +62,9 @@ public class ClientSessionStore implements SessionStore {
         try {
             readLock.lockInterruptibly();
             return state.sessions.keySet().stream()
-                    .filter(key -> key.name.equals(name) && key.deviceId != 1)
-                    .map(stateKey -> stateKey.deviceId).collect(Collectors.toList());
+                    .filter(key -> key.name.equals(name))
+                    .map(stateKey -> stateKey.deviceId)
+                    .collect(Collectors.toList());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }  finally {
@@ -71,9 +78,8 @@ public class ClientSessionStore implements SessionStore {
         try {
             writeLock.lockInterruptibly();
             StateKey key = StateKey.from(address);
-            state.nameKeyRelationship.put(address.getName(), key);
             state.sessions.put(key, record.serialize());
-            writeState(file, state);
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException();
         } catch (IOException e) {
@@ -88,7 +94,8 @@ public class ClientSessionStore implements SessionStore {
         ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
         try {
             readLock.lockInterruptibly();
-            return state.nameKeyRelationship.containsKey(address.getName());
+            StateKey key = StateKey.from(address);
+            return state.sessions.containsKey(key);
         } catch (InterruptedException e) {
             throw new RuntimeException();
         } finally {
@@ -102,9 +109,8 @@ public class ClientSessionStore implements SessionStore {
         try {
             writeLock.lockInterruptibly();
             StateKey key = StateKey.from(address);
-            state.nameKeyRelationship.remove(address.getName(), key);
             state.sessions.remove(key);
-            writeState(file, state);
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException();
         } catch (IOException e) {
@@ -119,10 +125,12 @@ public class ClientSessionStore implements SessionStore {
         ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
         try {
             writeLock.lockInterruptibly();
-            StateKey key = state.nameKeyRelationship.get(name);
-            state.nameKeyRelationship.remove(name, key);
-            state.sessions.remove(key);
-            writeState(file, state);
+            for (StateKey stateKey : new ArrayList<>(state.sessions.keySet())) {
+                if (stateKey.name.equals(name)) {
+                    state.sessions.remove(stateKey);
+                }
+            }
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException();
         } catch (IOException e) {
@@ -133,31 +141,29 @@ public class ClientSessionStore implements SessionStore {
     }
 
     private static class State {
-        @JsonProperty("nameKeyRelationship")
-        public final Map<String, StateKey> nameKeyRelationship;
         @JsonProperty("sessions")
         public final Map<StateKey, byte[]> sessions;
 
-        public State(@JsonProperty("nameKeyRelationship") Map<String, StateKey> nameKeyRelationship, @JsonProperty("sessions") Map<StateKey, byte[]> sessions) {
-            this.nameKeyRelationship = nameKeyRelationship;
+        public State(@JsonProperty("sessions") Map<StateKey, byte[]> sessions) {
             this.sessions = sessions;
         }
     }
 
 
-    private static void writeState(File file, State state) throws IOException {
-        Utils.createObjectMapper().writeValue(file, state);
+    private void writeState() throws IOException {
+        mapper.writeValue(file, state);
     }
 
-    public static ClientSessionStore from(HomeDirectory homeDirectory) throws IOException {
+    public static ClientSessionStore from(HomeDirectory homeDirectory, ObjectMapper mapper) throws IOException {
         File file = new File(homeDirectory.security(), "clientSessionStore.json");
         State state;
         if (file.exists()) {
             state = Utils.createObjectMapper().readValue(file, State.class);
         } else {
-            state = new State(new HashMap<>(), new HashMap<>());
-            writeState(file, state);
+            state = new State(new HashMap<>());
         }
-        return new ClientSessionStore(file, state);
+        ClientSessionStore clientSessionStore = new ClientSessionStore(file, state, mapper);
+        clientSessionStore.writeState();
+        return clientSessionStore;
     }
 }

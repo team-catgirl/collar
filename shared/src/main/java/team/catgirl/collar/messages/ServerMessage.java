@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.whispersystems.libsignal.state.PreKeyBundle;
 import team.catgirl.collar.models.Group;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.signal.PreKeyBundles;
+import team.catgirl.collar.security.signal.PreKeys;
 
 import java.io.IOException;
 import java.util.List;
@@ -84,7 +84,7 @@ public class ServerMessage {
         }
 
         public static CreateIdentityResponse from(PreKeyBundle bundle) throws IOException {
-            return new CreateIdentityResponse(PreKeyBundles.serialize(bundle));
+            return new CreateIdentityResponse(PreKeys.preKeyBundleToBytes(bundle));
         }
 
         public ServerMessage serverMessage(ServerIdentity identity) {

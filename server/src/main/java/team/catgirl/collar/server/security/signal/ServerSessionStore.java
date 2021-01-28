@@ -3,7 +3,9 @@ package team.catgirl.collar.server.security.signal;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.IndexOptions;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
@@ -20,19 +22,27 @@ import static com.mongodb.client.model.Filters.eq;
 
 public class ServerSessionStore implements SessionStore {
 
+    private static final String NAME = "name";
+    private static final String DEVICE_ID = "deviceId";
+    private static final String RECORD = "record";
+
     private final MongoCollection<Document> docs;
 
     public ServerSessionStore(MongoDatabase db) {
         this.docs = db.getCollection("signal_session_store");
+        Map<String, Object> index = new HashMap<>();
+        index.put(NAME, 1);
+        index.put(DEVICE_ID, 1);
+        this.docs.createIndex(new Document(index), new IndexOptions().unique(true));
     }
 
     @Override
     public SessionRecord loadSession(SignalProtocolAddress address) {
-        MongoCursor<Document> cursor = docs.find(and(eq("name", address.getName()), eq("deviceId", address.getDeviceId()))).iterator();
+        MongoCursor<Document> cursor = docs.find(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()))).iterator();
         if (cursor.hasNext()) {
             Document doc = cursor.next();
             try {
-                return new SessionRecord(doc.get("record", byte[].class));
+                return new SessionRecord(doc.get(RECORD, Binary.class).getData());
             } catch (IOException e) {
                 throw new IllegalStateException("could not load session record " + address);
             }
@@ -43,30 +53,30 @@ public class ServerSessionStore implements SessionStore {
 
     @Override
     public List<Integer> getSubDeviceSessions(String name) {
-        return StreamSupport.stream(docs.find(eq("name", name)).map(document -> document.getInteger("deviceId")).spliterator(), false).collect(Collectors.toList());
+        return StreamSupport.stream(docs.find(eq(NAME, name)).map(document -> document.getInteger(DEVICE_ID)).spliterator(), false).collect(Collectors.toList());
     }
 
     @Override
     public void storeSession(SignalProtocolAddress address, SessionRecord record) {
         Map<String, Object> state = new HashMap<>();
-        state.put("name", address.getName());
-        state.put("deviceId", address.getDeviceId());
-        state.put("record", record.serialize());
-        docs.replaceOne(and(eq("name", address.getName()), eq("deviceId", address.getDeviceId())), new Document(state));
+        state.put(NAME, address.getName());
+        state.put(DEVICE_ID, address.getDeviceId());
+        state.put(RECORD, record.serialize());
+        docs.insertOne(new Document(state));
     }
 
     @Override
     public boolean containsSession(SignalProtocolAddress address) {
-        return docs.find(and(eq("name", address.getName()), eq("deviceId", address.getDeviceId()))).iterator().hasNext();
+        return docs.find(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()))).iterator().hasNext();
     }
 
     @Override
     public void deleteSession(SignalProtocolAddress address) {
-        docs.deleteMany(and(eq("name", address.getName()), eq("deviceId", address.getDeviceId())));
+        docs.deleteMany(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId())));
     }
 
     @Override
     public void deleteAllSessions(String name) {
-        docs.deleteMany(eq("name", name));
+        docs.deleteMany(eq(NAME, name));
     }
 }

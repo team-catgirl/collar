@@ -9,28 +9,29 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import team.catgirl.collar.security.signal.PreKeys;
 
 import java.util.List;
 
 public class ServerSignalProtocolStore implements SignalProtocolStore {
     final ServerIdentityKeyStore identityKeyStore;
-    final ServerPreKeyStore serverPreKeyStore;
+    final ServerPreKeyStore preKeyStore;
     final ServerSessionStore sessionStore;
-    final ServerSignedPreKeyStore preKeyStore;
+    final ServerSignedPreKeyStore signedPreKeyStore;
 
-    private ServerSignalProtocolStore(ServerIdentityKeyStore identityKeyStore, ServerPreKeyStore serverPreKeyStore, ServerSessionStore sessionStore, ServerSignedPreKeyStore preKeyStore) {
+    private ServerSignalProtocolStore(ServerIdentityKeyStore identityKeyStore, ServerPreKeyStore preKeyStore, ServerSessionStore sessionStore, ServerSignedPreKeyStore signedPreKeyStore) {
         this.identityKeyStore = identityKeyStore;
-        this.serverPreKeyStore = serverPreKeyStore;
-        this.sessionStore = sessionStore;
         this.preKeyStore = preKeyStore;
+        this.sessionStore = sessionStore;
+        this.signedPreKeyStore = signedPreKeyStore;
     }
 
     public static ServerSignalProtocolStore from(MongoDatabase db) {
-        return new ServerSignalProtocolStore(
-                new ServerIdentityKeyStore(db),
-                new ServerPreKeyStore(db),
-                new ServerSessionStore(db),
-                new ServerSignedPreKeyStore(db)
+        ServerPreKeyStore preKeyStore = new ServerPreKeyStore(db);
+        ServerSignedPreKeyStore signedPreKeyStore = new ServerSignedPreKeyStore(db);
+        ServerIdentityKeyStore identityKeyStore = new ServerIdentityKeyStore(db, serverIdentityKeyStore -> PreKeys.generate(serverIdentityKeyStore, preKeyStore, signedPreKeyStore));
+        ServerSessionStore sessionStore = new ServerSessionStore(db);
+        return new ServerSignalProtocolStore(identityKeyStore, preKeyStore, sessionStore, signedPreKeyStore
         );
     }
 
@@ -56,22 +57,22 @@ public class ServerSignalProtocolStore implements SignalProtocolStore {
 
     @Override
     public PreKeyRecord loadPreKey(int preKeyId) throws InvalidKeyIdException {
-        return serverPreKeyStore.loadPreKey(preKeyId);
+        return preKeyStore.loadPreKey(preKeyId);
     }
 
     @Override
     public void storePreKey(int preKeyId, PreKeyRecord record) {
-        serverPreKeyStore.storePreKey(preKeyId, record);
+        preKeyStore.storePreKey(preKeyId, record);
     }
 
     @Override
     public boolean containsPreKey(int preKeyId) {
-        return serverPreKeyStore.containsPreKey(preKeyId);
+        return preKeyStore.containsPreKey(preKeyId);
     }
 
     @Override
     public void removePreKey(int preKeyId) {
-        serverPreKeyStore.removePreKey(preKeyId);
+        preKeyStore.removePreKey(preKeyId);
     }
 
     @Override
@@ -106,26 +107,26 @@ public class ServerSignalProtocolStore implements SignalProtocolStore {
 
     @Override
     public SignedPreKeyRecord loadSignedPreKey(int signedPreKeyId) throws InvalidKeyIdException {
-        return preKeyStore.loadSignedPreKey(signedPreKeyId);
+        return signedPreKeyStore.loadSignedPreKey(signedPreKeyId);
     }
 
     @Override
     public List<SignedPreKeyRecord> loadSignedPreKeys() {
-        return preKeyStore.loadSignedPreKeys();
+        return signedPreKeyStore.loadSignedPreKeys();
     }
 
     @Override
     public void storeSignedPreKey(int signedPreKeyId, SignedPreKeyRecord record) {
-        preKeyStore.storeSignedPreKey(signedPreKeyId, record);
+        signedPreKeyStore.storeSignedPreKey(signedPreKeyId, record);
     }
 
     @Override
     public boolean containsSignedPreKey(int signedPreKeyId) {
-        return preKeyStore.containsSignedPreKey(signedPreKeyId);
+        return signedPreKeyStore.containsSignedPreKey(signedPreKeyId);
     }
 
     @Override
     public void removeSignedPreKey(int signedPreKeyId) {
-        preKeyStore.removeSignedPreKey(signedPreKeyId);
+        signedPreKeyStore.removeSignedPreKey(signedPreKeyId);
     }
 }

@@ -1,5 +1,7 @@
 package team.catgirl.collar.client.security.signal;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyStore;
@@ -10,7 +12,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class ClientPreKeyStore implements PreKeyStore {
@@ -18,10 +19,12 @@ public final class ClientPreKeyStore implements PreKeyStore {
     private final File file;
     private final ReentrantReadWriteLock lock;
     private final State state;
+    private final ObjectMapper mapper;
 
-    public ClientPreKeyStore(File file, State state) {
+    public ClientPreKeyStore(File file, State state, ObjectMapper mapper) {
         this.file = file;
         this.state = state;
+        this.mapper = mapper;
         this.lock = new ReentrantReadWriteLock();
     }
 
@@ -50,7 +53,7 @@ public final class ClientPreKeyStore implements PreKeyStore {
         try {
             writeLock.lockInterruptibly();
             state.preKeyRecords.put(preKeyId, record.serialize());
-            saveState(file, state);
+            saveState();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -80,7 +83,7 @@ public final class ClientPreKeyStore implements PreKeyStore {
         try {
             writeLock.lockInterruptibly();
             state.preKeyRecords.remove(preKeyId);
-            saveState(file, state);
+            saveState();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -90,26 +93,28 @@ public final class ClientPreKeyStore implements PreKeyStore {
         }
     }
 
-    public static ClientPreKeyStore from(HomeDirectory home) throws IOException {
+    public static ClientPreKeyStore from(HomeDirectory home, ObjectMapper mapper) throws IOException {
         File file = new File(home.security(), "clientPreKeyStore.json");
         State state;
         if (file.exists()) {
             state = Utils.createObjectMapper().readValue(file, State.class);
         } else {
             state = new State(new HashMap<>());
-            saveState(file, state);
         }
-        return new ClientPreKeyStore(file, state);
+        ClientPreKeyStore clientPreKeyStore = new ClientPreKeyStore(file, state, mapper);
+        clientPreKeyStore.saveState();
+        return clientPreKeyStore;
     }
 
-    private static void saveState(File file, State state) throws IOException {
-        Utils.createObjectMapper().writeValue(file, state);
+    private void saveState() throws IOException {
+        mapper.writeValue(file, state);
     }
 
     private static class State {
+        @JsonProperty("preKeyRecords")
         public final Map<Integer, byte[]> preKeyRecords;
 
-        public State(Map<Integer, byte[]> preKeyRecords) {
+        public State(@JsonProperty("preKeyRecords") Map<Integer, byte[]> preKeyRecords) {
             this.preKeyRecords = preKeyRecords;
         }
     }

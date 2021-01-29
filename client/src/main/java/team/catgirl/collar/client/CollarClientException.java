@@ -10,12 +10,18 @@ public abstract class CollarClientException extends RuntimeException {
         super(message, cause);
     }
 
-    public static class CollarConnectionException extends CollarClientException {
-        public CollarConnectionException(String message) {
+    public static class UnsupportedVersionException extends CollarClientException {
+        public UnsupportedVersionException(String message) {
+            super(message);
+        }
+    }
+
+    public static class ConnectionException extends CollarClientException {
+        public ConnectionException(String message) {
             super(message);
         }
 
-        public CollarConnectionException(String message, Throwable cause) {
+        public ConnectionException(String message, Throwable cause) {
             super(message, cause);
         }
     }

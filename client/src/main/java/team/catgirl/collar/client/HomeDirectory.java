@@ -30,7 +30,7 @@ public final class HomeDirectory {
      * @return collar home directory
      * @throws IOException if directories could not be created
      */
-    public static HomeDirectory fromMinecraftHome(File mcHome, UUID playerId) throws IOException {
+    public static HomeDirectory from(File mcHome, UUID playerId) throws IOException {
         File collar = new File(mcHome, "collar/" + playerId.toString());
         if (!collar.exists() && !collar.mkdirs()) {
             throw new IOException("could not make directory " + collar.getAbsolutePath());

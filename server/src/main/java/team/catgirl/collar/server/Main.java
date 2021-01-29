@@ -1,15 +1,14 @@
 package team.catgirl.collar.server;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoDatabase;
+import spark.ModelAndView;
 import spark.Request;
+import team.catgirl.collar.http.ServerStatusResponse;
+import team.catgirl.collar.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
-import team.catgirl.collar.server.http.AuthToken;
-import team.catgirl.collar.server.http.HttpException;
+import team.catgirl.collar.server.http.*;
 import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
-import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.http.SessionManager;
 import team.catgirl.collar.server.mongo.Mongo;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
@@ -21,16 +20,16 @@ import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.devices.DeviceService.FindDevicesRequest;
 import team.catgirl.collar.server.services.groups.GroupService;
+import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static spark.Spark.*;
@@ -70,6 +69,13 @@ public class Main {
         exception(HttpException.class, (e, request, response) -> {
             response.status(e.code);
             response.body(e.getMessage());
+            LOGGER.log(Level.SEVERE, request.pathInfo(), e);
+        });
+
+        exception(Exception.class, (e, request, response) -> {
+            response.status(500);
+            response.body(e.getMessage());
+            LOGGER.log(Level.SEVERE, request.pathInfo(), e);
         });
 
         // Setup WebSockets
@@ -142,10 +148,73 @@ public class Main {
             apiVersions.add(1);
             return apiVersions;
         });
-        // Return nothing
-        get("/", (request, response) -> "", Object::toString);
+
+        // App Endpoints
+        get("/", (request, response) -> {
+            response.redirect("/app/login");
+            return "";
+        });
+        path("/app", () -> {
+            before("/*", (request, response) -> {
+                response.header("Content-Type", "text/html; charset=UTF-8");
+            });
+            get("/login", (request, response) -> {
+                Cookie cookie = Cookie.from(tokenCrypter, request);
+                if (cookie == null) {
+                    return render("login");
+                } else {
+                    response.redirect("/app");
+                    return "";
+                }
+            });
+            post("/login", (request, response) -> {
+                return "";
+            });
+            get("/logout", (request, response) -> {
+                Cookie.remove(response);
+                response.redirect("/app/login");
+                return "";
+            });
+            get("/signup", (request, response) -> {
+                return render("signup");
+            });
+            post("/signup", (request, response) -> {
+                String name = request.queryParamsSafe("name");
+                String email = request.queryParamsSafe("email");
+                String password = request.queryParamsSafe("password");
+                String confirmPassword = request.queryParamsSafe("confirmPassword");
+                PublicProfile profile = auth.createAccount(RequestContext.ANON, new CreateAccountRequest(email, name, password, confirmPassword)).profile;
+                Cookie cookie = new Cookie(profile.id, new Date().getTime() * TimeUnit.DAYS.toMillis(1));
+                cookie.set(tokenCrypter, response);
+                response.redirect("/app");
+                return "";
+            });
+            get("/", (request, response) -> {
+                Cookie cookie = Cookie.from(tokenCrypter, request);
+                if (cookie == null) {
+                    response.redirect("/app/login");
+                    return "";
+                } else {
+
+                    Profile profile = profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
+
+                    Map<String, Object> ctx = new HashMap<>();
+                    ctx.put("name", profile.name);
+
+                    return render(ctx,"home");
+                }
+            });
+        });
 
         LOGGER.info("Collar server started. Do you want to play a block game game?");
+    }
+
+    public static String render(Map<String, Object> context, String templatePath) {
+        return new HandlebarsTemplateEngine("/templates", false).render(new ModelAndView(context, templatePath));
+    }
+
+    public static String render(String templatePath) {
+        return render(new HashMap<>(), templatePath);
     }
 
     /**
@@ -167,12 +236,4 @@ public class Main {
         request.attribute("requestContext", context);
     }
 
-    private static class ServerStatusResponse {
-        @JsonProperty("status")
-        public final String status;
-
-        public ServerStatusResponse(@JsonProperty("status") String status) {
-            this.status = status;
-        }
-    }
 }

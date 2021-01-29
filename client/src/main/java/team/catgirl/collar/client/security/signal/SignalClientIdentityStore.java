@@ -21,7 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public final class SignalClientIdentityStore implements ClientIdentityStore {
 
@@ -91,7 +91,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         }
     }
 
-    public static ClientIdentityStore from(UUID player, HomeDirectory homeDirectory, BiConsumer<SignalProtocolStore, PreKeyBundle> onInstall) throws IOException {
+    public static ClientIdentityStore from(UUID player, HomeDirectory homeDirectory, Consumer<SignalProtocolStore> onInstall) throws IOException {
         SignalProtocolStore store = ClientSignalProtocolStore.from(homeDirectory);
         File file = new File(homeDirectory.security(), "identity.json");
         State state;
@@ -114,9 +114,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             // Save the identity state
             writeState(file, state);
             // fire the on install consumer
-
-            PreKeyBundle preKeyBundle = PreKeys.generate(store, 1);
-            onInstall.accept(store, preKeyBundle);
+            onInstall.accept(store);
         }
         return new SignalClientIdentityStore(player, store, state);
     }

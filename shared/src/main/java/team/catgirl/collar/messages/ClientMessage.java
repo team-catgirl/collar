@@ -165,4 +165,13 @@ public final class ClientMessage {
             return new ClientMessage(identity, this, null, null, null, null, null, null, null);
         }
     }
+
+    public static class RegisterClientRequest {
+        @JsonProperty("signedPreKeyBundle")
+        public final byte[] signedPreKeyBundle;
+
+        public RegisterClientRequest(@JsonProperty("signedPreKeyBundle") byte[] signedPreKeyBundle) {
+            this.signedPreKeyBundle = signedPreKeyBundle;
+        }
+    }
 }

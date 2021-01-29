@@ -18,6 +18,8 @@ import team.catgirl.collar.server.services.authentication.AuthenticationService;
 import team.catgirl.collar.server.services.authentication.AuthenticationService.CreateAccountRequest;
 import team.catgirl.collar.server.services.authentication.AuthenticationService.LoginRequest;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
+import team.catgirl.collar.server.services.devices.DeviceService;
+import team.catgirl.collar.server.services.devices.DeviceService.FindDevicesRequest;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
@@ -54,6 +56,7 @@ public class Main {
         SessionManager sessions = new SessionManager(mapper);
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
         ProfileService profiles = new ProfileService(db);
+        DeviceService devices = new DeviceService(db);
         // TODO: pass this in as configuration
         TokenCrypter tokenCrypter = new TokenCrypter("mycoolpassword");
         PasswordHashing passwordHashing = new PasswordHashing();
@@ -101,6 +104,14 @@ public class Main {
                         String id = request.params("id");
                         UUID uuid = UUID.fromString(id);
                         return profiles.getProfile(RequestContext.from(request), GetProfileRequest.byId(uuid)).profile.toPublic();
+                    });
+                    get("/devices", (request, response) -> {
+                        return devices.findDevices(RequestContext.from(request), mapper.readValue(request.bodyAsBytes(), FindDevicesRequest.class));
+                    });
+                    delete("/devices/:id", (request, response) -> {
+                        RequestContext context = RequestContext.from(request);
+                        String deviceId = request.params("id");
+                        return devices.deleteDevice(context, new DeviceService.DeleteDeviceRequest(context.profileId, Integer.parseInt(deviceId)));
                     });
                 });
 

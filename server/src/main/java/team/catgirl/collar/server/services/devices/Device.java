@@ -1,19 +1,28 @@
 package team.catgirl.collar.server.services.devices;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 
 import java.util.UUID;
 
 public final class Device {
-    public final UUID player;
+    @JsonProperty("profileId")
+    public final UUID profileId;
+    @JsonProperty("deviceId")
     public final int deviceId;
-    public final String deviceName;
+    @JsonProperty("deviceName")
+    public final String name;
+    @JsonProperty("publicKey")
     public final PublicKey publicKey;
 
-    public Device(UUID player, int deviceId, String deviceName, PublicKey publicKey) {
-        this.player = player;
+    public Device(
+            @JsonProperty("profileId") UUID profileId,
+            @JsonProperty("deviceId") int deviceId,
+            @JsonProperty("deviceName") String name,
+            @JsonProperty("publicKey")PublicKey publicKey) {
+        this.profileId = profileId;
         this.deviceId = deviceId;
-        this.deviceName = deviceName;
+        this.name = name;
         this.publicKey = publicKey;
     }
 }

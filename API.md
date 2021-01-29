@@ -132,3 +132,31 @@ All requests must be sent with an `Authorization: Bearer <token>` with a token r
     "email": "your email"
 }
 ```
+
+### List registered devices 
+
+**Request**
+
+`GET /api/1/profiles/me/devices`
+
+**Response**
+
+```
+{
+    "profileId": "uuid of the owner",
+    "deviceId": "the device id",
+    "publicKey: {
+        ...
+    }
+}
+```
+
+### Delete registered device
+
+**Request**
+
+`GET /api/1/profiles/me/devices/<deviceId>`
+
+**Response**
+
+`{}`

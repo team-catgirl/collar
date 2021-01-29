@@ -79,9 +79,7 @@ public final class DeviceService {
             throw new UnauthorisedException("not owner");
         }
         FindIterable<Document> cursor;
-        if (req.byDeviceId != null && req.byOwner != null) {
-            cursor = docs.find(and(eq(FIELD_OWNER, req.byOwner), eq(FIELD_DEVICE_ID, req.byDeviceId)));
-        } else if (req.byOwner != null) {
+        if (req.byOwner != null) {
             cursor = docs.find(eq(FIELD_OWNER, req.byOwner));
         } else {
             throw new BadRequestException("empty request");
@@ -137,20 +135,17 @@ public final class DeviceService {
     }
 
     public static class FindDevicesRequest {
+        @JsonProperty("byOwner")
         public final UUID byOwner;
-        @JsonProperty("byDeviceId")
-        public final Integer byDeviceId;
 
         public FindDevicesRequest(
-                @JsonProperty("byOwner") UUID byOwner,
-                @JsonProperty("byDeviceId") Integer byDeviceId)
+                @JsonProperty("byOwner") UUID byOwner)
         {
             this.byOwner = byOwner;
-            this.byDeviceId = byDeviceId;
         }
 
         public static FindDevicesRequest byOwner(UUID owner) {
-            return new FindDevicesRequest( owner, null);
+            return new FindDevicesRequest(owner);
         }
     }
 

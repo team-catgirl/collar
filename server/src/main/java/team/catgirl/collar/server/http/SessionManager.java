@@ -1,4 +1,4 @@
-package team.catgirl.collar.server.managers;
+package team.catgirl.collar.server.http;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;

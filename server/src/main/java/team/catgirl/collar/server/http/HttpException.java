@@ -37,6 +37,22 @@ public abstract class HttpException extends RuntimeException {
         }
     }
 
+    public final static class ConflictException extends HttpException {
+        public ConflictException(String message) {
+            super(409, message);
+        }
+    }
+
+    public final static class ServerErrorException extends HttpException {
+        public ServerErrorException(String message) {
+            super(500, message);
+        }
+
+        public ServerErrorException(String message, Throwable cause) {
+            super(500, message, cause);
+        }
+    }
+
     public final static class UnmappedHttpException extends HttpException {
         public UnmappedHttpException(int httpCode, String message) {
             super(httpCode, message);

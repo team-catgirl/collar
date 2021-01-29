@@ -78,6 +78,16 @@
                 <artifactId>mongodb-driver-sync</artifactId>
                 <version>4.1.0</version>
             </dependency>
+            <!-- password hashing -->
+            <dependency>
+                <groupId>at.favre.lib</groupId>
+                <artifactId>bcrypt</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.jasypt</groupId>
+                <artifactId>jasypt</artifactId>
+                <version>1.9.3</version>
+            </dependency>
             <!-- hopefully not wishful thinking -->
             <dependency>
                 <groupId>junit</groupId>

@@ -1,4 +1,4 @@
-package team.catgirl.collar.server.managers;
+package team.catgirl.collar.server.services.groups;
 
 import com.google.common.collect.ImmutableList;
 import org.eclipse.jetty.websocket.api.Session;
@@ -10,9 +10,9 @@ import team.catgirl.collar.models.Group.Member;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
+import team.catgirl.collar.server.http.SessionManager;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -23,16 +23,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public final class GroupManager {
+public final class GroupService {
 
-    private static final Logger LOGGER = Logger.getLogger(GroupManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(GroupService.class.getName());
 
     private final ServerIdentity serverIdentity;
     private final SessionManager sessionManager;
 
     private final ConcurrentMap<String, Group> groupsById = new ConcurrentHashMap<>();
 
-    public GroupManager(ServerIdentity serverIdentity, SessionManager sessionManager) throws NoSuchAlgorithmException {
+    public GroupService(ServerIdentity serverIdentity, SessionManager sessionManager) {
         this.serverIdentity = serverIdentity;
         this.sessionManager = sessionManager;
     }
@@ -128,7 +128,8 @@ public final class GroupManager {
 
     /**
      * Invite user to a group
-     * @param groupInviteRequest
+     * @param identity player creating invitation
+     * @param groupInviteRequest request
      */
     public GroupInviteResponse invite(PlayerIdentity identity, GroupInviteRequest groupInviteRequest) {
         Group group = groupsById.get(groupInviteRequest.groupId);
@@ -172,20 +173,6 @@ public final class GroupManager {
         return new UpdatePlayerStateResponse(findGroupsForPlayer(identity.player));
     }
 
-    private void updateGroup(String groupId) {
-        Group group = groupsById.get(groupId);
-        if (group != null) {
-            synchronized (group.id) {
-                group.members.values().forEach(member -> {
-                    List<Group> groupsForPlayer = findGroupsForPlayer(member.player);
-                    if (!groupsForPlayer.isEmpty()) {
-                        sendMessageToGroup(null, group, new UpdatePlayerStateResponse(groupsForPlayer).serverMessage(serverIdentity));
-                    }
-                });
-            }
-        }
-    }
-
     private List<Group> findGroupsForPlayer(UUID player) {
         return groupsById.values().stream().filter(group -> group.members.containsKey(player)).collect(Collectors.toList());
     }
@@ -215,7 +202,12 @@ public final class GroupManager {
                 groupsById.remove(group.id);
             } else {
                 groupsById.put(group.id, group);
-                updateGroup(group.id);
+                group.members.values().forEach(member -> {
+                    List<Group> groupsForPlayer = findGroupsForPlayer(member.player);
+                    if (!groupsForPlayer.isEmpty()) {
+                        sendMessageToGroup(null, group, new UpdatePlayerStateResponse(groupsForPlayer).serverMessage(serverIdentity));
+                    }
+                });
             }
         }
     }

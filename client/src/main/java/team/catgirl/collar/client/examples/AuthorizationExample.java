@@ -3,7 +3,7 @@ package team.catgirl.collar.client.examples;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarListener;
 import team.catgirl.collar.client.State;
-import team.catgirl.collar.protocol.RegisterDeviceResponse;
+import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
 
 import java.io.File;
 import java.nio.file.Files;

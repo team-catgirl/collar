@@ -1,6 +1,6 @@
 package team.catgirl.collar.client;
 
-import team.catgirl.collar.protocol.RegisterDeviceResponse;
+import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
 
 public interface CollarListener {
     /**

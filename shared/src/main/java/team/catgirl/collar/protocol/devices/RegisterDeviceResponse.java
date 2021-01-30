@@ -1,6 +1,7 @@
-package team.catgirl.collar.protocol;
+package team.catgirl.collar.protocol.devices;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
 
 /**

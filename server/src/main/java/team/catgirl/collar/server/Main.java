@@ -202,10 +202,8 @@ public class Main {
                     return "";
                 } else {
                     Profile profile = profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
-
                     Map<String, Object> ctx = new HashMap<>();
                     ctx.put("name", profile.name);
-
                     return render(ctx,"home");
                 }
             }, Object::toString);

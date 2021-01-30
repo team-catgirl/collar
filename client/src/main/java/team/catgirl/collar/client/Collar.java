@@ -33,19 +33,18 @@ public final class Collar {
     private final UUID playerId;
     private final UrlBuilder baseUrl;
     private final HomeDirectory home;
+    private final CollarListener listener;
     private final OkHttpClient http;
-    private final WebSocket webSocket;
+    private WebSocket webSocket;
+    private State state;
 
-    private Collar(OkHttpClient http, UUID playerId, UrlBuilder baseUrl, HomeDirectory home) {
+    private Collar(OkHttpClient http, UUID playerId, UrlBuilder baseUrl, HomeDirectory home, CollarListener listener) {
         this.http = http;
         this.playerId = playerId;
         this.baseUrl = baseUrl;
         this.home = home;
-        String url = baseUrl.withPath("/api/1/listen").toString();
-        LOGGER.log(Level.INFO, "Connecting to server " + url);
-        webSocket = http.newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket());
-        webSocket.request();
-        http.dispatcher().executorService().shutdown();
+        this.listener = listener;
+        changeState(State.DISCONNECTED);
     }
 
     /**
@@ -53,14 +52,51 @@ public final class Collar {
      * @param playerId of the minecraft player
      * @param server address of the collar server
      * @param minecraftHome the minecraft data directory
+     * @param listener client listener
      * @return collar client
      * @throws IOException setting up
      */
-    public static Collar create(UUID playerId, String server, File minecraftHome) throws IOException {
+    public static Collar create(UUID playerId, String server, File minecraftHome, CollarListener listener) throws IOException {
         OkHttpClient http = new OkHttpClient();
         UrlBuilder baseUrl = UrlBuilder.fromString(server);
+        return new Collar(http, playerId, baseUrl, HomeDirectory.from(minecraftHome, playerId), listener);
+    }
+
+    /**
+     * Connect to server
+     */
+    public void connect() {
         checkVersionCompatibility(http, baseUrl);
-        return new Collar(http, playerId, baseUrl, HomeDirectory.from(minecraftHome, playerId));
+        String url = baseUrl.withPath("/api/1/listen").toString();
+        LOGGER.log(Level.INFO, "Connecting to server " + url);
+        webSocket = http.newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
+        webSocket.request();
+        http.dispatcher().executorService().shutdown();
+    }
+
+    /**
+     * Disconnect from server
+     */
+    public void disconnect() {
+        this.webSocket.close(1000, "Client was disconnected");
+        this.webSocket = null;
+        changeState(State.DISCONNECTED);
+    }
+
+    public State getState() {
+        return state;
+    }
+
+    /**
+     * Change the client state and fire the listener
+     * @param state to change to
+     */
+    private void changeState(State state) {
+        State previousState = this.state;
+        if (previousState != state) {
+            this.state = state;
+            this.listener.onStateChanged(this, state);
+        }
     }
 
     /**
@@ -69,12 +105,12 @@ public final class Collar {
      */
     private static void checkVersionCompatibility(OkHttpClient http, UrlBuilder baseUrl) {
         int[] supportedVersions = httpGet(http, baseUrl.withPath("/api/discover").toString(), int[].class);
+        StringJoiner versions = new StringJoiner(",");
+        Arrays.stream(supportedVersions).forEach(value -> versions.add(String.valueOf(value)));
         if (Arrays.stream(supportedVersions).noneMatch(value -> value == VERSION)) {
-            StringJoiner versions = new StringJoiner(",");
-            Arrays.stream(supportedVersions).forEach(value -> versions.add(String.valueOf(value)));
             throw new UnsupportedVersionException("version " + VERSION + " is not supported by server. Server supports versions " + versions.toString());
         }
-        LOGGER.log(Level.INFO, "Server supports versions " + supportedVersions);
+        LOGGER.log(Level.INFO, "Server supports versions " + versions);
     }
 
     private static  <T> T httpGet(OkHttpClient http, String url, Class<T> aClass) {
@@ -96,6 +132,12 @@ public final class Collar {
     class CollarWebSocket extends WebSocketListener {
         private final ObjectMapper mapper = Utils.createObjectMapper();
         private ClientIdentityStore identityStore;
+        private final Collar collar;
+        private KeepAlive keepAlive;
+
+        public CollarWebSocket(Collar collar) {
+            this.collar = collar;
+        }
 
         @Override
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
@@ -111,21 +153,24 @@ public final class Collar {
             } catch (IOException e) {
                 throw new IllegalStateException("could not setup identity store", e);
             }
-        }
 
-        @Override
-        public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            super.onClosing(webSocket, code, reason);
+            // Start the keep alive
+            this.keepAlive = new KeepAlive(webSocket, this.identityStore.currentIdentity());
+            this.keepAlive.start();
         }
 
         @Override
         public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
             super.onClosed(webSocket, code, reason);
+            LOGGER.log(Level.SEVERE, "Closed socket: " + reason);
+            this.keepAlive.stop();
+            disconnect();
         }
 
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-            super.onFailure(webSocket, t, response);
+            LOGGER.log(Level.SEVERE, "Socket failure", t);
+            disconnect();
         }
 
         @Override
@@ -140,6 +185,7 @@ public final class Collar {
             if (resp instanceof RegisterDeviceResponse) {
                 RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
                 LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
+                listener.onConfirmDeviceRegistration(collar, registerDeviceResponse);
             } else if (resp instanceof DeviceRegisteredResponse) {
                 DeviceRegisteredResponse response = (DeviceRegisteredResponse)resp;
                 LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);

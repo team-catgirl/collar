@@ -1,6 +1,9 @@
 package team.catgirl.collar.client.examples;
 
 import team.catgirl.collar.client.Collar;
+import team.catgirl.collar.client.CollarListener;
+import team.catgirl.collar.client.State;
+import team.catgirl.collar.protocol.RegisterDeviceResponse;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -12,10 +15,16 @@ public class AuthorizationExample {
         Path path = Files.createTempDirectory("example");
         File file = path.toFile();
         UUID playerId = UUID.randomUUID();
-        Collar collar = Collar.create(playerId, "http://localhost:3000/", file);
+        Collar collar = Collar.create(playerId, "http://localhost:3000/", file, new CollarListener() {
+            @Override
+            public void onConfirmDeviceRegistration(Collar collar, RegisterDeviceResponse resp) {
+                System.out.println(resp.approvalUrl);
+            }
+        });
 
-        while (true) {
-//        while (client.getState() != CollarClient.ClientState.DISCONNECTED) {
+        collar.connect();
+
+        while (collar.getState() != State.DISCONNECTED) {
             Thread.sleep(1000);
         }
     }

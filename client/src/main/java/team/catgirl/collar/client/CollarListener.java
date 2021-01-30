@@ -1,18 +1,19 @@
 package team.catgirl.collar.client;
 
-import team.catgirl.collar.messages.ServerMessage.*;
-import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.protocol.RegisterDeviceResponse;
 
 public interface CollarListener {
-    default void onConnected(CollarClient client, ServerIdentity serverIdentity) {};
-    default void onIdentityCreated(CollarClient client, CreateIdentityResponse resp) {};
-    default void onSessionCreated(CollarClient client) {}
-    default void onDisconnect(CollarClient client) {}
-    default void onGroupCreated(CollarClient client, CreateGroupResponse resp) {};
-    default void onGroupMembershipRequested(CollarClient client, GroupMembershipRequest resp) {};
-    default void onGroupJoined(CollarClient client, AcceptGroupMembershipResponse resp) {};
-    default void onGroupLeft(CollarClient client, LeaveGroupResponse resp) {};
-    default void onGroupUpdated(CollarClient client, UpdatePlayerStateResponse resp) {};
-    default void onGroupInvitesSent(CollarClient client, GroupInviteResponse resp) {};
-    default void onPongReceived(PongResponse pongResponse) {};
+    /**
+     * Fired on new installation, to confirm that the device is trusted with an authorized collar user
+     * @param collar client
+     * @param resp response
+     */
+    default void onConfirmDeviceRegistration(Collar collar, RegisterDeviceResponse resp) {}
+
+    /**
+     * Fired when the state of the client changes
+     * @param collar client
+     * @param state of the client connection
+     */
+    default void onStateChanged(Collar collar, State state) {}
 }

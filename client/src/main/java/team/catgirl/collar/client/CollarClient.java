@@ -39,7 +39,7 @@ public final class CollarClient {
     private ClientIdentityStore identityStore;
     private ServerIdentity serverIdentity;
     private WebSocket webSocket;
-    private DelegatingListener listener;
+    private DelegatingListenerOld listener;
     private ClientState state = ClientState.DISCONNECTED;
     private ScheduledExecutorService keepAliveScheduler;
     private CreateIdentityRequest createIdentityRequest;
@@ -57,7 +57,7 @@ public final class CollarClient {
         this.http = new OkHttpClient();
     }
 
-    public void connect(UUID player, CollarListener listener) throws IOException {
+    public void connect(UUID player, OldCollarListener listener) throws IOException {
         // Do not run if we are already connected
         if (state != ClientState.DISCONNECTED) {
             throw new IllegalStateException("Client is in state " + state);
@@ -67,7 +67,7 @@ public final class CollarClient {
         this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (store) -> {
 //            createIdentityRequest = CreateIdentityRequest.from(PreKeys.generate(store, 1));
         });
-        this.listener = new DelegatingListener(listener);
+        this.listener = new DelegatingListenerOld(listener);
         Request request = new Request.Builder().url(baseUrl + "listen").build();
         webSocket = http.newWebSocket(request, new WebSocketListenerImpl(this));
         http.dispatcher().executorService().shutdown();
@@ -78,7 +78,7 @@ public final class CollarClient {
             throw new IllegalStateException("Client is in state " + state);
         }
         webSocket.close(1000, "Collar was disconnected by the client");
-        CollarListener listener = this.listener;
+        OldCollarListener listener = this.listener;
         this.listener = null;
         this.identityStore = null;
         this.serverIdentity = null;
@@ -268,10 +268,10 @@ public final class CollarClient {
         }
     }
 
-    public class DelegatingListener implements CollarListener {
-        private final CollarListener listener;
+    public class DelegatingListenerOld implements OldCollarListener {
+        private final OldCollarListener listener;
 
-        public DelegatingListener(CollarListener listener) {
+        public DelegatingListenerOld(OldCollarListener listener) {
             this.listener = listener;
         }
 

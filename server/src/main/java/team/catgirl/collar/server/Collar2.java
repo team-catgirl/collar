@@ -3,10 +3,7 @@ package team.catgirl.collar.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import team.catgirl.collar.protocol.ProtocolRequest;
-import team.catgirl.collar.protocol.ProtocolResponse;
-import team.catgirl.collar.protocol.RegisterDeviceRequest;
-import team.catgirl.collar.protocol.RegisterDeviceResponse;
+import team.catgirl.collar.protocol.*;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.SessionManager;
 import team.catgirl.collar.server.security.ServerIdentityStore;
@@ -42,21 +39,27 @@ public class Collar2 {
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason) {
         LOGGER.log(Level.INFO, "Session closed " + statusCode + " " + reason);
+        sessions.stopSession(session, reason, null);
     }
 
     @OnWebSocketError
     public void onError(Throwable e) {
-        LOGGER.log(Level.SEVERE, "Error", e);
+        LOGGER.log(Level.SEVERE, "Unrecoverable error", e);
     }
 
     @OnWebSocketMessage
     public void message(Session session, String value) throws IOException {
         LOGGER.log(Level.INFO, "Received message " + value);
         ProtocolRequest req = mapper.readValue(value, ProtocolRequest.class);
-        if (req instanceof RegisterDeviceRequest) {
+        if (req instanceof KeepAliveRequest) {
+            LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
+            send(session, new KeepAliveResponse(identityStore.getIdentity()));
+        } else if (req instanceof RegisterDeviceRequest) {
+            LOGGER.log(Level.INFO, "Received RegisterDeviceRequest");
             String token = sessions.createDeviceRegistrationToken(session, req.identity.publicKey);
             String deviceApprovalUrl = urlProvider.deviceVerificationUrl(token);
             RegisterDeviceResponse response = new RegisterDeviceResponse(identityStore.getIdentity(), deviceApprovalUrl);
+            LOGGER.log(Level.INFO, "Sending RegisterDeviceResponse");
             send(session, response);
         }
     }

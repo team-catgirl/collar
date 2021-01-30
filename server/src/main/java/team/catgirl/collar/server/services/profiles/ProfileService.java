@@ -41,6 +41,8 @@ public class ProfileService {
         // TODO: use a salt
         String hashedPassword = BCrypt.withDefaults().hashToString(12, req.password.toCharArray());
         Map<String, Object> state = new HashMap<>();
+        state.put(FIELD_PROFILE_ID, UUID.randomUUID());
+        state.put(FIELD_NAME, req.name);
         state.put(FIELD_EMAIL, req.email.toLowerCase());
         state.put(FIELD_HASHED_PASSWORD, hashedPassword);
         InsertOneResult insertOneResult = docs.insertOne(new Document(state));
@@ -76,10 +78,12 @@ public class ProfileService {
     public static class CreateProfileRequest {
         public final String email;
         public final String password;
+        public final String name;
 
-        public CreateProfileRequest(String email, String password) {
+        public CreateProfileRequest(String email, String password, String name) {
             this.email = email;
             this.password = password;
+            this.name = name;
         }
     }
 

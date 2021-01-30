@@ -35,9 +35,6 @@ public class AuthenticationService {
 
     public CreateAccountResponse createAccount(RequestContext context, CreateAccountRequest req) {
         context.assertAnonymous();
-        if (context.equals(RequestContext.ANON)) {
-            throw new UnauthorisedException("already logged in");
-        }
         if (req.name == null) {
             throw new BadRequestException("name missing");
         }
@@ -57,7 +54,7 @@ public class AuthenticationService {
             profiles.getProfile(context, GetProfileRequest.byEmail(req.email));
             throw new HttpException.ConflictException("user already exists");
         } catch (HttpException.NotFoundException e) {
-            Profile profile = profiles.createProfile(context, new CreateProfileRequest(req.email.toLowerCase(), req.password)).profile;
+            Profile profile = profiles.createProfile(context, new CreateProfileRequest(req.email.toLowerCase(), req.password, req.name)).profile;
             return new CreateAccountResponse(profile.toPublic(), tokenFrom(profile));
         }
     }
@@ -77,7 +74,7 @@ public class AuthenticationService {
             // Do not leak existence of account by letting NotFoundException propagate
             throw new UnauthorisedException("login failed");
         }
-        BCrypt.Result result = passwordHashing.verifyer().verifyStrict(req.password.toCharArray(), Objects.requireNonNull(profile.hashedPassword).toCharArray());
+        BCrypt.Result result = passwordHashing.verifyer().verify(req.password.toCharArray(), Objects.requireNonNull(profile.hashedPassword).toCharArray());
         if (result.verified) {
             return new LoginResponse(profile, tokenFrom(profile));
         } else {

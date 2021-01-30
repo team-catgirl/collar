@@ -16,14 +16,6 @@ public final class RequestContext {
         this.profileId = profileId;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        RequestContext that = (RequestContext) o;
-        return profileId.equals(that.profileId);
-    }
-
     public void assertAnonymous() {
         if (!ANON.equals(this)) {
             throw new UnauthorisedException("caller must be anonymous");
@@ -31,7 +23,7 @@ public final class RequestContext {
     }
 
     public void assertIsUser() {
-        if (ANON.equals(this)) {
+        if (!ANON.equals(this)) {
             throw new UnauthorisedException("caller must not be anonymous");
         }
     }
@@ -39,6 +31,14 @@ public final class RequestContext {
     @Override
     public int hashCode() {
         return Objects.hash(profileId);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RequestContext that = (RequestContext) o;
+        return profileId.equals(that.profileId);
     }
 
     public static RequestContext from(Request req) {

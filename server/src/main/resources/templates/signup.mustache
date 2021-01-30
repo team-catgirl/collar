@@ -6,13 +6,16 @@
 <body>
 <div class="signup-form">
     <h2>Create an account</h2>
-    <form action="/app/signup">
-        <input type="text" title="name" placeholder="name" />
-        <input type="text" title="email" placeholder="example@collarmc.com" />
-        <input type="password" title="username" placeholder="password" />
-        <input type="password" title="confirmPassword" placeholder="confirmPassword" />
+    <form method="post">
+        <input type="text" title="name" name="name" placeholder="name" />
+        <input type="text" title="email" name="email" placeholder="example@collarmc.com" />
+        <input type="password" title="username" name="password" placeholder="password" />
+        <input type="password" title="confirmPassword" name="confirmPassword" placeholder="confirmPassword" />
         <button type="submit" class="btn">Create Account</button>
     </form>
+</div>
+<div>
+    Already have an account? <a href="/app/login">Login</a>
 </div>
 </body>
 </html>

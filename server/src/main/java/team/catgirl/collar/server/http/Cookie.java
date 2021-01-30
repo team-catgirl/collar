@@ -30,12 +30,18 @@ public class Cookie {
         if (identity == null) {
             return null;
         }
-        byte[] bytes = crypter.decrypt(BaseEncoding.base64().decode(identity));
+        byte[] bytes; {
+            try {
+                bytes = crypter.decrypt(BaseEncoding.base64Url().decode(identity));
+            } catch (Throwable e) {
+                return null;
+            }
+        }
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes)) {
             try (ObjectInputStream objectStream = new ObjectInputStream(byteStream)) {
                 String profileId;
                 long expiresAt;
-                int version = objectStream.read();
+                int version = objectStream.readInt();
                 switch (version) {
                     case 1:
                         profileId = objectStream.readUTF();
@@ -54,11 +60,12 @@ public class Cookie {
     public void set(TokenCrypter crypter, Response response) throws IOException {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             try (ObjectOutputStream objectStream = new ObjectOutputStream(byteStream)) {
-                objectStream.writeLong(VERSION);
+                objectStream.writeInt(VERSION);
                 objectStream.writeUTF(profileId.toString());
                 objectStream.writeLong(expiresAt);
             }
-            String encoded = BaseEncoding.base64().encode(crypter.crypt(byteStream.toByteArray()));
+            byteStream.flush();
+            String encoded = BaseEncoding.base64Url().encode(crypter.crypt(byteStream.toByteArray()));
             response.cookie("identity", encoded);
         }
     }

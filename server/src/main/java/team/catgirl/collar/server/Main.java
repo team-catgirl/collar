@@ -166,18 +166,24 @@ public class Main {
                     response.redirect("/app");
                     return "";
                 }
-            });
+            }, Object::toString);
             post("/login", (request, response) -> {
+                String email = request.queryParamsSafe("email");
+                String password = request.queryParamsSafe("password");
+                Profile profile = auth.login(RequestContext.ANON, new LoginRequest(email, password)).profile;
+                Cookie cookie = new Cookie(profile.id, new Date().getTime() + TimeUnit.DAYS.toMillis(1));
+                cookie.set(tokenCrypter, response);
+                response.redirect("/app");
                 return "";
-            });
+            }, Object::toString);
             get("/logout", (request, response) -> {
                 Cookie.remove(response);
                 response.redirect("/app/login");
                 return "";
-            });
+            }, Object::toString);
             get("/signup", (request, response) -> {
                 return render("signup");
-            });
+            }, Object::toString);
             post("/signup", (request, response) -> {
                 String name = request.queryParamsSafe("name");
                 String email = request.queryParamsSafe("email");
@@ -188,14 +194,13 @@ public class Main {
                 cookie.set(tokenCrypter, response);
                 response.redirect("/app");
                 return "";
-            });
-            get("/", (request, response) -> {
+            }, Object::toString);
+            get("", (request, response) -> {
                 Cookie cookie = Cookie.from(tokenCrypter, request);
                 if (cookie == null) {
                     response.redirect("/app/login");
                     return "";
                 } else {
-
                     Profile profile = profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
 
                     Map<String, Object> ctx = new HashMap<>();
@@ -203,7 +208,7 @@ public class Main {
 
                     return render(ctx,"home");
                 }
-            });
+            }, Object::toString);
         });
 
         LOGGER.info("Collar server started. Do you want to play a block game game?");

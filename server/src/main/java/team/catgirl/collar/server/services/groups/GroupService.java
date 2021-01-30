@@ -12,7 +12,6 @@ import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 import team.catgirl.collar.server.http.SessionManager;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -115,12 +114,12 @@ public final class GroupService {
             memberList.stream().filter(member -> member.membershipState == Group.MembershipState.PENDING).map(member -> member.player).forEach(player -> {
                 Session session = sessionManager.getSession(player);
                 if (session != null) {
-                    try {
-                        sessionManager.send(session, new GroupMembershipRequest(group.id, requester.player, ImmutableList.copyOf(group.members.keySet())).serverMessage(serverIdentity));
-                    } catch (IOException e) {
-                        LOGGER.log(Level.INFO, "Problem sending membership requests", e);
-                        sessionManager.stopSession(session, "Could not communicate with player " + player, e);
-                    }
+//                    try {
+//                        sessionManager.send(session, new GroupMembershipRequest(group.id, requester.player, ImmutableList.copyOf(group.members.keySet())).serverMessage(serverIdentity));
+//                    } catch (IOException e) {
+//                        LOGGER.log(Level.INFO, "Problem sending membership requests", e);
+//                        sessionManager.stopSession(session, "Could not communicate with player " + player, e);
+//                    }
                 }
             });
         }
@@ -185,11 +184,11 @@ public final class GroupService {
                     .forEach(entry -> {
                         Session session = sessionManager.getSession(entry.getKey());
                         if (session != null) {
-                            try {
-                                sessionManager.send(session, message);
-                            } catch (IOException e) {
-                                sessionManager.stopSession(session, "Could not communicate with player " + entry.getKey(), e);
-                            }
+//                            try {
+//                                sessionManager.send(session, message);
+//                            } catch (IOException e) {
+//                                sessionManager.stopSession(session, "Could not communicate with player " + entry.getKey(), e);
+//                            }
                         }
                     });
         }

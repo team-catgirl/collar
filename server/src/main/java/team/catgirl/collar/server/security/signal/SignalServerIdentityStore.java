@@ -26,8 +26,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         this.serverIdentitySupplier = Suppliers.memoize(() -> {
             IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
             return new ServerIdentity(
-                    new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize()),
-                    store.identityKeyStore.getServerId()
+                new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize())
             );
         });
     }

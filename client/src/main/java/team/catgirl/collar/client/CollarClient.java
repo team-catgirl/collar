@@ -17,7 +17,6 @@ import team.catgirl.collar.models.Group.MembershipState;
 import team.catgirl.collar.models.Position;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.signal.PreKeys;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -65,8 +64,8 @@ public final class CollarClient {
         }
         state = ClientState.CONNECTING;
         // Setup the identity store for this player
-        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (store, bundle) -> {
-            createIdentityRequest = CreateIdentityRequest.from(PreKeys.generate(store, 1));
+        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (store) -> {
+//            createIdentityRequest = CreateIdentityRequest.from(PreKeys.generate(store, 1));
         });
         this.listener = new DelegatingListener(listener);
         Request request = new Request.Builder().url(baseUrl + "listen").build();

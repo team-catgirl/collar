@@ -6,6 +6,7 @@ import spark.ModelAndView;
 import spark.Request;
 import team.catgirl.collar.http.ServerStatusResponse;
 import team.catgirl.collar.profiles.PublicProfile;
+import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.http.*;
 import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
@@ -18,6 +19,8 @@ import team.catgirl.collar.server.services.authentication.AuthenticationService.
 import team.catgirl.collar.server.services.authentication.AuthenticationService.LoginRequest;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
+import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceRequest;
+import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceResponse;
 import team.catgirl.collar.server.services.devices.DeviceService.FindDevicesRequest;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.profiles.Profile;
@@ -36,6 +39,7 @@ import static spark.Spark.*;
 
 public class Main {
 
+    private static final HandlebarsTemplateEngine TEMPLATE_ENGINE = new HandlebarsTemplateEngine("/templates", false);
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
@@ -52,10 +56,11 @@ public class Main {
         MongoDatabase db = Mongo.database();
 
         ObjectMapper mapper = Utils.createObjectMapper();
+        AppUrlProvider urlProvider = new DefaultAppUrlProvider("http://localhost:3000");
         SessionManager sessions = new SessionManager(mapper);
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
         ProfileService profiles = new ProfileService(db);
-        DeviceService devices = new DeviceService(db);
+        DeviceService devices = new DeviceService(urlProvider, sessions, db);
         // TODO: pass this in as configuration
         TokenCrypter tokenCrypter = new TokenCrypter("mycoolpassword");
         PasswordHashing passwordHashing = new PasswordHashing();
@@ -82,7 +87,7 @@ public class Main {
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
 
         // WebSocket server
-        webSocket("/api/1/listen", new Collar(mapper, sessions, groups, serverIdentityStore));
+        webSocket("/api/1/listen", new Collar2(mapper, sessions, serverIdentityStore, devices, urlProvider));
 
         // API routes
         path("/api", () -> {
@@ -149,7 +154,7 @@ public class Main {
             return apiVersions;
         });
 
-        // App Endpoints
+        // App Endpoints - to be replaced with a better app
         get("/", (request, response) -> {
             response.redirect("/app/login");
             return "";
@@ -207,13 +212,43 @@ public class Main {
                     return render(ctx,"home");
                 }
             }, Object::toString);
+
+            path("/devices", () -> {
+                get("/trust/:token", (request, response) -> {
+                    Cookie cookie = Cookie.from(tokenCrypter, request);
+                    if (cookie == null) {
+                        response.redirect("/app/login");
+                        return "";
+                    } else {
+                        Map<String, Object> ctx = new HashMap<>();
+                        ctx.put("token", request.params("token"));
+                        return render(ctx, "trust");
+                    }
+                }, Object::toString);
+                post("/trust/:id", (request, response) -> {
+                    Cookie cookie = Cookie.from(tokenCrypter, request);
+                    if (cookie == null) {
+                        response.redirect("/app/login");
+                        return "";
+                    } else {
+                        String token = request.queryParams("token");
+                        String name = request.queryParams("name");
+                        RequestContext context = new RequestContext(cookie.profileId);
+                        KeyPair.PublicKey publicKey = sessions.getDeviceRegistrationPublicKey(token);
+                        CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.profileId, name, publicKey));
+                        sessions.onDeviceRegistered(serverIdentityStore.getIdentity(), token, device);
+                        response.redirect("/app");
+                        return "";
+                    }
+                }, Object::toString);
+            });
         });
 
         LOGGER.info("Collar server started. Do you want to play a block game game?");
     }
 
     public static String render(Map<String, Object> context, String templatePath) {
-        return new HandlebarsTemplateEngine("/templates", false).render(new ModelAndView(context, templatePath));
+        return TEMPLATE_ENGINE.render(new ModelAndView(context, templatePath));
     }
 
     public static String render(String templatePath) {

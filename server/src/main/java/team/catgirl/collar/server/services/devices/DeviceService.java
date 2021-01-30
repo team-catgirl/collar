@@ -9,10 +9,13 @@ import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import team.catgirl.collar.security.KeyPair.PublicKey;
+import team.catgirl.collar.security.TokenGenerator;
+import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.HttpException.BadRequestException;
 import team.catgirl.collar.server.http.HttpException.NotFoundException;
 import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.http.SessionManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,15 +26,21 @@ import static com.mongodb.client.model.Filters.eq;
 
 public final class DeviceService {
 
-    public static final int MAX_DEVICES = 100;
-    public static final String FIELD_OWNER = "owner";
-    public static final String FIELD_DEVICE_ID = "deviceId";
-    public static final String FIELD_PUBLIC_KEY = "publicKey";
-    public static final String FIELD_NAME = "name";
-    public static final String FIELD_FINGERPRINT = "fingerprint";
-    private final MongoCollection<Document> docs;
+    private static final int MAX_DEVICES = 100;
+    private static final String FIELD_OWNER = "owner";
+    private static final String FIELD_DEVICE_ID = "deviceId";
+    private static final String FIELD_PUBLIC_KEY = "publicKey";
+    private static final String FIELD_NAME = "name";
+    private static final String FIELD_FINGERPRINT = "fingerprint";
+    private static final String FIELD_VERIFICATION_CODE = "verificationCode";
 
-    public DeviceService(MongoDatabase db) {
+    private final AppUrlProvider urlProvider;
+    private final MongoCollection<Document> docs;
+    private final SessionManager sessions;
+
+    public DeviceService(AppUrlProvider urlProvider, SessionManager sessions, MongoDatabase db) {
+        this.urlProvider = urlProvider;
+        this.sessions = sessions;
         this.docs = db.getCollection("devices");
         Map<String, Object> index = new HashMap<>();
         index.put(FIELD_OWNER, 1);
@@ -41,13 +50,13 @@ public final class DeviceService {
 
     public CreateDeviceResponse createDevice(RequestContext context, CreateDeviceRequest req) {
         if (req.name == null) {
-            throw new BadRequestException(FIELD_NAME);
+            throw new BadRequestException("name missing");
         }
         if (req.owner == null) {
-            throw new BadRequestException(FIELD_OWNER);
+            throw new BadRequestException("owner missing");
         }
         if (req.publicKey == null) {
-            throw new BadRequestException(FIELD_PUBLIC_KEY);
+            throw new BadRequestException("public key missing");
         }
         if (!context.profileId.equals(req.owner)) {
             throw new UnauthorisedException("not owner");
@@ -68,21 +77,22 @@ public final class DeviceService {
         state.put(FIELD_NAME, req.name);
         state.put(FIELD_PUBLIC_KEY, new Binary(req.publicKey.key));
         state.put(FIELD_FINGERPRINT, req.publicKey.fingerPrint);
-
+        state.put(FIELD_VERIFICATION_CODE, TokenGenerator.verificationCode());
         InsertOneResult result = docs.insertOne(new Document(state));
         ObjectId value = Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue();
-        return new CreateDeviceResponse(docs.find(eq("_id", value)).map(DeviceService::map).first());
+        Device device = docs.find(eq("_id", value)).map(DeviceService::map).first();
+        if (device == null) {
+            throw new NotFoundException("cannot find created device");
+        }
+        return new CreateDeviceResponse(device);
     }
 
     public FindDevicesResponse findDevices(RequestContext context, FindDevicesRequest req) {
-        if (!context.profileId.equals(req.byOwner)) {
-            throw new UnauthorisedException("not owner");
-        }
         FindIterable<Document> cursor;
-        if (req.byOwner != null) {
+        if (req.byOwner != null && req.byOwner.equals(context.profileId)) {
             cursor = docs.find(eq(FIELD_OWNER, req.byOwner));
         } else {
-            throw new BadRequestException("empty request");
+            throw new UnauthorisedException("not owner");
         }
         return new FindDevicesResponse(StreamSupport.stream(cursor.spliterator(), false).map(DeviceService::map).collect(Collectors.toList()));
     }
@@ -104,7 +114,8 @@ public final class DeviceService {
         byte[] publicKeyBytes = document.get(FIELD_PUBLIC_KEY, Binary.class).getData();
         String fingerprint = document.get(FIELD_FINGERPRINT, String.class);
         PublicKey publicKey = new PublicKey(fingerprint, publicKeyBytes);
-        return new Device(player, deviceId, deviceName, publicKey);
+        String code = document.getString(FIELD_VERIFICATION_CODE);
+        return new Device(player, deviceId, deviceName, publicKey, code == null);
     }
 
     public static class CreateDeviceRequest {
@@ -127,9 +138,10 @@ public final class DeviceService {
     }
 
     public static class CreateDeviceResponse {
+        @JsonProperty("verificationUrl")
         public final Device device;
 
-        public CreateDeviceResponse(Device device) {
+        public CreateDeviceResponse(@JsonProperty("device") Device device) {
             this.device = device;
         }
     }

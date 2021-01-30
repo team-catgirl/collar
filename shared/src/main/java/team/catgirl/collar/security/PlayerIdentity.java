@@ -12,13 +12,10 @@ public final class PlayerIdentity implements Identity {
     public final UUID player;
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
-    @JsonProperty("registrationId")
-    public final int registrationId;
 
-    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey, @JsonProperty("registrationId") int registrationId) {
+    public PlayerIdentity(@JsonProperty("player") UUID player, @JsonProperty("publicKey") PublicKey publicKey) {
         this.player = player;
         this.publicKey = publicKey;
-        this.registrationId = registrationId;
     }
 
     @Override

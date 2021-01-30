@@ -20,6 +20,10 @@
             <artifactId>okhttp</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.mikael</groupId>
+            <artifactId>urlbuilder</artifactId>
+        </dependency>
+        <dependency>
             <groupId>team.catgirl.collar</groupId>
             <artifactId>server</artifactId>
             <scope>test</scope>

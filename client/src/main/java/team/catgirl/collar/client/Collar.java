@@ -223,7 +223,7 @@ public final class Collar {
                 sendRequest(webSocket, request);
             } else if (resp instanceof SendPreKeysResponse) {
                 SendPreKeysResponse response = (SendPreKeysResponse)resp;
-                identityStore.trustIdentity(resp.identity, response);
+                identityStore.trustIdentity(response);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
                 sendRequest(webSocket, new StartSessionRequest(identity));
             } else if (resp instanceof StartSessionResponse) {
@@ -231,8 +231,8 @@ public final class Collar {
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
             } else if (resp instanceof IsTrustedRelationshipResponse) {
                 LOGGER.log(Level.INFO, "Server has confirmed a trusted relationship with the client");
-                collar.changeState(State.CONNECTED);
                 this.serverIdentity = resp.identity;
+                collar.changeState(State.CONNECTED);
             } else if (resp instanceof IsUntrustedRelationshipResponse) {
                 LOGGER.log(Level.INFO, "Server has declared the client as untrusted. Consumer should reset the identity store and reconnect.");
                 collar.changeState(State.DISCONNECTED);
@@ -246,7 +246,7 @@ public final class Collar {
 
         private ProtocolResponse readResponse(String message) {
             ProtocolResponse resp;
-            if (state == State.CONNECTED) {
+            if (BaseEncoding.base64().canDecode(message)) {
                 byte[] bytes = identityStore.createCypher().decrypt(serverIdentity, BaseEncoding.base64().decode(message));
                 try {
                     resp = mapper.readValue(bytes, ProtocolResponse.class);
@@ -266,13 +266,13 @@ public final class Collar {
         void sendRequest(WebSocket webSocket, ProtocolRequest req) {
             if (state == State.CONNECTED) {
                 Cypher cypher = identityStore.createCypher();
-                byte[] bytes = new byte[0];
+                byte[] bytes;
                 try {
                     bytes = mapper.writeValueAsBytes(req);
                 } catch (JsonProcessingException e) {
                     throw new ConnectionException("Could not send message", e);
                 }
-                String message = BaseEncoding.base64().encode(cypher.crypt(req.identity, bytes));
+                String message = BaseEncoding.base64().encode(cypher.crypt(serverIdentity, bytes));
                 webSocket.send(message);
             } else {
                 String message;

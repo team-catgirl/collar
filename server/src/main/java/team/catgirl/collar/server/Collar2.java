@@ -17,6 +17,7 @@ import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
+import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.SessionManager;
@@ -69,31 +70,31 @@ public class Collar2 {
         ServerIdentity serverIdentity = identityStore.getIdentity();
         if (req instanceof KeepAliveRequest) {
             LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
-            send(session, new KeepAliveResponse(serverIdentity));
+            sendPlain(session, new KeepAliveResponse(serverIdentity));
         } else if (req instanceof RegisterDeviceRequest) {
             LOGGER.log(Level.INFO, "Received RegisterDeviceRequest");
             String token = sessions.createDeviceRegistrationToken(session, req.identity.publicKey);
             String deviceApprovalUrl = urlProvider.deviceVerificationUrl(token);
             RegisterDeviceResponse response = new RegisterDeviceResponse(serverIdentity, deviceApprovalUrl);
             LOGGER.log(Level.INFO, "Sending RegisterDeviceResponse");
-            send(session, response);
+            sendPlain(session, response);
         } else if (req instanceof SendPreKeysRequest) {
             SendPreKeysRequest request = (SendPreKeysRequest) req;
-            identityStore.trustIdentity(req.identity, request);
+            identityStore.trustIdentity(request);
             SendPreKeysResponse response = identityStore.createSendPreKeysResponse();
-            send(session, response);
+            sendPlain(session, response);
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session");
+            sendPlain(session, new StartSessionResponse(serverIdentity));
             sessions.identify(session, req.identity);
-            send(session, new StartSessionResponse(serverIdentity));
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
             if (identityStore.isTrustedIdentity(req.identity)) {
                 LOGGER.log(Level.INFO, "Identity is trusted. Signaling client to start encryption.");
-                send(session, new IsTrustedRelationshipResponse(serverIdentity));
+                sendPlain(session, new IsTrustedRelationshipResponse(serverIdentity));
             } else {
                 LOGGER.log(Level.INFO, "Identity is NOT trusted. Signaling client to restart registration.");
-                send(session, new IsUntrustedRelationshipResponse(serverIdentity));
+                sendPlain(session, new IsUntrustedRelationshipResponse(serverIdentity));
             }
         } else {
             throw new IllegalStateException("message received was not understood");
@@ -103,7 +104,8 @@ public class Collar2 {
     public void send(Session session, ProtocolResponse resp) throws IOException {
         String message;
         if (sessions.isIdentified(session)) {
-            byte[] bytes = identityStore.createCypher().crypt(identityStore.getIdentity(), mapper.writeValueAsBytes(resp));
+            PlayerIdentity playerIdentity = sessions.getIdentity(session);
+            byte[] bytes = identityStore.createCypher().crypt(playerIdentity, mapper.writeValueAsBytes(resp));
             message = BaseEncoding.base64().encode(bytes);
         } else {
             message = mapper.writeValueAsString(resp);
@@ -112,6 +114,15 @@ public class Collar2 {
             session.getRemote().sendString(message);
         } catch (IOException e) {
             sessions.stopSession(session, "Could not send message to client", e);
+            throw e;
+        }
+    }
+
+    public void sendPlain(Session session, ProtocolResponse resp) throws IOException {
+        try {
+            session.getRemote().sendString(mapper.writeValueAsString(resp));
+        } catch (IOException e) {
+            sessions.stopSession(session, "Could not send plain message to client", e);
             throw e;
         }
     }

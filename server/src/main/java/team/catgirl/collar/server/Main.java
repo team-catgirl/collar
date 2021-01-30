@@ -6,7 +6,6 @@ import spark.ModelAndView;
 import spark.Request;
 import team.catgirl.collar.http.ServerStatusResponse;
 import team.catgirl.collar.profiles.PublicProfile;
-import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.http.*;
 import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
@@ -234,8 +233,7 @@ public class Main {
                         String token = request.queryParams("token");
                         String name = request.queryParams("name");
                         RequestContext context = new RequestContext(cookie.profileId);
-                        KeyPair.PublicKey publicKey = sessions.getDeviceRegistrationPublicKey(token);
-                        CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.profileId, name, publicKey));
+                        CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.profileId, name));
                         sessions.onDeviceRegistered(serverIdentityStore.getIdentity(), token, device);
                         response.redirect("/app");
                         return "";

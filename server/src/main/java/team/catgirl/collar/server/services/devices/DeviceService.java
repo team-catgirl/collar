@@ -6,9 +6,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.Document;
-import org.bson.types.Binary;
 import org.bson.types.ObjectId;
-import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.server.http.HttpException.BadRequestException;
 import team.catgirl.collar.server.http.HttpException.NotFoundException;
 import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
@@ -47,9 +45,6 @@ public final class DeviceService {
         if (req.owner == null) {
             throw new BadRequestException("owner missing");
         }
-        if (req.publicKey == null) {
-            throw new BadRequestException("public key missing");
-        }
         if (!context.profileId.equals(req.owner)) {
             throw new UnauthorisedException("not owner");
         }
@@ -67,8 +62,6 @@ public final class DeviceService {
         state.put(FIELD_OWNER, req.owner);
         state.put(FIELD_DEVICE_ID, newDeviceId);
         state.put(FIELD_NAME, req.name);
-        state.put(FIELD_PUBLIC_KEY, new Binary(req.publicKey.key));
-        state.put(FIELD_FINGERPRINT, req.publicKey.fingerPrint);
         InsertOneResult result = docs.insertOne(new Document(state));
         ObjectId value = Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue();
         Device device = docs.find(eq("_id", value)).map(DeviceService::map).first();
@@ -102,10 +95,7 @@ public final class DeviceService {
         UUID player = document.get(FIELD_OWNER, UUID.class);
         int deviceId = document.getInteger(FIELD_DEVICE_ID);
         String deviceName = document.getString(FIELD_NAME);
-        byte[] publicKeyBytes = document.get(FIELD_PUBLIC_KEY, Binary.class).getData();
-        String fingerprint = document.get(FIELD_FINGERPRINT, String.class);
-        PublicKey publicKey = new PublicKey(fingerprint, publicKeyBytes);
-        return new Device(player, deviceId, deviceName, publicKey);
+        return new Device(player, deviceId, deviceName);
     }
 
     public static class CreateDeviceRequest {
@@ -113,17 +103,13 @@ public final class DeviceService {
         public final UUID owner;
         @JsonProperty(FIELD_NAME)
         public final String name;
-        @JsonProperty(FIELD_PUBLIC_KEY)
-        public final PublicKey publicKey;
 
         public CreateDeviceRequest(
                 @JsonProperty(FIELD_OWNER) UUID owner,
-                @JsonProperty(FIELD_NAME) String name,
-                @JsonProperty(FIELD_PUBLIC_KEY) PublicKey publicKey
+                @JsonProperty(FIELD_NAME) String name
         ) {
             this.owner = owner;
             this.name = name;
-            this.publicKey = publicKey;
         }
     }
 

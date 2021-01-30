@@ -21,10 +21,9 @@ public interface ClientIdentityStore {
 
     /**
      * Trust the server identity
-     * @param identity to trust
-     * @param resp
+     * @param resp with PreKeyBundle
      */
-    void trustIdentity(ServerIdentity identity, SendPreKeysResponse resp);
+    void trustIdentity(SendPreKeysResponse resp);
 
     /**
      * @return creates a new {@link Cypher}

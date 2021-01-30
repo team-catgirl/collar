@@ -54,14 +54,14 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public void trustIdentity(ServerIdentity identity, SendPreKeysResponse resp) {
+    public void trustIdentity(SendPreKeysResponse resp) {
         PreKeyBundle bundle;
         try {
             bundle = PreKeys.preKeyBundleFromBytes(resp.preKeyBundle);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-        SignalProtocolAddress address = signalProtocolAddressFrom(identity);
+        SignalProtocolAddress address = signalProtocolAddressFrom(resp.identity);
         store.saveIdentity(address, bundle.getIdentityKey());
         SessionBuilder sessionBuilder = new SessionBuilder(store, address);
         try {

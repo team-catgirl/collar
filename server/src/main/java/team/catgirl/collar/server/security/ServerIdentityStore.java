@@ -14,10 +14,9 @@ public interface ServerIdentityStore {
 
     /**
      * Creates a new identity for a client
-     * @param identity to create
      * @param req to create
      */
-    void trustIdentity(PlayerIdentity identity, SendPreKeysRequest req);
+    void trustIdentity(SendPreKeysRequest req);
 
     /**
      * Tests if the identity trusted

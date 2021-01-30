@@ -22,6 +22,7 @@ public class PreKeys {
         int unsignedPreKeyId = Utils.createSecureRandom().nextInt(Medium.MAX_VALUE);
         byte[] signature;
         try {
+//            Curve.calculateSignature(identityKeyPair.getPrivateKey(), keyPair.getPublicKey().serialize())
             signature = Curve.calculateSignature(store.getIdentityKeyPair().getPrivateKey(), signedPreKey.getPublicKey().serialize());
         } catch (InvalidKeyException e) {
             throw new IllegalStateException("invalid key");

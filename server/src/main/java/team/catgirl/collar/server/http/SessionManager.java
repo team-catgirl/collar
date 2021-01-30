@@ -38,9 +38,6 @@ public final class SessionManager {
     private final Cache<String, Session> sessionsWaitingToRegister = CacheBuilder.newBuilder()
             .expireAfterWrite(10, TimeUnit.MINUTES)
             .build();
-    private final Cache<String, KeyPair.PublicKey> registrationPublicKeys = CacheBuilder.newBuilder()
-            .expireAfterWrite(10, TimeUnit.MINUTES)
-            .build();
 
     private final ObjectMapper mapper;
 
@@ -57,7 +54,6 @@ public final class SessionManager {
     public String createDeviceRegistrationToken(Session session, KeyPair.PublicKey publicKey) {
         String token = TokenGenerator.urlToken();
         sessionsWaitingToRegister.put(token, session);
-        registrationPublicKeys.put(token, publicKey);
         return token;
     }
 
@@ -98,9 +94,5 @@ public final class SessionManager {
 
     public PlayerIdentity getIdentity(Session session) {
         return sessionToIdentity.get(session);
-    }
-
-    public KeyPair.PublicKey getDeviceRegistrationPublicKey(String token) {
-        return registrationPublicKeys.getIfPresent(token);
     }
 }

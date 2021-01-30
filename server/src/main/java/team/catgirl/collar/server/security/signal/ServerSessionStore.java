@@ -4,6 +4,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -62,7 +64,10 @@ public class ServerSessionStore implements SessionStore {
         state.put(NAME, address.getName());
         state.put(DEVICE_ID, address.getDeviceId());
         state.put(RECORD, record.serialize());
-        docs.insertOne(new Document(state));
+        UpdateResult result = docs.replaceOne(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId())), new Document(state), new ReplaceOptions().upsert(true));
+        if (!result.wasAcknowledged() && result.getMatchedCount() != 1) {
+            throw new IllegalStateException("did not save session for " + address);
+        }
     }
 
     @Override

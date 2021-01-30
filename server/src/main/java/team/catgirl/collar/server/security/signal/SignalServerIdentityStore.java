@@ -39,14 +39,14 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     @Override
-    public void trustIdentity(PlayerIdentity identity, SendPreKeysRequest req) {
+    public void trustIdentity(SendPreKeysRequest req) {
         PreKeyBundle bundle;
         try {
             bundle = PreKeys.preKeyBundleFromBytes(req.preKeyBundle);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-        SignalProtocolAddress address = signalProtocolAddressFrom(identity);
+        SignalProtocolAddress address = signalProtocolAddressFrom(req.identity);
         store.saveIdentity(address, bundle.getIdentityKey());
         SessionBuilder sessionBuilder = new SessionBuilder(store, address);
         try {

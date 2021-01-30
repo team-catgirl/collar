@@ -60,7 +60,7 @@ public class Main {
         SessionManager sessions = new SessionManager(mapper);
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
         ProfileService profiles = new ProfileService(db);
-        DeviceService devices = new DeviceService(urlProvider, sessions, db);
+        DeviceService devices = new DeviceService(db);
         // TODO: pass this in as configuration
         TokenCrypter tokenCrypter = new TokenCrypter("mycoolpassword");
         PasswordHashing passwordHashing = new PasswordHashing();

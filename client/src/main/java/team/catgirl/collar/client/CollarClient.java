@@ -7,7 +7,6 @@ import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import team.catgirl.collar.client.security.ClientIdentityStore;
-import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ClientMessage.*;
 import team.catgirl.collar.messages.ServerMessage;
@@ -64,9 +63,9 @@ public final class CollarClient {
         }
         state = ClientState.CONNECTING;
         // Setup the identity store for this player
-        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (store) -> {
-//            createIdentityRequest = CreateIdentityRequest.from(PreKeys.generate(store, 1));
-        });
+//        this.identityStore = SignalClientIdentityStore.from(player, homeDirectory, (store) -> {
+////            createIdentityRequest = CreateIdentityRequest.from(PreKeys.generate(store, 1));
+//        });
         this.listener = new DelegatingListenerOld(listener);
         Request request = new Request.Builder().url(baseUrl + "listen").build();
         webSocket = http.newWebSocket(request, new WebSocketListenerImpl(this));
@@ -212,7 +211,7 @@ public final class CollarClient {
             }
             if (message.createIdentityResponse != null) {
                 createIdentityRequest = null;
-                identityStore.trustIdentity(message.identity, message.createIdentityResponse);
+//                identityStore.trustIdentity(message.identity, message.createIdentityResponse);
                 identify();
             }
             if (message.identificationResponse != null) {

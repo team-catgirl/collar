@@ -7,7 +7,7 @@ import team.catgirl.collar.security.ServerIdentity;
 /**
  * Fired after the {@link RegisterDeviceRequest} is made with the client, with a URL to approve the device
  */
-public class RegisterDeviceResponse extends ProtocolResponse {
+public final class RegisterDeviceResponse extends ProtocolResponse {
     @JsonProperty("approvalUrl")
     public final String approvalUrl;
 

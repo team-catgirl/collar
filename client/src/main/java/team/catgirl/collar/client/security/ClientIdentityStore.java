@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.security;
 
-import team.catgirl.collar.messages.ServerMessage;
+import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
@@ -21,11 +22,16 @@ public interface ClientIdentityStore {
     /**
      * Trust the server identity
      * @param identity to trust
+     * @param resp
      */
-    void trustIdentity(ServerIdentity identity, ServerMessage.CreateIdentityResponse resp);
+    void trustIdentity(ServerIdentity identity, SendPreKeysResponse resp);
 
     /**
      * @return creates a new {@link Cypher}
      */
     Cypher createCypher();
+
+    void setDeviceId(int deviceId);
+
+    SendPreKeysRequest createSendPreKeysRequest();
 }

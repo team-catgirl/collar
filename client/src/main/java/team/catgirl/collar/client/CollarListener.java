@@ -1,5 +1,6 @@
 package team.catgirl.collar.client;
 
+import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
 
 public interface CollarListener {
@@ -16,4 +17,11 @@ public interface CollarListener {
      * @param state of the client connection
      */
     default void onStateChanged(Collar collar, State state) {}
+
+    /**
+     * Fired when the server or client cannot negotiate trust with the client
+     * @param collar
+     * @param store
+     */
+    default void onClientUntrusted(Collar collar, ClientIdentityStore store) {};
 }

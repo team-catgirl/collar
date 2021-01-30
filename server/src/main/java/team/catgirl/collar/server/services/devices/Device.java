@@ -6,27 +6,23 @@ import team.catgirl.collar.security.KeyPair.PublicKey;
 import java.util.UUID;
 
 public final class Device {
-    @JsonProperty("profileId")
-    public final UUID profileId;
+    @JsonProperty("owner")
+    public final UUID owner;
     @JsonProperty("deviceId")
     public final int deviceId;
     @JsonProperty("deviceName")
     public final String name;
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
-    @JsonProperty("trusted")
-    public final Boolean trusted;
 
     public Device(
-            @JsonProperty("profileId") UUID profileId,
+            @JsonProperty("owner") UUID owner,
             @JsonProperty("deviceId") int deviceId,
             @JsonProperty("deviceName") String name,
-            @JsonProperty("publicKey") PublicKey publicKey,
-            @JsonProperty("trusted") Boolean trusted) {
-        this.profileId = profileId;
+            @JsonProperty("publicKey") PublicKey publicKey) {
+        this.owner = owner;
         this.deviceId = deviceId;
         this.name = name;
         this.publicKey = publicKey;
-        this.trusted = trusted;
     }
 }

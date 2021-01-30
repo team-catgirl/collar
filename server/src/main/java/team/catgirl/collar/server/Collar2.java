@@ -1,14 +1,23 @@
 package team.catgirl.collar.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.BaseEncoding;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import team.catgirl.collar.protocol.KeepAliveRequest;
-import team.catgirl.collar.protocol.KeepAliveResponse;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.RegisterDeviceRequest;
 import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
+import team.catgirl.collar.protocol.keepalive.KeepAliveRequest;
+import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
+import team.catgirl.collar.protocol.session.StartSessionRequest;
+import team.catgirl.collar.protocol.session.StartSessionResponse;
+import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
+import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
+import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
+import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.SessionManager;
 import team.catgirl.collar.server.security.ServerIdentityStore;
@@ -48,29 +57,57 @@ public class Collar2 {
     }
 
     @OnWebSocketError
-    public void onError(Throwable e) {
+    public void onError(Session session, Throwable e) {
         LOGGER.log(Level.SEVERE, "Unrecoverable error", e);
+        sessions.stopSession(session, "Unrecoverable error", null);
     }
 
     @OnWebSocketMessage
     public void message(Session session, String value) throws IOException {
         LOGGER.log(Level.INFO, "Received message " + value);
         ProtocolRequest req = mapper.readValue(value, ProtocolRequest.class);
+        ServerIdentity serverIdentity = identityStore.getIdentity();
         if (req instanceof KeepAliveRequest) {
             LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
-            send(session, new KeepAliveResponse(identityStore.getIdentity()));
+            send(session, new KeepAliveResponse(serverIdentity));
         } else if (req instanceof RegisterDeviceRequest) {
             LOGGER.log(Level.INFO, "Received RegisterDeviceRequest");
             String token = sessions.createDeviceRegistrationToken(session, req.identity.publicKey);
             String deviceApprovalUrl = urlProvider.deviceVerificationUrl(token);
-            RegisterDeviceResponse response = new RegisterDeviceResponse(identityStore.getIdentity(), deviceApprovalUrl);
+            RegisterDeviceResponse response = new RegisterDeviceResponse(serverIdentity, deviceApprovalUrl);
             LOGGER.log(Level.INFO, "Sending RegisterDeviceResponse");
             send(session, response);
+        } else if (req instanceof SendPreKeysRequest) {
+            SendPreKeysRequest request = (SendPreKeysRequest) req;
+            identityStore.trustIdentity(req.identity, request);
+            SendPreKeysResponse response = identityStore.createSendPreKeysResponse();
+            send(session, response);
+        } else if (req instanceof StartSessionRequest) {
+            LOGGER.log(Level.INFO, "Starting session");
+            sessions.identify(session, req.identity);
+            send(session, new StartSessionResponse(serverIdentity));
+        } else if (req instanceof CheckTrustRelationshipRequest) {
+            LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
+            if (identityStore.isTrustedIdentity(req.identity)) {
+                LOGGER.log(Level.INFO, "Identity is trusted. Signaling client to start encryption.");
+                send(session, new IsTrustedRelationshipResponse(serverIdentity));
+            } else {
+                LOGGER.log(Level.INFO, "Identity is NOT trusted. Signaling client to restart registration.");
+                send(session, new IsUntrustedRelationshipResponse(serverIdentity));
+            }
+        } else {
+            throw new IllegalStateException("message received was not understood");
         }
     }
 
     public void send(Session session, ProtocolResponse resp) throws IOException {
-        String message = mapper.writeValueAsString(resp);
+        String message;
+        if (sessions.isIdentified(session)) {
+            byte[] bytes = identityStore.createCypher().crypt(identityStore.getIdentity(), mapper.writeValueAsBytes(resp));
+            message = BaseEncoding.base64().encode(bytes);
+        } else {
+            message = mapper.writeValueAsString(resp);
+        }
         try {
             session.getRemote().sendString(message);
         } catch (IOException e) {

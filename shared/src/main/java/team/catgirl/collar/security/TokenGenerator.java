@@ -1,24 +1,16 @@
 package team.catgirl.collar.security;
 
 import com.google.common.io.BaseEncoding;
+import team.catgirl.collar.utils.Utils;
 
 import java.security.SecureRandom;
-import java.util.Arrays;
 
 public final class TokenGenerator {
-    public static final SecureRandom secureRandom = new SecureRandom();
-
-    public static String verificationCode() {
-        int[] code = new int[6];
-        for (int i = 0; i < code.length; i++) {
-            code[i] = secureRandom.nextInt(10);
-        }
-        return Arrays.toString(code);
-    }
+    private static final SecureRandom RANDOM = Utils.createSecureRandom();
 
     public static byte[] byteToken(int size) {
         byte[] bytes = new byte[size];
-        secureRandom.nextBytes(bytes);
+        RANDOM.nextBytes(bytes);
         return bytes;
     }
 
@@ -30,6 +22,9 @@ public final class TokenGenerator {
         return BaseEncoding.base64Url().encode(byteToken());
     }
 
+    /**
+     * @return new url token
+     */
     public static String urlToken() {
         return BaseEncoding.base64Url().encode(byteToken(16)).replace("==", "");
     }

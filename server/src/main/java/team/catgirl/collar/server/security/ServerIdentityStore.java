@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.security;
 
-import team.catgirl.collar.messages.ClientMessage.CreateIdentityRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
@@ -16,7 +17,7 @@ public interface ServerIdentityStore {
      * @param identity to create
      * @param req to create
      */
-    void trustIdentity(PlayerIdentity identity, CreateIdentityRequest req);
+    void trustIdentity(PlayerIdentity identity, SendPreKeysRequest req);
 
     /**
      * Tests if the identity trusted
@@ -30,8 +31,5 @@ public interface ServerIdentityStore {
      */
     Cypher createCypher();
 
-    /**
-     * @return generates a new {@link org.whispersystems.libsignal.state.PreKeyBundle}
-     */
-    byte[] generatePreKeyBundle();
+    SendPreKeysResponse createSendPreKeysResponse();
 }

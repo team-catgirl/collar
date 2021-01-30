@@ -6,7 +6,6 @@ import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.messages.ClientMessage;
 import team.catgirl.collar.messages.ServerMessage;
-import team.catgirl.collar.messages.ServerMessage.CreateIdentityResponse;
 import team.catgirl.collar.messages.ServerMessage.IdentificationResponse;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.server.http.SessionManager;
@@ -92,9 +91,9 @@ public class Collar {
             if (message.createIdentityRequest != null) {
                 LOGGER.log(Level.INFO, "createIdentityRequest");
                 if (!identityStore.isTrustedIdentity(message.identity)) {
-                    identityStore.trustIdentity(message.identity, message.createIdentityRequest);
+//                    identityStore.trustIdentity(message.identity, message.createIdentityRequest);
                 }
-                send(session, new CreateIdentityResponse(identityStore.generatePreKeyBundle()).serverMessage(identityStore.getIdentity()));
+//                send(session, new CreateIdentityResponse(identityStore.generatePreKeyBundle()).serverMessage(identityStore.getIdentity()));
             } else if (message.identifyRequest != null) {
                 LOGGER.log(Level.INFO, "identifyRequest");
                 IdentificationResponse.Status status;

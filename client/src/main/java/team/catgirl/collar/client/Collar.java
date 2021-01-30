@@ -2,6 +2,7 @@ package team.catgirl.collar.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.BaseEncoding;
 import io.mikael.urlbuilder.UrlBuilder;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
@@ -16,8 +17,18 @@ import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.devices.RegisterDeviceRequest;
 import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
+import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
+import team.catgirl.collar.protocol.session.StartSessionRequest;
+import team.catgirl.collar.protocol.session.StartSessionResponse;
+import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
+import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
+import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
+import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
@@ -76,15 +87,19 @@ public final class Collar {
         webSocket = http.newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
         webSocket.request();
         http.dispatcher().executorService().shutdown();
+        changeState(State.CONNECTING);
     }
 
     /**
      * Disconnect from server
      */
     public void disconnect() {
-        this.webSocket.close(1000, "Client was disconnected");
-        this.webSocket = null;
-        changeState(State.DISCONNECTED);
+        if (this.webSocket != null && state != State.DISCONNECTED) {
+            LOGGER.log(Level.INFO, "Disconnected");
+            this.webSocket.close(1000, "Client was disconnected");
+            this.webSocket = null;
+            changeState(State.DISCONNECTED);
+        }
     }
 
     public State getState() {
@@ -99,6 +114,14 @@ public final class Collar {
         State previousState = this.state;
         if (previousState != state) {
             this.state = state;
+            if (state == State.DISCONNECTED) {
+                disconnect();
+            }
+            if (previousState == null) {
+                LOGGER.log(Level.INFO, "Client in state " + state);
+            } else {
+                LOGGER.log(Level.INFO, "State changed from " + previousState + " to " + state);
+            }
             this.listener.onStateChanged(this, state);
         }
     }
@@ -117,7 +140,7 @@ public final class Collar {
         LOGGER.log(Level.INFO, "Server supports versions " + versions);
     }
 
-    private static  <T> T httpGet(OkHttpClient http, String url, Class<T> aClass) {
+    private static <T> T httpGet(OkHttpClient http, String url, Class<T> aClass) {
         Request request = new Request.Builder()
                 .url(url)
                 .build();
@@ -138,6 +161,7 @@ public final class Collar {
         private ClientIdentityStore identityStore;
         private final Collar collar;
         private KeepAlive keepAlive;
+        private ServerIdentity serverIdentity;
 
         public CollarWebSocket(Collar collar) {
             this.collar = collar;
@@ -150,9 +174,14 @@ public final class Collar {
                 this.identityStore = SignalClientIdentityStore.from(playerId, home, signalProtocolStore -> {
                     LOGGER.log(Level.INFO, "New installation. Registering device with server...");
                     IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
-                    PlayerIdentity serverIdentity = new PlayerIdentity(playerId, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
-                    RegisterDeviceRequest request = new RegisterDeviceRequest(serverIdentity);
-                    send(webSocket, request);
+                    PlayerIdentity playerIdentity = new PlayerIdentity(playerId, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                    RegisterDeviceRequest request = new RegisterDeviceRequest(playerIdentity);
+                    sendRequest(webSocket, request);
+                }, store -> {
+                    IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
+                    PlayerIdentity playerIdentity = new PlayerIdentity(playerId, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                    StartSessionRequest request = new StartSessionRequest(playerIdentity);
+                    sendRequest(webSocket, request);
                 });
             } catch (IOException e) {
                 throw new IllegalStateException("could not setup identity store", e);
@@ -168,42 +197,92 @@ public final class Collar {
             super.onClosed(webSocket, code, reason);
             LOGGER.log(Level.SEVERE, "Closed socket: " + reason);
             this.keepAlive.stop();
-            disconnect();
+            collar.changeState(State.DISCONNECTED);
         }
 
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
             LOGGER.log(Level.SEVERE, "Socket failure", t);
-            disconnect();
+            collar.changeState(State.DISCONNECTED);
         }
 
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull String message) {
             LOGGER.log(Level.INFO, "Message received " + message);
-            ProtocolResponse resp;
-            try {
-                resp = mapper.readValue(message, ProtocolResponse.class);
-            } catch (IOException e) {
-                throw new ConnectionException("Could not read message", e);
-            }
+            ProtocolResponse resp = readResponse(message);
+            PlayerIdentity identity = identityStore.currentIdentity();
             if (resp instanceof RegisterDeviceResponse) {
                 RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
                 LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
                 listener.onConfirmDeviceRegistration(collar, registerDeviceResponse);
             } else if (resp instanceof DeviceRegisteredResponse) {
                 DeviceRegisteredResponse response = (DeviceRegisteredResponse)resp;
+                identityStore.setDeviceId(response.deviceId);
                 LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);
+                SendPreKeysRequest request = identityStore.createSendPreKeysRequest();
+                sendRequest(webSocket, request);
+            } else if (resp instanceof SendPreKeysResponse) {
+                SendPreKeysResponse response = (SendPreKeysResponse)resp;
+                identityStore.trustIdentity(resp.identity, response);
+                LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
+                sendRequest(webSocket, new StartSessionRequest(identity));
+            } else if (resp instanceof StartSessionResponse) {
+                LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
+                sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
+            } else if (resp instanceof IsTrustedRelationshipResponse) {
+                LOGGER.log(Level.INFO, "Server has confirmed a trusted relationship with the client");
+                collar.changeState(State.CONNECTED);
+                this.serverIdentity = resp.identity;
+            } else if (resp instanceof IsUntrustedRelationshipResponse) {
+                LOGGER.log(Level.INFO, "Server has declared the client as untrusted. Consumer should reset the identity store and reconnect.");
+                collar.changeState(State.DISCONNECTED);
+                listener.onClientUntrusted(collar, identityStore);
+            } else if (resp instanceof KeepAliveResponse) {
+                LOGGER.log(Level.INFO, "KeepAliveResponse received");
+            } else {
+                throw new IllegalStateException("Did not understand received protocol response " + message);
             }
         }
 
-        void send(WebSocket webSocket, ProtocolRequest req) {
-            String message;
-            try {
-                message = mapper.writeValueAsString(req);
-            } catch (JsonProcessingException e) {
-                throw new ConnectionException("Could not send message", e);
+        private ProtocolResponse readResponse(String message) {
+            ProtocolResponse resp;
+            if (state == State.CONNECTED) {
+                byte[] bytes = identityStore.createCypher().decrypt(serverIdentity, BaseEncoding.base64().decode(message));
+                try {
+                    resp = mapper.readValue(bytes, ProtocolResponse.class);
+                } catch (IOException e) {
+                    throw new ConnectionException("Could not read message", e);
+                }
+            } else {
+                try {
+                    resp = mapper.readValue(message, ProtocolResponse.class);
+                } catch (IOException e) {
+                    throw new ConnectionException("Could not read message", e);
+                }
             }
-            webSocket.send(message);
+            return resp;
+        }
+
+        void sendRequest(WebSocket webSocket, ProtocolRequest req) {
+            if (state == State.CONNECTED) {
+                Cypher cypher = identityStore.createCypher();
+                byte[] bytes = new byte[0];
+                try {
+                    bytes = mapper.writeValueAsBytes(req);
+                } catch (JsonProcessingException e) {
+                    throw new ConnectionException("Could not send message", e);
+                }
+                String message = BaseEncoding.base64().encode(cypher.crypt(req.identity, bytes));
+                webSocket.send(message);
+            } else {
+                String message;
+                try {
+                    message = mapper.writeValueAsString(req);
+                } catch (JsonProcessingException e) {
+                    throw new ConnectionException("Could not send message", e);
+                }
+                webSocket.send(message);
+            }
         }
     }
 }

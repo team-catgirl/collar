@@ -4,7 +4,8 @@ import com.google.common.base.Suppliers;
 import com.mongodb.client.MongoDatabase;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.state.PreKeyBundle;
-import team.catgirl.collar.messages.ClientMessage.CreateIdentityRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.security.PlayerIdentity;
@@ -26,7 +27,8 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         this.serverIdentitySupplier = Suppliers.memoize(() -> {
             IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
             return new ServerIdentity(
-                new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize())
+                new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize()),
+                store.identityKeyStore.getServerId()
             );
         });
     }
@@ -37,14 +39,16 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     @Override
-    public void trustIdentity(PlayerIdentity identity, CreateIdentityRequest req) {
+    public void trustIdentity(PlayerIdentity identity, SendPreKeysRequest req) {
         PreKeyBundle bundle;
         try {
-            bundle = PreKeys.preKeyBundleFromBytes(req.signedPreKeyBundle);
+            bundle = PreKeys.preKeyBundleFromBytes(req.preKeyBundle);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-        SessionBuilder sessionBuilder = new SessionBuilder(store, signalProtocolAddressFrom(identity));
+        SignalProtocolAddress address = signalProtocolAddressFrom(identity);
+        store.saveIdentity(address, bundle.getIdentityKey());
+        SessionBuilder sessionBuilder = new SessionBuilder(store, address);
         try {
             sessionBuilder.process(bundle);
         } catch (InvalidKeyException|UntrustedIdentityException e) {
@@ -62,11 +66,12 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     @Override
-    public byte[] generatePreKeyBundle() {
+    public SendPreKeysResponse createSendPreKeysResponse() {
+        PreKeyBundle bundle = PreKeys.generate(store, 1);
         try {
-            return PreKeys.preKeyBundleToBytes(PreKeys.generate(store, 1));
+            return new SendPreKeysResponse(getIdentity(), PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("could not generate PreKeyBundle");
         }
     }
 

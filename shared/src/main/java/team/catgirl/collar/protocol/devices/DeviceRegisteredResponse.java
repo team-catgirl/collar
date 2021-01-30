@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
 
-public class DeviceRegisteredResponse extends ProtocolResponse {
+public final class DeviceRegisteredResponse extends ProtocolResponse {
     @JsonProperty("deviceId")
     public Integer deviceId;
 

@@ -9,13 +9,10 @@ import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import team.catgirl.collar.security.KeyPair.PublicKey;
-import team.catgirl.collar.security.TokenGenerator;
-import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.HttpException.BadRequestException;
 import team.catgirl.collar.server.http.HttpException.NotFoundException;
 import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.http.SessionManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,15 +29,10 @@ public final class DeviceService {
     private static final String FIELD_PUBLIC_KEY = "publicKey";
     private static final String FIELD_NAME = "name";
     private static final String FIELD_FINGERPRINT = "fingerprint";
-    private static final String FIELD_VERIFICATION_CODE = "verificationCode";
 
-    private final AppUrlProvider urlProvider;
     private final MongoCollection<Document> docs;
-    private final SessionManager sessions;
 
-    public DeviceService(AppUrlProvider urlProvider, SessionManager sessions, MongoDatabase db) {
-        this.urlProvider = urlProvider;
-        this.sessions = sessions;
+    public DeviceService(MongoDatabase db) {
         this.docs = db.getCollection("devices");
         Map<String, Object> index = new HashMap<>();
         index.put(FIELD_OWNER, 1);
@@ -77,7 +69,6 @@ public final class DeviceService {
         state.put(FIELD_NAME, req.name);
         state.put(FIELD_PUBLIC_KEY, new Binary(req.publicKey.key));
         state.put(FIELD_FINGERPRINT, req.publicKey.fingerPrint);
-        state.put(FIELD_VERIFICATION_CODE, TokenGenerator.verificationCode());
         InsertOneResult result = docs.insertOne(new Document(state));
         ObjectId value = Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue();
         Device device = docs.find(eq("_id", value)).map(DeviceService::map).first();
@@ -114,8 +105,7 @@ public final class DeviceService {
         byte[] publicKeyBytes = document.get(FIELD_PUBLIC_KEY, Binary.class).getData();
         String fingerprint = document.get(FIELD_FINGERPRINT, String.class);
         PublicKey publicKey = new PublicKey(fingerprint, publicKeyBytes);
-        String code = document.getString(FIELD_VERIFICATION_CODE);
-        return new Device(player, deviceId, deviceName, publicKey, code == null);
+        return new Device(player, deviceId, deviceName, publicKey);
     }
 
     public static class CreateDeviceRequest {

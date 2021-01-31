@@ -7,7 +7,7 @@ import net.chris54721.openmcauthenticator.responses.RefreshResponse;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 
 /**
- * Verifies identitifies against Mojang auth servers
+ * Verifies identifies against Mojang auth servers
  */
 public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier {
     @Override

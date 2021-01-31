@@ -10,6 +10,9 @@ import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKey;
 import team.catgirl.collar.client.CollarClientException.ConnectionException;
 import team.catgirl.collar.client.CollarClientException.UnsupportedVersionException;
+import team.catgirl.collar.client.api.features.AbstractFeature;
+import team.catgirl.collar.client.api.features.ApiListener;
+import team.catgirl.collar.client.api.groups.GroupsFeature;
 import team.catgirl.collar.client.security.IdentityState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
@@ -36,10 +39,7 @@ import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.StringJoiner;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,6 +55,7 @@ public final class Collar {
     private final OkHttpClient http;
     private WebSocket webSocket;
     private State state;
+    private final Map<Class<?>, AbstractFeature<? extends ApiListener>> features;
 
     private Collar(OkHttpClient http, MinecraftSession minecraftSession, UrlBuilder baseUrl, HomeDirectory home, CollarListener listener) {
         this.http = http;
@@ -63,6 +64,8 @@ public final class Collar {
         this.home = home;
         this.listener = listener;
         changeState(State.DISCONNECTED);
+        this.features = new HashMap<>();
+        this.features.put(GroupsFeature.class, new GroupsFeature());
     }
 
     /**
@@ -103,6 +106,13 @@ public final class Collar {
             this.webSocket = null;
             changeState(State.DISCONNECTED);
         }
+    }
+
+    /**
+     * @return groups api
+     */
+    public GroupsFeature groups() {
+        return (GroupsFeature)features.get(GroupsFeature.class);
     }
 
     public State getState() {
@@ -263,7 +273,15 @@ public final class Collar {
                 collar.changeState(State.DISCONNECTED);
                 listener.onClientUntrusted(collar, identityStore);
             } else {
-                throw new IllegalStateException("Did not understand received protocol response " + message);
+                // Find the first Feature that handles the request and return the result
+                boolean wasHandled = collar.features.values().stream()
+                        .map(feature -> feature.handleProtocolResponse(resp, request -> sendRequest(webSocket, request)))
+                        .filter(handled -> handled)
+                        .findFirst()
+                        .orElse(false);
+                if (!wasHandled) {
+                    throw new IllegalStateException("Did not understand received protocol response " + message);
+                }
             }
         }
 

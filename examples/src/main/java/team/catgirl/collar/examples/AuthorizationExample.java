@@ -1,4 +1,4 @@
-package team.catgirl.collar.client.examples;
+package team.catgirl.collar.examples;
 
 import com.google.common.io.Files;
 import team.catgirl.collar.client.Collar;

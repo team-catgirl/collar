@@ -102,25 +102,12 @@ public class PreKeys {
 
     private PreKeys() {}
 
-    public static void generateAllPreKeys(SignalProtocolStore store) {
-        IdentityKeyPair identityKeyPair = store.getIdentityKeyPair();
-        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(0, 500);
-        SignedPreKeyRecord signedPreKey;
-        try {
-            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, 0);
-        } catch (InvalidKeyException e) {
-            throw new IllegalStateException("problem generating signed preKey", e);
-        }
-        preKeys.forEach(preKeyRecord -> store.storePreKey(preKeyRecord.getId(), preKeyRecord));
-        store.storeSignedPreKey(signedPreKey.getId(), signedPreKey);
-    }
-
     public static void generate(IdentityKeyStore identityKeyStore, PreKeyStore preKeyStore, SignedPreKeyStore signedPreKeyStore) {
         IdentityKeyPair identityKeyPair = identityKeyStore.getIdentityKeyPair();
         List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(0, 500);
         SignedPreKeyRecord signedPreKey;
         try {
-            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, 0);
+            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, Utils.createSecureRandom().nextInt(Medium.MAX_VALUE));
         } catch (InvalidKeyException e) {
             throw new IllegalStateException("problem generating signed preKey", e);
         }

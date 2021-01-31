@@ -12,6 +12,7 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.server.mongo.DatabaseTest;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class ServerSignalProtocolStoreTest extends DatabaseTest {
     @Test
     public void signedPreKeyStore() throws Exception {
         IdentityKeyPair identityKeyPair = KeyHelper.generateIdentityKeyPair();
-        SignedPreKeyRecord signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, 0);
+        SignedPreKeyRecord signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, new SecureRandom().nextInt());
         store.storeSignedPreKey(signedPreKey.getId(), signedPreKey);
         SignedPreKeyRecord loaded = store.loadSignedPreKey(signedPreKey.getId());
         Assert.assertArrayEquals(signedPreKey.serialize(), loaded.serialize());
@@ -44,7 +45,7 @@ public class ServerSignalProtocolStoreTest extends DatabaseTest {
         Assert.assertTrue(store.getLocalRegistrationId() > 0);
         Assert.assertNotNull(store.getIdentityKeyPair());
         IdentityKeyPair identityKeyPair = KeyHelper.generateIdentityKeyPair();
-        SignalProtocolAddress address = new SignalProtocolAddress("testKey", 1);
+        SignalProtocolAddress address = new SignalProtocolAddress("testKey", new SecureRandom().nextInt());
         Assert.assertFalse(store.isTrustedIdentity(address, identityKeyPair.getPublicKey()));
         store.saveIdentity(address, identityKeyPair.getPublicKey());
         Assert.assertTrue(store.isTrustedIdentity(address, identityKeyPair.getPublicKey()));

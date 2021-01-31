@@ -61,7 +61,7 @@ public final class GroupService {
         }
         synchronized (group.id) {
             Group.MembershipState state = req.state;
-            group = group.updateMemberState(identity.player, state);
+            group = group.updateMemberState(identity.owner, state);
             refreshGroupState(group);
         }
         return new AcceptGroupMembershipResponse(group);
@@ -79,9 +79,9 @@ public final class GroupService {
             return new LeaveGroupResponse(null);
         }
         synchronized (group.id) {
-            group = group.removeMember(identity.player);
+            group = group.removeMember(identity.owner);
             refreshGroupState(group);
-            sendMessageToGroup(identity.player, group, new UpdatePlayerStateResponse(ImmutableList.of(group)).serverMessage(serverIdentity));
+            sendMessageToGroup(identity.owner, group, new UpdatePlayerStateResponse(ImmutableList.of(group)).serverMessage(serverIdentity));
         }
         LOGGER.log(Level.INFO, "Group count " + groupsById.size());
         return new LeaveGroupResponse(group.id);
@@ -137,13 +137,13 @@ public final class GroupService {
         }
         List<Member> newMembers = new ArrayList<>();
         synchronized (group.id) {
-            Member requester = group.members.get(identity.player);
+            Member requester = group.members.get(identity.owner);
             if (requester == null) {
-                LOGGER.log(Level.INFO, identity.player + " is not a member of the group "  + group.id);
+                LOGGER.log(Level.INFO, identity.owner + " is not a member of the group "  + group.id);
                 return new GroupInviteResponse(group.id, null);
             }
             if (requester.membershipRole != Group.MembershipRole.OWNER) {
-                LOGGER.log(Level.INFO, identity.player + " is not OWNER member of the group "  + group.id);
+                LOGGER.log(Level.INFO, identity.owner + " is not OWNER member of the group "  + group.id);
                 return new GroupInviteResponse(group.id, null);
             }
             group = group.addMembers(groupInviteRequest.players, Group.MembershipRole.MEMBER, Group.MembershipState.PENDING, (newGroup, members) -> {
@@ -161,15 +161,15 @@ public final class GroupService {
      * @return response to send to client
      */
     public UpdatePlayerStateResponse updatePosition(PlayerIdentity identity, UpdatePlayerStateRequest req) {
-        List<Group> groups = findGroupsForPlayer(identity.player);
+        List<Group> groups = findGroupsForPlayer(identity.owner);
         groups.forEach(group -> {
             synchronized (group.id) {
-                group = group.updateMemberPosition(identity.player, req.position);
+                group = group.updateMemberPosition(identity.owner, req.position);
                 refreshGroupState(group);
-                sendMessageToGroup(identity.player, group, new UpdatePlayerStateResponse(groups).serverMessage(serverIdentity));
+                sendMessageToGroup(identity.owner, group, new UpdatePlayerStateResponse(groups).serverMessage(serverIdentity));
             }
         });
-        return new UpdatePlayerStateResponse(findGroupsForPlayer(identity.player));
+        return new UpdatePlayerStateResponse(findGroupsForPlayer(identity.owner));
     }
 
     private List<Group> findGroupsForPlayer(UUID player) {

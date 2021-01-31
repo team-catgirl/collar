@@ -4,14 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoDatabase;
 import spark.ModelAndView;
 import spark.Request;
+import team.catgirl.collar.http.HttpException;
+import team.catgirl.collar.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.http.ServerStatusResponse;
 import team.catgirl.collar.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.http.*;
-import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.server.mongo.Mongo;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
+import team.catgirl.collar.server.security.mojang.MinecraftSessionVerifier;
+import team.catgirl.collar.server.security.mojang.MojangMinecraftSessionVerifier;
 import team.catgirl.collar.server.security.signal.SignalServerIdentityStore;
 import team.catgirl.collar.server.services.authentication.AuthenticationService;
 import team.catgirl.collar.server.services.authentication.AuthenticationService.CreateAccountRequest;
@@ -55,6 +58,7 @@ public class Main {
         MongoDatabase db = Mongo.database();
 
         ObjectMapper mapper = Utils.createObjectMapper();
+        // TODO: make configurable
         AppUrlProvider urlProvider = new DefaultAppUrlProvider("http://localhost:3000");
         SessionManager sessions = new SessionManager(mapper);
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
@@ -64,6 +68,8 @@ public class Main {
         TokenCrypter tokenCrypter = new TokenCrypter("mycoolpassword");
         PasswordHashing passwordHashing = new PasswordHashing();
         AuthenticationService auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter);
+        // TODO: make configurable
+        MinecraftSessionVerifier minecraftSessionVerifier = new MojangMinecraftSessionVerifier();
 
         // Collar feature services
         GroupService groups = new GroupService(serverIdentityStore.getIdentity(), sessions);
@@ -86,7 +92,7 @@ public class Main {
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
 
         // WebSocket server
-        webSocket("/api/1/listen", new Collar2(mapper, sessions, serverIdentityStore, devices, urlProvider));
+        webSocket("/api/1/listen", new CollarServer(mapper, sessions, serverIdentityStore, devices, profiles, urlProvider, minecraftSessionVerifier));
 
         // API routes
         path("/api", () -> {
@@ -102,12 +108,12 @@ public class Main {
 
                 path("/profile", () -> {
                     before("/*", (request, response) -> {
-                        RequestContext.from(request).assertIsUser();
+                        RequestContext.from(request).assertNotAnonymous();
                     });
                     // Get your own profile
                     get("/me", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
-                        return profiles.getProfile(context, GetProfileRequest.byId(context.profileId)).profile;
+                        return profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile;
                     });
                     // Get someone elses profile
                     get("/:id", (request, response) -> {
@@ -121,7 +127,7 @@ public class Main {
                     delete("/devices/:id", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
                         String deviceId = request.params("id");
-                        return devices.deleteDevice(context, new DeviceService.DeleteDeviceRequest(context.profileId, Integer.parseInt(deviceId)));
+                        return devices.deleteDevice(context, new DeviceService.DeleteDeviceRequest(context.owner, Integer.parseInt(deviceId)));
                     });
                 });
 
@@ -233,8 +239,9 @@ public class Main {
                         String token = request.queryParams("token");
                         String name = request.queryParams("name");
                         RequestContext context = new RequestContext(cookie.profileId);
-                        CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.profileId, name));
-                        sessions.onDeviceRegistered(serverIdentityStore.getIdentity(), token, device);
+                        CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.owner, name));
+                        PublicProfile profile = profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile.toPublic();
+                        sessions.onDeviceRegistered(serverIdentityStore.getIdentity(), profile, token, device);
                         response.redirect("/app");
                         return "";
                     }

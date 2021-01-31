@@ -15,6 +15,7 @@ import team.catgirl.collar.security.signal.SignalCypher;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class SignalServerIdentityStore implements ServerIdentityStore {
@@ -73,6 +74,12 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }
+    }
+
+    @Override
+    public UUID findIdentity(PlayerIdentity identity, int deviceId) {
+        String name = store.identityKeyStore.findNameBy(identityKeyFrom(identity), deviceId);
+        return name == null ? null : UUID.fromString(name);
     }
 
     private static IdentityKey identityKeyFrom(PlayerIdentity playerIdentity) {

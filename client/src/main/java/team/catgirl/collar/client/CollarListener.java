@@ -20,8 +20,8 @@ public interface CollarListener {
 
     /**
      * Fired when the server or client cannot negotiate trust with the client
-     * @param collar
-     * @param store
+     * @param collar client
+     * @param store identity store to be reset
      */
     default void onClientUntrusted(Collar collar, ClientIdentityStore store) {};
 }

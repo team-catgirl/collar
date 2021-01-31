@@ -72,6 +72,12 @@
                 <artifactId>signal-protocol-java</artifactId>
                 <version>2.3.0</version>
             </dependency>
+            <!-- authenticating with mojang -->
+            <dependency>
+                <groupId>com.github.chris54721</groupId>
+                <artifactId>openmcauthenticator</artifactId>
+                <version>1.3.1</version>
+            </dependency>
             <!-- a database -->
             <dependency>
                 <groupId>org.mongodb</groupId>
@@ -107,4 +113,14 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>jitpack</id>
+            <url>https://jitpack.io</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 </project>

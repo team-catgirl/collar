@@ -125,6 +125,13 @@ public class ClientSignalProtocolStore implements SignalProtocolStore {
         clientSignedPreKeyStore.removeSignedPreKey(signedPreKeyId);
     }
 
+    public void delete() throws IOException {
+        this.identityKeyStore.delete();
+        this.clientPreKeyStore.delete();
+        this.clientSessionStore.delete();
+        this.clientSignedPreKeyStore.delete();
+    }
+
     public static ClientSignalProtocolStore from(HomeDirectory home) throws IOException {
         SimpleModule simpleModule = new SimpleModule();
         simpleModule.addKeyDeserializer(StateKey.class, new KeyDeserializer() {

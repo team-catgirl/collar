@@ -6,6 +6,8 @@ import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
+import java.io.IOException;
+
 public interface ClientIdentityStore {
     /**
      * @return the players identity
@@ -30,7 +32,19 @@ public interface ClientIdentityStore {
      */
     Cypher createCypher();
 
+    /**
+     * @param deviceId of the registered device
+     */
     void setDeviceId(int deviceId);
 
+    /**
+     * @return new {@link SendPreKeysRequest}
+     */
     SendPreKeysRequest createSendPreKeysRequest();
+
+    /**
+     * Resets the identity store and recreates it
+     * @throws IOException when store could not be recreated
+     */
+    void reset() throws IOException;
 }

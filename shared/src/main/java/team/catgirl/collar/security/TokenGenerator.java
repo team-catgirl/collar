@@ -8,6 +8,14 @@ import java.security.SecureRandom;
 public final class TokenGenerator {
     private static final SecureRandom RANDOM = Utils.createSecureRandom();
 
+    public static String verificationCode() {
+        StringBuilder buffer = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            buffer.append(RANDOM.nextInt(10));
+        }
+        return buffer.toString();
+    }
+
     public static byte[] byteToken(int size) {
         byte[] bytes = new byte[size];
         RANDOM.nextBytes(bytes);

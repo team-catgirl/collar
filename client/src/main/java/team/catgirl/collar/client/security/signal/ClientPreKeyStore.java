@@ -110,6 +110,20 @@ public final class ClientPreKeyStore implements PreKeyStore {
         mapper.writeValue(file, state);
     }
 
+    public void delete() throws IOException {
+        ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
+        try {
+            writeLock.lockInterruptibly();
+            if (file.delete()) {
+                throw new IOException("Could not delete " + file.getAbsolutePath());
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            writeLock.lock();
+        }
+    }
+
     private static class State {
         @JsonProperty("preKeyRecords")
         public final Map<Integer, byte[]> preKeyRecords;

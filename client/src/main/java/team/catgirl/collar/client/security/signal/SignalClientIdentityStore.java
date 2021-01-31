@@ -9,6 +9,7 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.client.security.IdentityState;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.Cypher;
@@ -28,14 +29,14 @@ import java.util.function.Consumer;
 
 public final class SignalClientIdentityStore implements ClientIdentityStore {
 
-    private final UUID player;
-    private final SignalProtocolStore store;
+    private final UUID owner;
+    private final ClientSignalProtocolStore store;
     private final State state;
     private final File file;
     private final ReentrantReadWriteLock lock;
 
-    public SignalClientIdentityStore(UUID player, SignalProtocolStore store, State state, File file) {
-        this.player = player;
+    public SignalClientIdentityStore(UUID owner, ClientSignalProtocolStore store, State state, File file) {
+        this.owner = owner;
         this.store = store;
         this.state = state;
         this.file = file;
@@ -45,7 +46,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     @Override
     public PlayerIdentity currentIdentity() {
         IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
-        return new PlayerIdentity(player, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()));
+        return new PlayerIdentity(owner, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()));
     }
 
     @Override
@@ -81,6 +82,9 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
         try {
             writeLock.lockInterruptibly();
+            if (state.deviceId != null) {
+                throw new IllegalStateException("deviceId has already been set");
+            }
             state.deviceId = deviceId;
             writeState(file, state);
         } catch (InterruptedException e) {
@@ -113,6 +117,10 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }
+    }
+
+    public void delete() throws IOException {
+        store.delete();
     }
 
     private SignalProtocolAddress signalProtocolAddressFrom(ServerIdentity serverIdentity) {
@@ -154,14 +162,37 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         }
     }
 
-    public static SignalClientIdentityStore from(UUID player, HomeDirectory homeDirectory, Consumer<SignalProtocolStore> onInstall, Consumer<SignalProtocolStore> onReady) throws IOException {
-        SignalProtocolStore store = ClientSignalProtocolStore.from(homeDirectory);
-        File file = new File(homeDirectory.security(), "identity.json");
+    @Override
+    public void reset() throws IOException {
+        store.delete();
+    }
+
+    public static boolean hasIdentityStore(HomeDirectory homeDirectory) {
+        return IdentityState.exists(homeDirectory);
+    }
+
+    public static SignalClientIdentityStore from(UUID profileId, HomeDirectory homeDirectory, Consumer<SignalProtocolStore> onInstall, Consumer<SignalProtocolStore> onReady) {
+        ClientSignalProtocolStore store;
+        try {
+            store = ClientSignalProtocolStore.from(homeDirectory);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not create identity store", e);
+        }
+        File file;
+        try {
+            file = new File(homeDirectory.security(), "identityStore.json");
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not create identity store", e);
+        }
         State state;
         SignalClientIdentityStore clientIdentityStore;
         if (file.exists()) {
-            state = Utils.createObjectMapper().readValue(file, State.class);
-            clientIdentityStore = new SignalClientIdentityStore(player, store, state, file);
+            try {
+                state = Utils.createObjectMapper().readValue(file, State.class);
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not read profile store", e);
+            }
+            clientIdentityStore = new SignalClientIdentityStore(profileId, store, state, file);
             onReady.accept(store);
         } else {
             // Generate the new identity, its prekeys, etc
@@ -178,10 +209,14 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             store.storeSignedPreKey(signedPreKey.getId(), signedPreKey);
             state = new State(identityKeyPair.serialize(), registrationId, null);
             // Save the identity state
-            writeState(file, state);
+            try {
+                writeState(file, state);
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not create new profile store", e);
+            }
             // fire the on install consumer
             onInstall.accept(store);
-            clientIdentityStore = new SignalClientIdentityStore(player, store, state, file);
+            clientIdentityStore = new SignalClientIdentityStore(profileId, store, state, file);
         }
         return clientIdentityStore;
     }

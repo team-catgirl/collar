@@ -25,7 +25,7 @@ public final class Group {
 
     public static Group newGroup(String id, PlayerIdentity owner, Position ownerPosition, List<UUID> members) {
         ImmutableMap.Builder<UUID, Member> state = ImmutableMap.<UUID, Member>builder()
-                .put(owner.player, new Member(owner.player, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerPosition));
+                .put(owner.owner, new Member(owner.owner, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerPosition));
         members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, null)));
         return new Group(id, state.build());
     }

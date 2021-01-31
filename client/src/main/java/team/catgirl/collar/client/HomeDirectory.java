@@ -2,7 +2,6 @@ package team.catgirl.collar.client;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 public final class HomeDirectory {
 
@@ -24,14 +23,22 @@ public final class HomeDirectory {
         return securityDir;
     }
 
+    public File profile() throws IOException {
+        File securityDir = new File(collarHome, "security");
+        if (!securityDir.exists() && !securityDir.mkdirs()) {
+            throw new IOException("could not make directory " + securityDir.getAbsolutePath());
+        }
+        return securityDir;
+    }
+
     /**
      * @param mcHome of the minecraft client
-     * @param playerId of the current player
+     * @param hostName of the collar server
      * @return collar home directory
      * @throws IOException if directories could not be created
      */
-    public static HomeDirectory from(File mcHome, UUID playerId) throws IOException {
-        File collar = new File(mcHome, "collar/" + playerId.toString());
+    public static HomeDirectory from(File mcHome, String hostName) throws IOException {
+        File collar = new File(mcHome, "collar/" + hostName);
         if (!collar.exists() && !collar.mkdirs()) {
             throw new IOException("could not make directory " + collar.getAbsolutePath());
         }

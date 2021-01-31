@@ -18,16 +18,14 @@ import java.util.logging.Logger;
 final class KeepAlive {
     private static final Logger LOGGER = Logger.getLogger(KeepAlive.class.getName());
     private final WebSocket webSocket;
-    private final PlayerIdentity identity;
-    private final ScheduledExecutorService scheduler;
+    private ScheduledExecutorService scheduler;
 
-    public KeepAlive(WebSocket webSocket, PlayerIdentity identity) {
+    public KeepAlive(WebSocket webSocket) {
         this.webSocket = webSocket;
-        this.identity = identity;
-        this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
-    public void start() {
+    public void start(PlayerIdentity identity) {
+        scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 webSocket.send(Utils.createObjectMapper().writeValueAsString(new KeepAliveRequest(identity)));
@@ -39,6 +37,8 @@ final class KeepAlive {
     }
 
     public void stop() {
-        this.scheduler.shutdown();
+        if (this.scheduler != null) {
+            this.scheduler.shutdown();
+        }
     }
 }

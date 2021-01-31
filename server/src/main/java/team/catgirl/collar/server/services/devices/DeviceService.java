@@ -7,9 +7,9 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import team.catgirl.collar.server.http.HttpException.BadRequestException;
-import team.catgirl.collar.server.http.HttpException.NotFoundException;
-import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.http.HttpException.BadRequestException;
+import team.catgirl.collar.http.HttpException.NotFoundException;
+import team.catgirl.collar.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.server.http.RequestContext;
 
 import java.util.*;
@@ -45,7 +45,7 @@ public final class DeviceService {
         if (req.owner == null) {
             throw new BadRequestException("owner missing");
         }
-        if (!context.profileId.equals(req.owner)) {
+        if (!context.owner.equals(req.owner)) {
             throw new UnauthorisedException("not owner");
         }
         int newDeviceId = findDevices(context, FindDevicesRequest.byOwner(req.owner)).devices.stream()
@@ -73,7 +73,7 @@ public final class DeviceService {
 
     public FindDevicesResponse findDevices(RequestContext context, FindDevicesRequest req) {
         FindIterable<Document> cursor;
-        if (req.byOwner != null && req.byOwner.equals(context.profileId)) {
+        if (req.byOwner != null && req.byOwner.equals(context.owner)) {
             cursor = docs.find(eq(FIELD_OWNER, req.byOwner));
         } else {
             throw new UnauthorisedException("not owner");
@@ -82,7 +82,7 @@ public final class DeviceService {
     }
 
     public DeleteDeviceResponse deleteDevice(RequestContext context, DeleteDeviceRequest req) {
-        if (!context.profileId.equals(req.owner)) {
+        if (!context.owner.equals(req.owner)) {
             throw new UnauthorisedException("not owner");
         }
         if (docs.deleteOne(and(eq(FIELD_OWNER, req.owner), eq(FIELD_DEVICE_ID, req.deviceId))).getDeletedCount() != 1) {

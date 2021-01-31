@@ -10,13 +10,15 @@ import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKey;
 import team.catgirl.collar.client.CollarClientException.ConnectionException;
 import team.catgirl.collar.client.CollarClientException.UnsupportedVersionException;
-import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.client.security.IdentityState;
+import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
-import team.catgirl.collar.protocol.devices.RegisterDeviceRequest;
 import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
+import team.catgirl.collar.protocol.identity.IdentifyRequest;
+import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
@@ -29,6 +31,7 @@ import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
@@ -45,7 +48,7 @@ public final class Collar {
 
     private static final int VERSION = 1;
 
-    private final UUID playerId;
+    private final MinecraftSession minecraftSession;
     private final UrlBuilder baseUrl;
     private final HomeDirectory home;
     private final CollarListener listener;
@@ -53,9 +56,9 @@ public final class Collar {
     private WebSocket webSocket;
     private State state;
 
-    private Collar(OkHttpClient http, UUID playerId, UrlBuilder baseUrl, HomeDirectory home, CollarListener listener) {
+    private Collar(OkHttpClient http, MinecraftSession minecraftSession, UrlBuilder baseUrl, HomeDirectory home, CollarListener listener) {
         this.http = http;
-        this.playerId = playerId;
+        this.minecraftSession = minecraftSession;
         this.baseUrl = baseUrl;
         this.home = home;
         this.listener = listener;
@@ -64,17 +67,17 @@ public final class Collar {
 
     /**
      * Create a new Collar client
-     * @param playerId of the minecraft player
+     * @param session of the minecraft player
      * @param server address of the collar server
      * @param minecraftHome the minecraft data directory
      * @param listener client listener
      * @return collar client
      * @throws IOException setting up
      */
-    public static Collar create(UUID playerId, String server, File minecraftHome, CollarListener listener) throws IOException {
+    public static Collar create(MinecraftSession session, String server, File minecraftHome, CollarListener listener) throws IOException {
         OkHttpClient http = new OkHttpClient();
         UrlBuilder baseUrl = UrlBuilder.fromString(server);
-        return new Collar(http, playerId, baseUrl, HomeDirectory.from(minecraftHome, playerId), listener);
+        return new Collar(http, session, baseUrl, HomeDirectory.from(minecraftHome, baseUrl.hostName), listener);
     }
 
     /**
@@ -158,7 +161,7 @@ public final class Collar {
 
     class CollarWebSocket extends WebSocketListener {
         private final ObjectMapper mapper = Utils.createObjectMapper();
-        private ClientIdentityStore identityStore;
+        private ResettableClientIdentityStore identityStore;
         private final Collar collar;
         private KeepAlive keepAlive;
         private ServerIdentity serverIdentity;
@@ -170,26 +173,32 @@ public final class Collar {
         @Override
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             LOGGER.log(Level.INFO, "Connection established");
-            try {
-                this.identityStore = SignalClientIdentityStore.from(playerId, home, signalProtocolStore -> {
-                    LOGGER.log(Level.INFO, "New installation. Registering device with server...");
-                    IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
-                    PlayerIdentity playerIdentity = new PlayerIdentity(playerId, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
-                    RegisterDeviceRequest request = new RegisterDeviceRequest(playerIdentity);
-                    sendRequest(webSocket, request);
-                }, store -> {
-                    IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
-                    PlayerIdentity playerIdentity = new PlayerIdentity(playerId, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
-                    StartSessionRequest request = new StartSessionRequest(playerIdentity);
-                    sendRequest(webSocket, request);
-                });
-            } catch (IOException e) {
-                throw new IllegalStateException("could not setup identity store", e);
+            if (SignalClientIdentityStore.hasIdentityStore(home)) {
+                identityStore = getOrCreateIdentityKeyStore(webSocket, null);
+            } else {
+                sendRequest(webSocket, IdentifyRequest.unknown());
             }
-
             // Start the keep alive
-            this.keepAlive = new KeepAlive(webSocket, this.identityStore.currentIdentity());
-            this.keepAlive.start();
+            this.keepAlive = new KeepAlive(webSocket);
+            this.keepAlive.start(null);
+        }
+
+        private ResettableClientIdentityStore getOrCreateIdentityKeyStore(WebSocket webSocket, UUID owner) {
+            return new ResettableClientIdentityStore(() -> SignalClientIdentityStore.from(owner, home, signalProtocolStore -> {
+                LOGGER.log(Level.INFO, "New installation. Registering device with server...");
+                IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
+                new IdentityState(owner).write(home);
+                PlayerIdentity playerIdentity = new PlayerIdentity(owner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                IdentifyRequest request = new IdentifyRequest(playerIdentity);
+                sendRequest(webSocket, request);
+            }, (store) -> {
+                LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server");
+                IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
+                IdentityState identityState = IdentityState.read(home);
+                PlayerIdentity playerIdentity = new PlayerIdentity(identityState.owner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                IdentifyRequest request = new IdentifyRequest(playerIdentity);
+                sendRequest(webSocket, request);
+            }));
         }
 
         @Override
@@ -210,22 +219,38 @@ public final class Collar {
         public void onMessage(@NotNull WebSocket webSocket, @NotNull String message) {
             LOGGER.log(Level.INFO, "Message received " + message);
             ProtocolResponse resp = readResponse(message);
-            PlayerIdentity identity = identityStore.currentIdentity();
-            if (resp instanceof RegisterDeviceResponse) {
+            PlayerIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
+            if (resp instanceof IdentifyResponse) {
+                IdentifyResponse response = (IdentifyResponse) resp;
+                if (identityStore == null) {
+                    identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
+                    identity = identityStore.currentIdentity();
+                    StartSessionRequest request = new StartSessionRequest(identity, minecraftSession);
+                    sendRequest(webSocket, request);
+                    keepAlive.stop();
+                    keepAlive.start(identity);
+                }
+            } else if (resp instanceof KeepAliveResponse) {
+                LOGGER.log(Level.INFO, "KeepAliveResponse received");
+            } else if (resp instanceof RegisterDeviceResponse) {
                 RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
                 LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
                 listener.onConfirmDeviceRegistration(collar, registerDeviceResponse);
             } else if (resp instanceof DeviceRegisteredResponse) {
                 DeviceRegisteredResponse response = (DeviceRegisteredResponse)resp;
+                identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
                 identityStore.setDeviceId(response.deviceId);
                 LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);
                 SendPreKeysRequest request = identityStore.createSendPreKeysRequest();
                 sendRequest(webSocket, request);
             } else if (resp instanceof SendPreKeysResponse) {
                 SendPreKeysResponse response = (SendPreKeysResponse)resp;
+                if (identityStore == null) {
+                    throw new IllegalStateException("identity has not been established");
+                }
                 identityStore.trustIdentity(response);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
-                sendRequest(webSocket, new StartSessionRequest(identity));
+                sendRequest(webSocket, new StartSessionRequest(identity, minecraftSession));
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
@@ -237,8 +262,6 @@ public final class Collar {
                 LOGGER.log(Level.INFO, "Server has declared the client as untrusted. Consumer should reset the identity store and reconnect.");
                 collar.changeState(State.DISCONNECTED);
                 listener.onClientUntrusted(collar, identityStore);
-            } else if (resp instanceof KeepAliveResponse) {
-                LOGGER.log(Level.INFO, "KeepAliveResponse received");
             } else {
                 throw new IllegalStateException("Did not understand received protocol response " + message);
             }

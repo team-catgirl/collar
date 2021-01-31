@@ -46,7 +46,7 @@ public class Collar {
         LOGGER.log(Level.INFO, "Session closed " + statusCode + " " + reason);
         PlayerIdentity player = sessions.getIdentity(session);
         if (player != null) {
-            groups.removeUserFromAllGroups(player.player);
+            groups.removeUserFromAllGroups(player.owner);
         }
         sessions.stopSession(session, "Session closed", null);
     }
@@ -99,7 +99,7 @@ public class Collar {
                 IdentificationResponse.Status status;
                 if (identityStore.isTrustedIdentity(message.identity)) {
                     status = IdentificationResponse.Status.SUCCESSS;
-                    sessions.identify(session, message.identity);
+//                    sessions.identify(session, message.identity, session);
                     send(session, new IdentificationResponse(status).serverMessage(identityStore.getIdentity()));
                 } else {
                     status = IdentificationResponse.Status.FAILURE;

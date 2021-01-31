@@ -6,6 +6,8 @@ import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
+import java.util.UUID;
+
 public interface ServerIdentityStore {
     /**
      * @return identity of the server
@@ -31,4 +33,6 @@ public interface ServerIdentityStore {
     Cypher createCypher();
 
     SendPreKeysResponse createSendPreKeysResponse();
+
+    UUID findIdentity(PlayerIdentity identity, int deviceId);
 }

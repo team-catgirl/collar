@@ -28,14 +28,14 @@ public class ClientSignalProtocolStoreTest {
     public void createStore() throws IOException {
         tempDir = Files.createTempDir();
         playerId = UUID.randomUUID();
-        store = ClientSignalProtocolStore.from(HomeDirectory.from(tempDir, playerId));
+        store = ClientSignalProtocolStore.from(HomeDirectory.from(tempDir, "localhost"));
     }
 
     @Test
     public void loadsFromDisk() throws Exception {
         IdentityKeyPair identityKeyPair = store.getIdentityKeyPair();
         int registrationId = store.getLocalRegistrationId();
-        store = ClientSignalProtocolStore.from(HomeDirectory.from(tempDir, playerId));
+        store = ClientSignalProtocolStore.from(HomeDirectory.from(tempDir, "localhost"));
         Assert.assertEquals(store.getLocalRegistrationId(), registrationId);
         Assert.assertArrayEquals(store.getIdentityKeyPair().serialize(), identityKeyPair.serialize());
     }

@@ -100,6 +100,10 @@ public class ServerIdentityKeyStore implements IdentityKeyStore {
         return docs.find(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()), eq(FINGERPRINT, identityKey.getFingerprint()))).iterator().hasNext();
     }
 
+    public String findNameBy(IdentityKey identityKey, int deviceId) {
+        return docs.find(and(eq(FINGERPRINT, identityKey.getFingerprint()), eq(DEVICE_ID, deviceId))).map(document -> document.getString(NAME)).first();
+    }
+
     private static Document map(SignalProtocolAddress address, IdentityKey identityKey) {
         Map<String, Object> state = new HashMap<>();
         state.put(NAME, address.getName());

@@ -109,6 +109,20 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         mapper.writeValue(file, state);
     }
 
+    public void delete() throws IOException {
+        WriteLock writeLock = lock.writeLock();
+        try {
+            writeLock.lockInterruptibly();
+            if (file.delete()) {
+                throw new IOException("Could not delete " + file.getAbsolutePath());
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            writeLock.lock();
+        }
+    }
+
     private static final class State {
         @JsonProperty("localRegistrationId")
         public final int localRegistrationId;

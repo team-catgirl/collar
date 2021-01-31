@@ -140,6 +140,20 @@ public class ClientSessionStore implements SessionStore {
         }
     }
 
+    public void delete() throws IOException {
+        ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
+        try {
+            writeLock.lockInterruptibly();
+            if (file.delete()) {
+                throw new IOException("Could not delete " + file.getAbsolutePath());
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            writeLock.lock();
+        }
+    }
+
     private static class State {
         @JsonProperty("sessions")
         public final Map<StateKey, byte[]> sessions;

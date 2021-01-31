@@ -7,9 +7,10 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.BsonObjectId;
 import org.bson.Document;
-import team.catgirl.collar.server.http.HttpException.BadRequestException;
-import team.catgirl.collar.server.http.HttpException.NotFoundException;
-import team.catgirl.collar.server.http.HttpException.ServerErrorException;
+import team.catgirl.collar.http.HttpException.BadRequestException;
+import team.catgirl.collar.http.HttpException.NotFoundException;
+import team.catgirl.collar.http.HttpException.ServerErrorException;
+import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.server.http.RequestContext;
 
 import java.util.HashMap;
@@ -60,6 +61,7 @@ public class ProfileService {
     }
 
     public GetProfileResponse getProfile(RequestContext context, GetProfileRequest req) {
+        context.assertNotAnonymous();
         MongoCursor<Document> cursor;
         if (req.byId != null) {
             cursor = docs.find(eq(FIELD_PROFILE_ID, req.byId)).iterator();
@@ -98,18 +100,24 @@ public class ProfileService {
     public static class GetProfileRequest {
         public final UUID byId;
         public final String byEmail;
+        private final PublicKey byPublicKey;
 
-        public GetProfileRequest(UUID byId, String byEmail) {
+        public GetProfileRequest(UUID byId, String byEmail, PublicKey byPublicKey) {
             this.byId = byId;
             this.byEmail = byEmail;
+            this.byPublicKey = byPublicKey;
         }
 
         public static GetProfileRequest byId(UUID uuid) {
-            return new GetProfileRequest(uuid, null);
+            return new GetProfileRequest(uuid, null, null);
         }
 
         public static GetProfileRequest byEmail(String email) {
-            return new GetProfileRequest(null, email);
+            return new GetProfileRequest(null, email, null);
+        }
+
+        public static GetProfileRequest byPublicKey(PublicKey publicKey) {
+            return new GetProfileRequest(null, null, publicKey);
         }
     }
 

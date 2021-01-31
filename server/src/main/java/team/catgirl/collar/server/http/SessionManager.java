@@ -5,14 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.http.HttpException.NotFoundException;
+import team.catgirl.collar.http.HttpException.ServerErrorException;
+import team.catgirl.collar.profiles.PublicProfile;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
-import team.catgirl.collar.security.KeyPair;
 import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
-import team.catgirl.collar.server.http.HttpException.NotFoundException;
-import team.catgirl.collar.server.http.HttpException.ServerErrorException;
+import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceResponse;
 
 import java.io.IOException;
@@ -35,7 +36,11 @@ public final class SessionManager {
     private final ConcurrentMap<UUID, PlayerIdentity> playerToIdentity = new ConcurrentHashMap<>();
 
     // TODO: move all this to device service records
-    private final Cache<String, Session> sessionsWaitingToRegister = CacheBuilder.newBuilder()
+    private final Cache<String, Session> devicesWaitingToRegister = CacheBuilder.newBuilder()
+            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .build();
+
+    private final Cache<String, Session> sessionsWaitingForIdentityRegistration = CacheBuilder.newBuilder()
             .expireAfterWrite(10, TimeUnit.MINUTES)
             .build();
 
@@ -45,25 +50,25 @@ public final class SessionManager {
         this.mapper = mapper;
     }
 
-    public void identify(Session session, PlayerIdentity identity) {
+    public void identify(Session session, PlayerIdentity identity, MinecraftSession minecraftSession) {
         sessionToIdentity.put(session, identity);
         identityToSession.put(identity, session);
-        playerToIdentity.put(identity.player, identity);
+        playerToIdentity.put(identity.owner, identity);
     }
 
-    public String createDeviceRegistrationToken(Session session, KeyPair.PublicKey publicKey) {
+    public String createDeviceRegistrationToken(Session session) {
         String token = TokenGenerator.urlToken();
-        sessionsWaitingToRegister.put(token, session);
+        devicesWaitingToRegister.put(token, session);
         return token;
     }
 
-    public void onDeviceRegistered(ServerIdentity identity, String token, CreateDeviceResponse resp) {
-        Session session = sessionsWaitingToRegister.getIfPresent(token);
+    public void onDeviceRegistered(ServerIdentity identity, PublicProfile profile, String token, CreateDeviceResponse resp) {
+        Session session = devicesWaitingToRegister.getIfPresent(token);
         if (session == null) {
             throw new NotFoundException("session does not exist");
         }
         try {
-            send(session, new DeviceRegisteredResponse(identity, resp.device.deviceId));
+            send(session, new DeviceRegisteredResponse(identity, profile, resp.device.deviceId));
         } catch (IOException e) {
             throw new ServerErrorException("could not send DeviceRegisteredResponse", e);
         }
@@ -76,11 +81,15 @@ public final class SessionManager {
     public void stopSession(Session session, String reason, IOException e) {
         PlayerIdentity playerIdentity = sessionToIdentity.remove(session);
         if (playerIdentity != null) {
-            playerToIdentity.remove(playerIdentity.player);
+            playerToIdentity.remove(playerIdentity.owner);
             identityToSession.remove(playerIdentity);
         }
         session.close(1000, reason);
         LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
+    }
+
+    public void startWaitingForIdentityRegistration(Session session) {
+        sessionsWaitingForIdentityRegistration.put(TokenGenerator.verificationCode(), session);
     }
 
     public void send(Session session, ProtocolResponse resp) throws IOException {
@@ -95,4 +104,5 @@ public final class SessionManager {
     public PlayerIdentity getIdentity(Session session) {
         return sessionToIdentity.get(session);
     }
+
 }

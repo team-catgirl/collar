@@ -2,12 +2,12 @@ package team.catgirl.collar.server.services.authentication;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.http.HttpException;
+import team.catgirl.collar.http.HttpException.BadRequestException;
+import team.catgirl.collar.http.HttpException.ServerErrorException;
+import team.catgirl.collar.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.profiles.PublicProfile;
 import team.catgirl.collar.server.http.AuthToken;
-import team.catgirl.collar.server.http.HttpException;
-import team.catgirl.collar.server.http.HttpException.BadRequestException;
-import team.catgirl.collar.server.http.HttpException.ServerErrorException;
-import team.catgirl.collar.server.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 import team.catgirl.collar.server.services.profiles.Profile;
@@ -51,7 +51,7 @@ public class AuthenticationService {
             throw new BadRequestException("password mismatch");
         }
         try {
-            profiles.getProfile(context, GetProfileRequest.byEmail(req.email));
+            profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail(req.email));
             throw new HttpException.ConflictException("user already exists");
         } catch (HttpException.NotFoundException e) {
             Profile profile = profiles.createProfile(context, new CreateProfileRequest(req.email.toLowerCase(), req.password, req.name)).profile;
@@ -69,7 +69,7 @@ public class AuthenticationService {
         }
         Profile profile;
         try {
-            profile = profiles.getProfile(context, GetProfileRequest.byEmail(req.email)).profile;
+            profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail(req.email)).profile;
         } catch (HttpException.NotFoundException e) {
             // Do not leak existence of account by letting NotFoundException propagate
             throw new UnauthorisedException("login failed");

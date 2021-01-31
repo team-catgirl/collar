@@ -9,6 +9,7 @@ public abstract class DatabaseTest {
 
     @Before
     public void setupDb() {
+        Mongo.getTestingDatabase().drop();
         db = Mongo.getTestingDatabase();
     }
 

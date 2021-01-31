@@ -83,7 +83,7 @@ public class ServerSignalProtocolStoreTest extends DatabaseTest {
 
     @Test
     public void preKeyStore() throws Exception {
-        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(0, 500);
+        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(1000, 500);
         Assert.assertEquals(500, preKeys.size());
         for (PreKeyRecord preKeyRecord : preKeys) {
             Assert.assertFalse(store.containsPreKey(preKeyRecord.getId()));

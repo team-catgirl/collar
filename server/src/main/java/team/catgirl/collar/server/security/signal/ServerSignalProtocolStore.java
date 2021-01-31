@@ -31,8 +31,7 @@ public class ServerSignalProtocolStore implements SignalProtocolStore {
         ServerSignedPreKeyStore signedPreKeyStore = new ServerSignedPreKeyStore(db);
         ServerIdentityKeyStore identityKeyStore = new ServerIdentityKeyStore(db, serverIdentityKeyStore -> PreKeys.generate(serverIdentityKeyStore, preKeyStore, signedPreKeyStore));
         ServerSessionStore sessionStore = new ServerSessionStore(db);
-        return new ServerSignalProtocolStore(identityKeyStore, preKeyStore, sessionStore, signedPreKeyStore
-        );
+        return new ServerSignalProtocolStore(identityKeyStore, preKeyStore, sessionStore, signedPreKeyStore);
     }
 
     @Override

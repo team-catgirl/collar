@@ -1,5 +1,6 @@
 package team.catgirl.collar.security.mojang;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.chris54721.openmcauthenticator.OpenMCAuthenticator;
 import net.chris54721.openmcauthenticator.Profile;
@@ -7,10 +8,10 @@ import net.chris54721.openmcauthenticator.exceptions.AuthenticationUnavailableEx
 import net.chris54721.openmcauthenticator.exceptions.InvalidCredentialsException;
 import net.chris54721.openmcauthenticator.exceptions.RequestException;
 import net.chris54721.openmcauthenticator.responses.AuthenticationResponse;
-import team.catgirl.collar.http.HttpException;
-import team.catgirl.collar.http.HttpException.NotFoundException;
-import team.catgirl.collar.http.HttpException.ServerErrorException;
-import team.catgirl.collar.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.http.HttpException;
+import team.catgirl.collar.api.http.HttpException.NotFoundException;
+import team.catgirl.collar.api.http.HttpException.ServerErrorException;
+import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -26,18 +27,26 @@ public final class MinecraftSession {
     public final String accessToken;
     @JsonProperty("clientSession")
     public final String clientToken;
-    @JsonProperty("serverIP")
-    public final String serverIP;
+    @JsonProperty("server")
+    public final String server;
 
     public MinecraftSession(
             @JsonProperty("id") UUID id,
             @JsonProperty("accessToken") String accessToken,
             @JsonProperty("clientSession") String clientToken,
-            @JsonProperty("serverIP") String serverIP) {
+            @JsonProperty("server") String server) {
         this.id = id;
         this.accessToken = accessToken;
         this.clientToken = clientToken;
-        this.serverIP = serverIP;
+        this.server = server;
+    }
+
+    /**
+     * @return the minecraft player
+     */
+    @JsonIgnore
+    public MinecraftPlayer toPlayer() {
+        return new MinecraftPlayer(id, server.trim());
     }
 
     /**

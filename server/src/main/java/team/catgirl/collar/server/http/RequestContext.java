@@ -1,7 +1,7 @@
 package team.catgirl.collar.server.http;
 
 import spark.Request;
-import team.catgirl.collar.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 
 import java.util.Objects;
 import java.util.UUID;

@@ -2,7 +2,7 @@ package team.catgirl.collar.client;
 
 import okhttp3.WebSocket;
 import team.catgirl.collar.protocol.keepalive.KeepAliveRequest;
-import team.catgirl.collar.security.PlayerIdentity;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ final class KeepAlive {
         this.webSocket = webSocket;
     }
 
-    public void start(PlayerIdentity identity) {
+    public void start(ClientIdentity identity) {
         scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(() -> {
             try {

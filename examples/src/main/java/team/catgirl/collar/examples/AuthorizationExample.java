@@ -3,7 +3,6 @@ package team.catgirl.collar.examples;
 import com.google.common.io.Files;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarListener;
-import team.catgirl.collar.client.State;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
 import team.catgirl.collar.security.mojang.MinecraftSession;
@@ -36,7 +35,7 @@ public class AuthorizationExample {
 
         collar.connect();
 
-        while (collar.getState() != State.DISCONNECTED) {
+        while (collar.getState() != Collar.State.DISCONNECTED) {
             Thread.sleep(1000);
         }
     }

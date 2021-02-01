@@ -8,11 +8,14 @@ import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKey;
-import team.catgirl.collar.client.CollarClientException.ConnectionException;
-import team.catgirl.collar.client.CollarClientException.UnsupportedVersionException;
+import team.catgirl.collar.api.http.CollarVersion;
+import team.catgirl.collar.api.http.DiscoverResponse;
+import team.catgirl.collar.client.CollarException.ConnectionException;
+import team.catgirl.collar.client.CollarException.UnsupportedServerVersionException;
 import team.catgirl.collar.client.api.features.AbstractFeature;
 import team.catgirl.collar.client.api.features.ApiListener;
 import team.catgirl.collar.client.api.groups.GroupsFeature;
+import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.IdentityState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
@@ -30,9 +33,9 @@ import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair.PublicKey;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
@@ -40,13 +43,15 @@ import team.catgirl.collar.utils.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class Collar {
     private static final Logger LOGGER = Logger.getLogger(Collar.class.getName());
 
-    private static final int VERSION = 1;
+    private static final CollarVersion VERSION = new CollarVersion(0, 1);
 
     private final MinecraftSession minecraftSession;
     private final UrlBuilder baseUrl;
@@ -56,6 +61,9 @@ public final class Collar {
     private WebSocket webSocket;
     private State state;
     private final Map<Class<?>, AbstractFeature<? extends ApiListener>> features;
+    private Consumer<ProtocolRequest> sender;
+    private ResettableClientIdentityStore identityStore;
+    private Supplier<ClientIdentityStore> identityStoreSupplier;
 
     private Collar(OkHttpClient http, MinecraftSession minecraftSession, UrlBuilder baseUrl, HomeDirectory home, CollarListener listener) {
         this.http = http;
@@ -65,7 +73,8 @@ public final class Collar {
         this.listener = listener;
         changeState(State.DISCONNECTED);
         this.features = new HashMap<>();
-        this.features.put(GroupsFeature.class, new GroupsFeature());
+        this.identityStoreSupplier = () -> identityStore;
+        this.features.put(GroupsFeature.class, new GroupsFeature(this, identityStoreSupplier, request -> sender.accept(request)));
     }
 
     /**
@@ -144,12 +153,13 @@ public final class Collar {
      * @param http client
      */
     private static void checkVersionCompatibility(OkHttpClient http, UrlBuilder baseUrl) {
-        int[] supportedVersions = httpGet(http, baseUrl.withPath("/api/discover").toString(), int[].class);
+        DiscoverResponse response = httpGet(http, baseUrl.withPath("/api/discover").toString(), DiscoverResponse.class);
         StringJoiner versions = new StringJoiner(",");
-        Arrays.stream(supportedVersions).forEach(value -> versions.add(String.valueOf(value)));
-        if (Arrays.stream(supportedVersions).noneMatch(value -> value == VERSION)) {
-            throw new UnsupportedVersionException("version " + VERSION + " is not supported by server. Server supports versions " + versions.toString());
-        }
+        response.versions.stream()
+                .peek(collarVersion -> versions.add(versions.toString()))
+                .filter(collarVersion -> collarVersion.equals(VERSION))
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedServerVersionException(VERSION + " is not supported by server. Server supports versions " + versions.toString()));
         LOGGER.log(Level.INFO, "Server supports versions " + versions);
     }
 
@@ -171,7 +181,6 @@ public final class Collar {
 
     class CollarWebSocket extends WebSocketListener {
         private final ObjectMapper mapper = Utils.createObjectMapper();
-        private ResettableClientIdentityStore identityStore;
         private final Collar collar;
         private KeepAlive keepAlive;
         private ServerIdentity serverIdentity;
@@ -182,6 +191,10 @@ public final class Collar {
 
         @Override
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+            // Create the sender delegate
+            sender = request -> {
+                sendRequest(webSocket, request);
+            };
             LOGGER.log(Level.INFO, "Connection established");
             if (SignalClientIdentityStore.hasIdentityStore(home)) {
                 identityStore = getOrCreateIdentityKeyStore(webSocket, null);
@@ -198,15 +211,15 @@ public final class Collar {
                 LOGGER.log(Level.INFO, "New installation. Registering device with server...");
                 IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
                 new IdentityState(owner).write(home);
-                PlayerIdentity playerIdentity = new PlayerIdentity(owner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
-                IdentifyRequest request = new IdentifyRequest(playerIdentity);
+                ClientIdentity clientIdentity = new ClientIdentity(owner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                IdentifyRequest request = new IdentifyRequest(clientIdentity);
                 sendRequest(webSocket, request);
             }, (store) -> {
                 LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server");
                 IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
                 IdentityState identityState = IdentityState.read(home);
-                PlayerIdentity playerIdentity = new PlayerIdentity(identityState.owner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
-                IdentifyRequest request = new IdentifyRequest(playerIdentity);
+                ClientIdentity clientIdentity = new ClientIdentity(identityState.owner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                IdentifyRequest request = new IdentifyRequest(clientIdentity);
                 sendRequest(webSocket, request);
             }));
         }
@@ -229,7 +242,7 @@ public final class Collar {
         public void onMessage(@NotNull WebSocket webSocket, @NotNull String message) {
             LOGGER.log(Level.INFO, "Message received " + message);
             ProtocolResponse resp = readResponse(message);
-            PlayerIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
+            ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
             if (resp instanceof IdentifyResponse) {
                 IdentifyResponse response = (IdentifyResponse) resp;
                 if (identityStore == null) {
@@ -275,7 +288,7 @@ public final class Collar {
             } else {
                 // Find the first Feature that handles the request and return the result
                 boolean wasHandled = collar.features.values().stream()
-                        .map(feature -> feature.handleProtocolResponse(resp, request -> sendRequest(webSocket, request)))
+                        .map(feature -> feature.handleResponse(resp))
                         .filter(handled -> handled)
                         .findFirst()
                         .orElse(false);
@@ -325,5 +338,11 @@ public final class Collar {
                 webSocket.send(message);
             }
         }
+    }
+
+    public enum State {
+        DISCONNECTED,
+        CONNECTING,
+        CONNECTED
     }
 }

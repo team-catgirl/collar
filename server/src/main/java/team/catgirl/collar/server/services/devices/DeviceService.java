@@ -7,9 +7,9 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import team.catgirl.collar.http.HttpException.BadRequestException;
-import team.catgirl.collar.http.HttpException.NotFoundException;
-import team.catgirl.collar.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.http.HttpException.BadRequestException;
+import team.catgirl.collar.api.http.HttpException.NotFoundException;
+import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.server.http.RequestContext;
 
 import java.util.*;

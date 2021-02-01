@@ -2,8 +2,8 @@ package team.catgirl.collar.server.security;
 
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
 import java.util.UUID;
@@ -25,7 +25,7 @@ public interface ServerIdentityStore {
      * @param identity to test
      * @return trusted or not
      */
-    boolean isTrustedIdentity(PlayerIdentity identity);
+    boolean isTrustedIdentity(ClientIdentity identity);
 
     /**
      * @return creates a new {@link Cypher}
@@ -34,5 +34,5 @@ public interface ServerIdentityStore {
 
     SendPreKeysResponse createSendPreKeysResponse();
 
-    UUID findIdentity(PlayerIdentity identity, int deviceId);
+    UUID findIdentity(ClientIdentity identity, int deviceId);
 }

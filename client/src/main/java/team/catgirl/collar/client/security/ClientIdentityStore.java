@@ -2,8 +2,8 @@ package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
 import java.io.IOException;
@@ -12,7 +12,7 @@ public interface ClientIdentityStore {
     /**
      * @return the players identity
      */
-    PlayerIdentity currentIdentity();
+    ClientIdentity currentIdentity();
 
     /**
      * Tests if the server identity is trusted

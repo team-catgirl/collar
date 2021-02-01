@@ -2,11 +2,11 @@ package team.catgirl.collar.server.services.authentication;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.http.HttpException;
-import team.catgirl.collar.http.HttpException.BadRequestException;
-import team.catgirl.collar.http.HttpException.ServerErrorException;
-import team.catgirl.collar.http.HttpException.UnauthorisedException;
-import team.catgirl.collar.profiles.PublicProfile;
+import team.catgirl.collar.api.http.HttpException;
+import team.catgirl.collar.api.http.HttpException.BadRequestException;
+import team.catgirl.collar.api.http.HttpException.ServerErrorException;
+import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.http.AuthToken;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;

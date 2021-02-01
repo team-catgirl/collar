@@ -1,7 +1,7 @@
 package team.catgirl.collar.protocol.identity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.profiles.PublicProfile;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
 

@@ -3,7 +3,7 @@ package team.catgirl.collar.server.services.profiles;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.profiles.PublicProfile;
+import team.catgirl.collar.api.profiles.PublicProfile;
 
 import java.util.UUID;
 

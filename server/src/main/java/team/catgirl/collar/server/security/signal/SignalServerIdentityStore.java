@@ -6,9 +6,9 @@ import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.state.PreKeyBundle;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.signal.PreKeys;
 import team.catgirl.collar.security.signal.SignalCypher;
@@ -57,8 +57,8 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         }
     }
 
-    public boolean isTrustedIdentity(PlayerIdentity playerIdentity) {
-        return store.isTrustedIdentity(signalProtocolAddressFrom(playerIdentity), identityKeyFrom(playerIdentity));
+    public boolean isTrustedIdentity(ClientIdentity clientIdentity) {
+        return store.isTrustedIdentity(signalProtocolAddressFrom(clientIdentity), identityKeyFrom(clientIdentity));
     }
 
     @Override
@@ -77,22 +77,22 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     @Override
-    public UUID findIdentity(PlayerIdentity identity, int deviceId) {
+    public UUID findIdentity(ClientIdentity identity, int deviceId) {
         String name = store.identityKeyStore.findNameBy(identityKeyFrom(identity), deviceId);
         return name == null ? null : UUID.fromString(name);
     }
 
-    private static IdentityKey identityKeyFrom(PlayerIdentity playerIdentity) {
+    private static IdentityKey identityKeyFrom(ClientIdentity clientIdentity) {
         IdentityKey identityKey;
         try {
-            identityKey = new IdentityKey(playerIdentity.publicKey.key, 0);
+            identityKey = new IdentityKey(clientIdentity.publicKey.key, 0);
         } catch (InvalidKeyException e) {
             throw new IllegalStateException("bad key");
         }
         return identityKey;
     }
 
-    private static SignalProtocolAddress signalProtocolAddressFrom(PlayerIdentity identity) {
+    private static SignalProtocolAddress signalProtocolAddressFrom(ClientIdentity identity) {
         return new SignalProtocolAddress(identity.id().toString(), 1);
     }
 }

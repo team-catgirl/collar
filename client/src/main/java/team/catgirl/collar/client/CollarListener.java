@@ -16,7 +16,7 @@ public interface CollarListener {
      * @param collar client
      * @param state of the client connection
      */
-    default void onStateChanged(Collar collar, State state) {}
+    default void onStateChanged(Collar collar, Collar.State state) {}
 
     /**
      * Fired when the server or client cannot negotiate trust with the client

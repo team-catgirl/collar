@@ -4,13 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoDatabase;
 import spark.ModelAndView;
 import spark.Request;
-import team.catgirl.collar.http.HttpException;
-import team.catgirl.collar.http.HttpException.UnauthorisedException;
-import team.catgirl.collar.http.ServerStatusResponse;
-import team.catgirl.collar.profiles.PublicProfile;
+import team.catgirl.collar.api.http.CollarVersion;
+import team.catgirl.collar.api.http.DiscoverResponse;
+import team.catgirl.collar.api.http.HttpException;
+import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.http.ServerStatusResponse;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.http.*;
 import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.protocol.GroupsProtocolHandler;
+import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 import team.catgirl.collar.server.security.mojang.MinecraftSessionVerifier;
@@ -28,6 +32,7 @@ import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -92,7 +97,9 @@ public class Main {
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
 
         // WebSocket server
-        webSocket("/api/1/listen", new CollarServer(mapper, sessions, serverIdentityStore, devices, profiles, urlProvider, minecraftSessionVerifier));
+        List<ProtocolHandler> protocolHandlers = new ArrayList<>();
+        protocolHandlers.add(new GroupsProtocolHandler(groups));
+        webSocket("/api/1/listen", new CollarServer(mapper, sessions, serverIdentityStore, devices, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
 
         // API routes
         path("/api", () -> {
@@ -154,9 +161,9 @@ public class Main {
         get("/api/version", (request, response) -> ServerVersion.version());
         // Query this route to discover what version of the APIs are supported
         get("/api/discover", (request, response) -> {
-            List<Integer> apiVersions = new ArrayList<>();
-            apiVersions.add(1);
-            return apiVersions;
+            List<CollarVersion> versions = new ArrayList<>();
+            versions.add(new CollarVersion(0, 1));
+            return new DiscoverResponse(versions);
         });
 
         // App Endpoints - to be replaced with a better app

@@ -1,4 +1,4 @@
-package team.catgirl.collar.profiles;
+package team.catgirl.collar.api.profiles;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

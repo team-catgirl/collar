@@ -12,9 +12,9 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.IdentityState;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.signal.PreKeys;
 import team.catgirl.collar.security.signal.SignalCypher;
@@ -44,9 +44,9 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public PlayerIdentity currentIdentity() {
+    public ClientIdentity currentIdentity() {
         IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
-        return new PlayerIdentity(owner, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()));
+        return new ClientIdentity(owner, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()));
     }
 
     @Override

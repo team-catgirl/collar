@@ -1,4 +1,4 @@
-package team.catgirl.collar.http;
+package team.catgirl.collar.api.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

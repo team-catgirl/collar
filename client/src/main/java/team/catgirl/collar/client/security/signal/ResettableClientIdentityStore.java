@@ -3,8 +3,8 @@ package team.catgirl.collar.client.security.signal;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
-import team.catgirl.collar.security.PlayerIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
 import java.io.IOException;
@@ -20,7 +20,7 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public PlayerIdentity currentIdentity() {
+    public ClientIdentity currentIdentity() {
         return currentIdentityStore.currentIdentity();
     }
 

@@ -11,7 +11,7 @@ public final class ClientIdentity implements Identity {
     @JsonProperty("owner")
     public final UUID owner;
     @JsonProperty("publicKey")
-    public final PublicKey publicKey; // TODO: change to device
+    public final PublicKey publicKey;
 
     public ClientIdentity(@JsonProperty("owner") UUID owner, @JsonProperty("publicKey") PublicKey publicKey) {
         this.owner = owner;

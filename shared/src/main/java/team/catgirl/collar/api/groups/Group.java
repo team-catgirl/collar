@@ -1,7 +1,8 @@
-package team.catgirl.collar.api;
+package team.catgirl.collar.api.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.ArrayList;

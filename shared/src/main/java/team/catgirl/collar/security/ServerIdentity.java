@@ -10,7 +10,6 @@ import java.util.UUID;
  * Identifies the server
  */
 public final class ServerIdentity implements Identity {
-    // TODO: remove public key
     @JsonProperty("publicKey")
     public final PublicKey publicKey;
     @JsonProperty("serverId")

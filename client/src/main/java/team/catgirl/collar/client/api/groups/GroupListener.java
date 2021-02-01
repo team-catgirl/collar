@@ -1,6 +1,6 @@
 package team.catgirl.collar.client.api.groups;
 
-import team.catgirl.collar.api.Group;
+import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.features.ApiListener;
 

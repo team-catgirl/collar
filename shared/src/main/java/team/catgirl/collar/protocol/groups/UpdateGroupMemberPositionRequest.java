@@ -1,7 +1,7 @@
 package team.catgirl.collar.protocol.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.api.Position;
+import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.security.ClientIdentity;
 

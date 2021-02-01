@@ -33,10 +33,6 @@ public final class SessionManager {
 
     private static final Logger LOGGER = Logger.getLogger(SessionManager.class.getName());
 
-//    private final ConcurrentMap<Session, ClientIdentity> sessionToIdentity = new ConcurrentHashMap<>();
-//    private final ConcurrentMap<ClientIdentity, Session> identityToSession = new ConcurrentHashMap<>();
-//    private final ConcurrentMap<UUID, ClientIdentity> playerToIdentity = new ConcurrentHashMap<>();
-
     private final ConcurrentMap<MinecraftPlayer, ClientIdentity> playerToClient = new ConcurrentHashMap<>();
     private final ConcurrentMap<Session, MinecraftPlayer> sessionToPlayer = new ConcurrentHashMap<>();
     private final ConcurrentMap<ClientIdentity, Session> clientIdentityToSession = new ConcurrentHashMap<>();

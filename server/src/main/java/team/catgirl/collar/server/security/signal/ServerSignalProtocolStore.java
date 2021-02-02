@@ -45,13 +45,18 @@ public class ServerSignalProtocolStore implements SignalProtocolStore {
     }
 
     @Override
-    public void saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-        identityKeyStore.saveIdentity(address, identityKey);
+    public IdentityKey getIdentity(SignalProtocolAddress address) {
+        return identityKeyStore.getIdentity(address);
     }
 
     @Override
-    public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-        return identityKeyStore.isTrustedIdentity(address, identityKey);
+    public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
+        return identityKeyStore.saveIdentity(address, identityKey);
+    }
+
+    @Override
+    public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
+        return identityKeyStore.isTrustedIdentity(address, identityKey, direction);
     }
 
     @Override

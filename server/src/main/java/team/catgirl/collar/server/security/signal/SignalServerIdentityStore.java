@@ -58,7 +58,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     public boolean isTrustedIdentity(ClientIdentity clientIdentity) {
-        return store.isTrustedIdentity(signalProtocolAddressFrom(clientIdentity), identityKeyFrom(clientIdentity));
+        return store.isTrustedIdentity(signalProtocolAddressFrom(clientIdentity), identityKeyFrom(clientIdentity), null);
     }
 
     @Override
@@ -68,7 +68,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
 
     @Override
     public SendPreKeysResponse createSendPreKeysResponse() {
-        PreKeyBundle bundle = PreKeys.generate(store, 1);
+        PreKeyBundle bundle = PreKeys.generate(getIdentity(), store);
         try {
             return new SendPreKeysResponse(getIdentity(), PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
@@ -93,6 +93,6 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     private static SignalProtocolAddress signalProtocolAddressFrom(ClientIdentity identity) {
-        return new SignalProtocolAddress(identity.id().toString(), 1);
+        return new SignalProtocolAddress(identity.id().toString(), identity.deviceId);
     }
 }

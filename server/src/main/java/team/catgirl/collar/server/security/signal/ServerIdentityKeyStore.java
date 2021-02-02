@@ -87,17 +87,29 @@ public class ServerIdentityKeyStore implements IdentityKeyStore {
     }
 
     @Override
-    public void saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-        if (isTrustedIdentity(address, identityKey)) {
+    public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
+        if (isTrustedIdentity(address, identityKey, null)) {
             docs.replaceOne(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()), eq(FINGERPRINT, identityKey.getFingerprint())), map(address, identityKey));
+            return true;
         } else {
             docs.insertOne(map(address, identityKey));
+            return false;
         }
     }
 
     @Override
-    public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
+    public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
         return docs.find(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()), eq(FINGERPRINT, identityKey.getFingerprint()))).iterator().hasNext();
+    }
+
+    @Override
+    public IdentityKey getIdentity(SignalProtocolAddress address) {
+        Document first = docs.find(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()))).first();
+        try {
+            return first == null ? null : new IdentityKey(first.get(IDENTITY_KEY, Binary.class).getData(), 0);
+        } catch (InvalidKeyException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     public String findNameBy(IdentityKey identityKey, int deviceId) {

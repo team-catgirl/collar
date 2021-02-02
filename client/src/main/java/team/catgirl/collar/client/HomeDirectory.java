@@ -24,7 +24,7 @@ public final class HomeDirectory {
     }
 
     public File profile() throws IOException {
-        File securityDir = new File(collarHome, "security");
+        File securityDir = new File(collarHome, "profile");
         if (!securityDir.exists() && !securityDir.mkdirs()) {
             throw new IOException("could not make directory " + securityDir.getAbsolutePath());
         }

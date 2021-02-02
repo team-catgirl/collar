@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.security.signal;
 
 import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.ClientIdentity;
@@ -45,8 +46,13 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public SendPreKeysRequest createSendPreKeysRequest() {
-        return currentIdentityStore.createSendPreKeysRequest();
+    public int getDeviceId() {
+        return currentIdentityStore.getDeviceId();
+    }
+
+    @Override
+    public SendPreKeysRequest createSendPreKeysRequest(DeviceRegisteredResponse response) {
+        return currentIdentityStore.createSendPreKeysRequest(response);
     }
 
     @Override

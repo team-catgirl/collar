@@ -51,7 +51,7 @@ public final class DeviceService {
         int newDeviceId = findDevices(context, FindDevicesRequest.byOwner(req.owner)).devices.stream()
                 .mapToInt(value -> value.deviceId)
                 .max()
-                .orElse(1);
+                .orElse(0) + 1;
 
         // Do not allow the creation of more devices
         if (newDeviceId >= MAX_DEVICES) {

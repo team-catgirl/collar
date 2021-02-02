@@ -46,9 +46,9 @@ public class ServerSignalProtocolStoreTest extends DatabaseTest {
         Assert.assertNotNull(store.getIdentityKeyPair());
         IdentityKeyPair identityKeyPair = KeyHelper.generateIdentityKeyPair();
         SignalProtocolAddress address = new SignalProtocolAddress("testKey", new SecureRandom().nextInt());
-        Assert.assertFalse(store.isTrustedIdentity(address, identityKeyPair.getPublicKey()));
+        Assert.assertFalse(store.isTrustedIdentity(address, identityKeyPair.getPublicKey(), null));
         store.saveIdentity(address, identityKeyPair.getPublicKey());
-        Assert.assertTrue(store.isTrustedIdentity(address, identityKeyPair.getPublicKey()));
+        Assert.assertTrue(store.isTrustedIdentity(address, identityKeyPair.getPublicKey(), null));
     }
 
     @Test

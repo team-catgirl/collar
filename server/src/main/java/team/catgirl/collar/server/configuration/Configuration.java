@@ -64,7 +64,7 @@ public class Configuration {
                 new DefaultAppUrlProvider("http://localhost:3000"),
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
-                new MojangMinecraftSessionVerifier()
+                new NojangMinecraftSessionVerifier()
         );
     }
 }

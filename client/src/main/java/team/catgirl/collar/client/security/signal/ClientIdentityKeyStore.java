@@ -63,6 +63,25 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
     }
 
     @Override
+    public IdentityKey getIdentity(SignalProtocolAddress address) {
+        ReadLock readLock = lock.readLock();
+        try {
+            readLock.lockInterruptibly();
+            IdentityState identityState = state.trusted.get(StateKey.from(address));
+            if (identityState == null) {
+                return null;
+            }
+            return new IdentityKey(identityState.publicKey, 0);
+        } catch (InvalidKeyException e) {
+            throw new IllegalStateException("cant load identity key pair", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
     public int getLocalRegistrationId() {
         ReadLock readLock = lock.readLock();
         try {
@@ -76,12 +95,15 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
     }
 
     @Override
-    public void saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
+    public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
         WriteLock writeLock = lock.writeLock();
         try {
             writeLock.lockInterruptibly();
-            this.state.trusted.put(StateKey.from(address), State.from(identityKey));
+            StateKey stateKey = StateKey.from(address);
+            boolean replaced = this.state.trusted.containsKey(stateKey);
+            this.state.trusted.put(stateKey, State.from(identityKey));
             writeState();
+            return replaced;
         } catch (IOException e) {
             throw new IllegalStateException("Could not save state", e);
         } catch (InterruptedException e) {
@@ -92,7 +114,7 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
     }
 
     @Override
-    public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
+    public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
         ReadLock readLock = lock.readLock();
         try {
             readLock.lockInterruptibly();

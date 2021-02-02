@@ -8,15 +8,19 @@ import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.profiles.PublicProfile;
+import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse.SessionErrorResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceResponse;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,9 +48,11 @@ public final class SessionManager {
             .build();
 
     private final ObjectMapper mapper;
+    private final ServerIdentityStore store;
 
-    public SessionManager(ObjectMapper mapper) {
+    public SessionManager(ObjectMapper mapper, ServerIdentityStore store) {
         this.mapper = mapper;
+        this.store = store;
     }
 
     public void identify(Session session, ClientIdentity identity, MinecraftPlayer player) {
@@ -68,7 +74,7 @@ public final class SessionManager {
             throw new NotFoundException("session does not exist");
         }
         try {
-            send(session, new DeviceRegisteredResponse(identity, profile, resp.device.deviceId));
+            send(session, null, new DeviceRegisteredResponse(identity, profile, resp.device.deviceId));
         } catch (IOException e) {
             throw new ServerErrorException("could not send DeviceRegisteredResponse", e);
         }
@@ -79,18 +85,36 @@ public final class SessionManager {
     }
 
     public void stopSession(Session session, String reason, IOException e) {
+        LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
         ClientIdentity playerIdentity = sessionToClientIdentity.remove(session);
         if (playerIdentity != null) {
-            session = clientIdentityToSession.remove(playerIdentity);
-            MinecraftPlayer player = sessionToPlayer.remove(session);
-            playerToClient.remove(player);
+            try {
+                if (session.isOpen()) {
+                    try {
+                        send(session, playerIdentity, new SessionErrorResponse(store.getIdentity()));
+                    } catch (IOException ioException) {
+                        throw new IllegalStateException("Couldn't send SessionErrorResponse", e);
+                    }
+                }
+            } finally {
+                session = clientIdentityToSession.remove(playerIdentity);
+                MinecraftPlayer player = sessionToPlayer.remove(session);
+                playerToClient.remove(player);
+            }
+        } else {
+            session.close(1000, "Session stopped");
         }
-        session.close(1000, reason);
-        LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
     }
 
-    public void send(Session session, ProtocolResponse resp) throws IOException {
-        session.getRemote().sendString(mapper.writeValueAsString(resp));
+    public void send(Session session, ClientIdentity recipient, ProtocolResponse resp) throws IOException {
+        PacketIO packetIO = new PacketIO(mapper, store.createCypher());
+        ByteBuffer buffer;
+        if (isIdentified(session)) {
+            buffer = ByteBuffer.wrap(packetIO.encodeEncrypted(recipient, resp));
+        } else {
+            buffer = ByteBuffer.wrap(packetIO.encodePlain(resp));
+        }
+        session.getRemote().sendBytes(buffer);
     }
 
     public Session getSession(MinecraftPlayer player) {

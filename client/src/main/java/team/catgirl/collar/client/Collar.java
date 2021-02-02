@@ -1,10 +1,9 @@
 package team.catgirl.collar.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.BaseEncoding;
 import io.mikael.urlbuilder.UrlBuilder;
 import okhttp3.*;
+import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKey;
@@ -16,9 +15,10 @@ import team.catgirl.collar.client.api.features.AbstractFeature;
 import team.catgirl.collar.client.api.features.ApiListener;
 import team.catgirl.collar.client.api.groups.GroupsFeature;
 import team.catgirl.collar.client.security.ClientIdentityStore;
-import team.catgirl.collar.client.security.IdentityState;
+import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
+import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
@@ -26,6 +26,8 @@ import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
 import team.catgirl.collar.protocol.identity.IdentifyRequest;
 import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -34,7 +36,6 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftSession;
@@ -209,21 +210,21 @@ public final class Collar {
         }
 
         private ResettableClientIdentityStore getOrCreateIdentityKeyStore(WebSocket webSocket, UUID owner) {
-            if (IdentityState.exists(home)) {
-                owner = IdentityState.read(home).owner;
+            if (ProfileState.exists(home)) {
+                owner = ProfileState.read(home).owner;
             }
             UUID finalOwner = owner;
             return new ResettableClientIdentityStore(() -> SignalClientIdentityStore.from(finalOwner, home, signalProtocolStore -> {
                 LOGGER.log(Level.INFO, "New installation. Registering device with server...");
                 IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
-                new IdentityState(finalOwner).write(home);
-                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                new ProfileState(finalOwner).write(home);
+                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()), null);
                 IdentifyRequest request = new IdentifyRequest(clientIdentity);
                 sendRequest(webSocket, request);
             }, (store) -> {
                 LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server");
                 IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
-                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()));
+                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()), null);
                 IdentifyRequest request = new IdentifyRequest(clientIdentity);
                 sendRequest(webSocket, request);
             }));
@@ -244,9 +245,9 @@ public final class Collar {
         }
 
         @Override
-        public void onMessage(@NotNull WebSocket webSocket, @NotNull String message) {
-            LOGGER.log(Level.INFO, "Message received " + message);
-            ProtocolResponse resp = readResponse(message);
+        public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString message) {
+            LOGGER.log(Level.INFO, "Message received");
+            ProtocolResponse resp = readResponse(message.toByteArray());
             ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
             if (resp instanceof IdentifyResponse) {
                 IdentifyResponse response = (IdentifyResponse) resp;
@@ -271,7 +272,7 @@ public final class Collar {
                 identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
                 identityStore.setDeviceId(response.deviceId);
                 LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);
-                SendPreKeysRequest request = identityStore.createSendPreKeysRequest();
+                SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
                 sendRequest(webSocket, request);
             } else if (resp instanceof SendPreKeysResponse) {
                 SendPreKeysResponse response = (SendPreKeysResponse)resp;
@@ -284,6 +285,16 @@ public final class Collar {
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
+            } else if (resp instanceof SessionFailedResponse) {
+                LOGGER.log(Level.INFO, "SessionFailedResponse received");
+                if (resp instanceof MojangVerificationFailedResponse) {
+                    MojangVerificationFailedResponse response = (MojangVerificationFailedResponse)resp;
+                    LOGGER.log(Level.INFO, "SessionFailedResponse with mojang session verification failure");
+                    listener.onMinecraftAccountVerificationFailed(collar, response.minecraftSession);
+                } else {
+                    LOGGER.log(Level.INFO, "SessionFailedResponse with general server failure");
+                }
+                collar.changeState(State.DISCONNECTED);
             } else if (resp instanceof IsTrustedRelationshipResponse) {
                 LOGGER.log(Level.INFO, "Server has confirmed a trusted relationship with the client");
                 this.serverIdentity = resp.identity;
@@ -305,45 +316,35 @@ public final class Collar {
             }
         }
 
-        private ProtocolResponse readResponse(String message) {
-            ProtocolResponse resp;
-            if (BaseEncoding.base64().canDecode(message)) {
-                byte[] bytes = identityStore.createCypher().decrypt(serverIdentity, BaseEncoding.base64().decode(message));
-                try {
-                    resp = mapper.readValue(bytes, ProtocolResponse.class);
-                } catch (IOException e) {
-                    throw new ConnectionException("Could not read message", e);
-                }
-            } else {
-                try {
-                    resp = mapper.readValue(message, ProtocolResponse.class);
-                } catch (IOException e) {
-                    throw new ConnectionException("Could not read message", e);
-                }
+        private ProtocolResponse readResponse(byte[] bytes) {
+            PacketIO packetIO = new PacketIO(mapper, identityStore == null ? null : identityStore.createCypher());
+            try {
+                return packetIO.decode(serverIdentity, bytes, ProtocolResponse.class);
+            } catch (IOException e) {
+                throw new IllegalStateException();
             }
-            return resp;
         }
 
         public void sendRequest(WebSocket webSocket, ProtocolRequest req) {
+            PacketIO packetIO = identityStore == null ? new PacketIO(mapper, null) : new PacketIO(mapper, identityStore.createCypher());
+            byte[] bytes;
             if (state == State.CONNECTED) {
-                Cypher cypher = identityStore.createCypher();
-                byte[] bytes;
                 try {
-                    bytes = mapper.writeValueAsBytes(req);
-                } catch (JsonProcessingException e) {
-                    throw new ConnectionException("Could not send message", e);
+                    if (identityStore == null) {
+                        throw new IllegalStateException("identity store should be available by the time the client is CONNECTED");
+                    }
+                    bytes = packetIO.encodeEncrypted(serverIdentity, req);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
                 }
-                String message = BaseEncoding.base64().encode(cypher.crypt(serverIdentity, bytes));
-                webSocket.send(message);
             } else {
-                String message;
                 try {
-                    message = mapper.writeValueAsString(req);
-                } catch (JsonProcessingException e) {
-                    throw new ConnectionException("Could not send message", e);
+                    bytes = packetIO.encodePlain(req);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
                 }
-                webSocket.send(message);
             }
+            webSocket.send(ByteString.of(bytes));
         }
     }
 

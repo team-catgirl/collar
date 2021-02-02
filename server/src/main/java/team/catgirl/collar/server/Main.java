@@ -66,8 +66,8 @@ public class Main {
 
         ObjectMapper mapper = Utils.createObjectMapper();
         AppUrlProvider urlProvider = configuration.appUrlProvider;
-        SessionManager sessions = new SessionManager(mapper);
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
+        SessionManager sessions = new SessionManager(mapper, serverIdentityStore);
         PasswordHashing passwordHashing = configuration.passwordHashing;
         ProfileService profiles = new ProfileService(db, passwordHashing);
         DeviceService devices = new DeviceService(db);
@@ -98,7 +98,7 @@ public class Main {
         // WebSocket server
         List<ProtocolHandler> protocolHandlers = new ArrayList<>();
         protocolHandlers.add(new GroupsProtocolHandler(groups));
-        webSocket("/api/1/listen", new CollarServer(mapper, sessions, serverIdentityStore, devices, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
+        webSocket("/api/1/listen", new CollarServer(mapper, sessions, serverIdentityStore, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
 
         // API routes
         path("/api", () -> {

@@ -3,11 +3,13 @@ package team.catgirl.collar.security.signal;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.state.*;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.Medium;
+import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.*;
@@ -15,21 +17,21 @@ import java.util.List;
 
 public class PreKeys {
 
-    public static PreKeyBundle generate(SignalProtocolStore store, int deviceId) {
+
+    public static PreKeyBundle generate(SignalProtocolAddress address, SignalProtocolStore store) {
         ECKeyPair signedPreKey = Curve.generateKeyPair();
         int signedPreKeyId = Utils.createSecureRandom().nextInt(Medium.MAX_VALUE);
         ECKeyPair unsignedPreKey = Curve.generateKeyPair();
         int unsignedPreKeyId = Utils.createSecureRandom().nextInt(Medium.MAX_VALUE);
         byte[] signature;
         try {
-//            Curve.calculateSignature(identityKeyPair.getPrivateKey(), keyPair.getPublicKey().serialize())
             signature = Curve.calculateSignature(store.getIdentityKeyPair().getPrivateKey(), signedPreKey.getPublicKey().serialize());
         } catch (InvalidKeyException e) {
             throw new IllegalStateException("invalid key");
         }
         PreKeyBundle preKeyBundle = new PreKeyBundle(
                 store.getLocalRegistrationId(),
-                deviceId,
+                address.getDeviceId(),
                 unsignedPreKeyId,
                 unsignedPreKey.getPublicKey(),
                 signedPreKeyId,
@@ -39,7 +41,12 @@ public class PreKeys {
 
         store.storeSignedPreKey(signedPreKeyId, new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), signedPreKey, signature));
         store.storePreKey(unsignedPreKeyId, new PreKeyRecord(unsignedPreKeyId, unsignedPreKey));
+        store.saveIdentity(address, store.getIdentityKeyPair().getPublicKey());
         return preKeyBundle;
+    }
+
+    public static PreKeyBundle generate(Identity caller, SignalProtocolStore store) {
+        return generate(new SignalProtocolAddress(caller.id().toString(), caller.deviceId()), store);
     }
 
     public static byte[] preKeyBundleToBytes(PreKeyBundle bundle) throws IOException {

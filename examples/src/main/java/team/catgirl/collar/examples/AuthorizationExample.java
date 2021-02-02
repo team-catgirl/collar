@@ -30,6 +30,11 @@ public class AuthorizationExample {
                     e.printStackTrace();
                 }
             }
+
+            @Override
+            public void onMinecraftAccountVerificationFailed(Collar collar, MinecraftSession session) {
+                collar.disconnect();
+            }
         });
 
         collar.connect();

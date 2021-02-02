@@ -62,9 +62,9 @@ public class ClientSignalProtocolStoreTest {
         Assert.assertNotNull(store.getIdentityKeyPair());
         IdentityKeyPair identityKeyPair = KeyHelper.generateIdentityKeyPair();
         SignalProtocolAddress address = new SignalProtocolAddress("testKey", 1);
-        Assert.assertFalse(store.isTrustedIdentity(address, identityKeyPair.getPublicKey()));
+        Assert.assertFalse(store.isTrustedIdentity(address, identityKeyPair.getPublicKey(), null));
         store.saveIdentity(address, identityKeyPair.getPublicKey());
-        Assert.assertTrue(store.isTrustedIdentity(address, identityKeyPair.getPublicKey()));
+        Assert.assertTrue(store.isTrustedIdentity(address, identityKeyPair.getPublicKey(), null));
     }
 
     @Test

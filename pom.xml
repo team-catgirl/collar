@@ -66,7 +66,12 @@
             <dependency>
                 <groupId>org.whispersystems</groupId>
                 <artifactId>signal-protocol-java</artifactId>
-                <version>2.3.0</version>
+                <version>2.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.whispersystems</groupId>
+                <artifactId>signal-service-java</artifactId>
+                <version>2.15.3</version>
             </dependency>
             <!-- authenticating with mojang -->
             <dependency>

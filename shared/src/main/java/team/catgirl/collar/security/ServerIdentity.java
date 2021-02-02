@@ -26,6 +26,11 @@ public final class ServerIdentity implements Identity {
     }
 
     @Override
+    public Integer deviceId() {
+        return 1;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

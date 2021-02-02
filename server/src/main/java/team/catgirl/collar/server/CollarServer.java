@@ -1,12 +1,11 @@
 package team.catgirl.collar.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.BaseEncoding;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.profiles.PublicProfile;
+import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
@@ -14,6 +13,7 @@ import team.catgirl.collar.protocol.identity.IdentifyRequest;
 import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveRequest;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -22,7 +22,6 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
-import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.RequestContext;
@@ -30,11 +29,12 @@ import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.security.mojang.MinecraftSessionVerifier;
-import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,17 +46,15 @@ public class CollarServer {
     private final ObjectMapper mapper;
     private final SessionManager sessions;
     private final ServerIdentityStore identityStore;
-    private final DeviceService devices;
     private final ProfileService profiles;
     private final AppUrlProvider urlProvider;
     private final MinecraftSessionVerifier minecraftSessionVerifier;
     private final List<ProtocolHandler> protocolHandlers;
 
-    public CollarServer(ObjectMapper mapper, SessionManager sessions, ServerIdentityStore identityStore, DeviceService devices, ProfileService profiles, AppUrlProvider urlProvider, MinecraftSessionVerifier minecraftSessionVerifier, List<ProtocolHandler> protocolHandlers) {
+    public CollarServer(ObjectMapper mapper, SessionManager sessions, ServerIdentityStore identityStore, ProfileService profiles, AppUrlProvider urlProvider, MinecraftSessionVerifier minecraftSessionVerifier, List<ProtocolHandler> protocolHandlers) {
         this.mapper = mapper;
         this.sessions = sessions;
         this.identityStore = identityStore;
-        this.devices = devices;
         this.profiles = profiles;
         this.urlProvider = urlProvider;
         this.minecraftSessionVerifier = minecraftSessionVerifier;
@@ -81,13 +79,13 @@ public class CollarServer {
     }
 
     @OnWebSocketMessage
-    public void message(Session session, String value) throws IOException {
-        LOGGER.log(Level.INFO, "Received message " + value);
-        ProtocolRequest req = read(session, value);
+    public void message(Session session, InputStream is) throws IOException {
+        LOGGER.log(Level.INFO, "Received message ");
+        ProtocolRequest req = read(session, is);
         ServerIdentity serverIdentity = identityStore.getIdentity();
         if (req instanceof KeepAliveRequest) {
             LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
-            send(session, new KeepAliveResponse(serverIdentity));
+            sendPlain(session, new KeepAliveResponse(serverIdentity));
         } else if (req instanceof IdentifyRequest) {
             IdentifyRequest request = (IdentifyRequest)req;
             if (request.identity == null) {
@@ -117,6 +115,7 @@ public class CollarServer {
                 sendPlain(session, new StartSessionResponse(serverIdentity));
                 sessions.identify(session, req.identity, request.session.toPlayer());
             } else {
+                sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
                 sessions.stopSession(session, "Minecraft session invalid", null);
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
@@ -138,24 +137,12 @@ public class CollarServer {
         }
     }
 
-    public ProtocolRequest read(Session session, String message) {
-        if (BaseEncoding.base64().canDecode(message)) {
-            ClientIdentity identity = sessions.getIdentity(session);
-            if (identity == null) {
-                throw new IllegalStateException("session not started");
-            }
-            byte[] decrypt = identityStore.createCypher().decrypt(identity, message.getBytes());
-            try {
-                return mapper.readValue(decrypt, ProtocolRequest.class);
-            } catch (IOException e) {
-                throw new IllegalStateException("Could not read message", e);
-            }
-        } else {
-            try {
-                return mapper.readValue(message, ProtocolRequest.class);
-            } catch (JsonProcessingException e) {
-                throw new IllegalStateException("Could not read message", e);
-            }
+    public ProtocolRequest read(Session session, InputStream message) {
+        PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
+        try {
+            return packetIO.decode(identityStore.getIdentity(), message, ProtocolRequest.class);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
         }
     }
 
@@ -167,38 +154,41 @@ public class CollarServer {
                 send(anotherSession, response);
             });
         } else {
-            String message;
+            PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
+            byte[] bytes;
             if (sessions.isIdentified(session)) {
-                ClientIdentity clientIdentity = sessions.getIdentity(session);
-                byte[] bytes;
                 try {
-                    bytes = identityStore.createCypher().crypt(clientIdentity, mapper.writeValueAsBytes(resp));
-                } catch (JsonProcessingException e) {
-                    throw new IllegalStateException("Could not write message", e);
+                    bytes = packetIO.encodeEncrypted(sessions.getIdentity(session), resp);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
                 }
-                message = BaseEncoding.base64().encode(bytes);
             } else {
                 try {
-                    message = mapper.writeValueAsString(resp);
-                } catch (JsonProcessingException e) {
-                    throw new IllegalStateException("Could not write message", e);
+                    bytes = packetIO.encodePlain(resp);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
                 }
             }
-            try {
-                session.getRemote().sendString(message);
-            } catch (IOException e) {
-                sessions.stopSession(session, "Could not send message to client", e);
-                throw new IllegalStateException("Could not send message", e);
-            }
+            sendBytes(session, bytes);
         }
     }
 
-    public void sendPlain(Session session, ProtocolResponse resp) throws IOException {
+    public void sendPlain(Session session, ProtocolResponse resp) {
+        PacketIO packetIO = new PacketIO(mapper, null);
+        byte[] bytes;
         try {
-            session.getRemote().sendString(mapper.writeValueAsString(resp));
+            bytes = packetIO.encodePlain(resp);
         } catch (IOException e) {
-            sessions.stopSession(session, "Could not send plain message to client", e);
-            throw e;
+            throw new IllegalStateException(e);
+        }
+        sendBytes(session, bytes);
+    }
+
+    private void sendBytes(Session session, byte[] bytes) {
+        try {
+            session.getRemote().sendBytes(ByteBuffer.wrap(bytes));
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

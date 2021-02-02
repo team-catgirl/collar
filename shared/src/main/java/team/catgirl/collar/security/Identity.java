@@ -7,4 +7,6 @@ import java.util.UUID;
 public interface Identity {
     @JsonIgnore
     UUID id();
+
+    Integer deviceId();
 }

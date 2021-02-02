@@ -1,17 +1,41 @@
 package team.catgirl.collar.utils;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
+import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.UUID;
 
 public final class Utils {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    static {
+        SimpleModule keys = new SimpleModule();
+        keys.addKeyDeserializer(MinecraftPlayer.class, new KeyDeserializer() {
+            @Override
+            public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
+                String id = key.substring(0, key.lastIndexOf(":"));
+                String server = key.substring(key.lastIndexOf(":") + 1);
+                return new MinecraftPlayer(UUID.fromString(id), server);
+            }
+        });
+        keys.addKeySerializer(MinecraftPlayer.class, new JsonSerializer<MinecraftPlayer>() {
+            @Override
+            public void serialize(MinecraftPlayer value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                gen.writeFieldName(value.id.toString() + ":" + value.server);
+            }
+        });
+
+        MAPPER = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+                .registerModules(keys);
+    }
+
+    private static final ObjectMapper MAPPER;
 
     public static final SecureRandom SECURERANDOM;
 

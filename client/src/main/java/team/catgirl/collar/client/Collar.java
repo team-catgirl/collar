@@ -321,7 +321,7 @@ public final class Collar {
             try {
                 return packetIO.decode(serverIdentity, bytes, ProtocolResponse.class);
             } catch (IOException e) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("Read error ", e);
             }
         }
 

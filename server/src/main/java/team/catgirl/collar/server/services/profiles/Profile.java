@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.profiles.PublicProfile;
 
+import java.util.Set;
 import java.util.UUID;
 
 public final class Profile {
@@ -16,6 +17,8 @@ public final class Profile {
     public final String name;
     @JsonIgnore
     public final String hashedPassword;
+    @JsonProperty("minecraftAccountIds")
+    public final Set<UUID> minecraftAccountIds;
 
     public Profile(UUID id, String email, String name, String hashedPassword) {
         this.id = id;

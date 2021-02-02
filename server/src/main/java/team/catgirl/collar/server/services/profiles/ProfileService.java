@@ -12,10 +12,7 @@ import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.eq;
 
@@ -78,6 +75,10 @@ public class ProfileService {
         return new GetProfileResponse(map(doc));
     }
 
+    public UpdateProfileResponse update(UpdateProfileRequest req) {
+
+    }
+
     public static class CreateProfileRequest {
         public final String email;
         public final String password;
@@ -130,5 +131,18 @@ public class ProfileService {
         String name = doc.getString(FIELD_NAME);
         String hashedPassword = doc.getString(FIELD_HASHED_PASSWORD);
         return new Profile(profileId, email, name, hashedPassword);
+    }
+
+    public static class UpdateProfileRequest {
+        public final UUID owner;
+        public final Set<UUID> addMinecraftPlayerIds;
+
+        public UpdateProfileRequest(UUID owner, Set<UUID> addMinecraftPlayerIds) {
+            this.owner = owner;
+            this.addMinecraftPlayerIds = addMinecraftPlayerIds;
+        }
+    }
+
+    public static class UpdateProfileResponse {
     }
 }

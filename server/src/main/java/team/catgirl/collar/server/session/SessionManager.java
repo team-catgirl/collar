@@ -4,6 +4,7 @@ package team.catgirl.collar.server.session;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableSet;
 import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
@@ -15,6 +16,8 @@ import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceResponse;
+import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
 
 import java.io.IOException;
 import java.util.List;
@@ -54,6 +57,7 @@ public final class SessionManager {
         clientIdentityToSession.put(identity, session);
         sessionToClientIdentity.put(session, identity);
         sessionToPlayer.put(session, player);
+        new ProfileService().update(new UpdateProfileRequest(identity.owner, ImmutableSet.of(player.id)));
     }
 
     public String createDeviceRegistrationToken(Session session) {

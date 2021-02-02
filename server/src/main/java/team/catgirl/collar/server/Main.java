@@ -32,7 +32,9 @@ import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.session.SessionManager;
+import team.catgirl.collar.textures.Texture;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -74,6 +76,7 @@ public class Main {
         TokenCrypter tokenCrypter = configuration.tokenCrypter;
         AuthenticationService auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter);
         MinecraftSessionVerifier minecraftSessionVerifier = configuration.minecraftSessionVerifier;
+        TextureService textureService = new TextureService(db);
 
         // Collar feature services
         GroupService groups = new GroupService(serverIdentityStore.getIdentity(), sessions);
@@ -111,6 +114,15 @@ public class Main {
 
                 // Used to test if API is available
                 get("/", (request, response) -> new ServerStatusResponse("OK"));
+
+                get("/player/:playerId/textures/:textureType", (request, response) -> {
+                    String playerId = request.params("playerId");
+                    RequestContext context = RequestContext.from(request);
+                    Profile profile = profiles.getProfile(context, GetProfileRequest.byMinecraftPlayer(playerId)).profile;
+                    String textureType = Texture.Type.valueOf(request.params("textureType"));
+                    response.header("Content-Type", "img/png");
+                    return textureService.getTexture(context, profile.id, textureType).bytes;
+                });
 
                 path("/profile", () -> {
                     before("/*", (request, response) -> {

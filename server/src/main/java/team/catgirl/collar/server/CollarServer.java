@@ -140,7 +140,7 @@ public class CollarServer {
     public ProtocolRequest read(Session session, InputStream message) {
         PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
         try {
-            return packetIO.decode(identityStore.getIdentity(), message, ProtocolRequest.class);
+            return packetIO.decode(sessions.getIdentity(session), message, ProtocolRequest.class);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -185,10 +185,6 @@ public class CollarServer {
     }
 
     private void sendBytes(Session session, byte[] bytes) {
-        try {
-            session.getRemote().sendBytes(ByteBuffer.wrap(bytes));
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        session.getRemote().sendBytesByFuture(ByteBuffer.wrap(bytes));
     }
 }

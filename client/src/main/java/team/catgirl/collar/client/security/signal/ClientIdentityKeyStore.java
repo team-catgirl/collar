@@ -135,7 +135,7 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         WriteLock writeLock = lock.writeLock();
         try {
             writeLock.lockInterruptibly();
-            if (file.delete()) {
+            if (!file.delete()) {
                 throw new IOException("Could not delete " + file.getAbsolutePath());
             }
         } catch (InterruptedException e) {

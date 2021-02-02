@@ -17,7 +17,7 @@ public class GroupsExample {
     public static void main(String[] args) throws Exception {
         String username = args[0];
         String password = args[1];
-        File file = new File("target/collar-home").getAbsoluteFile();
+        File file = new File("target");
         MinecraftSession minecraftSession = MinecraftSession.from(username, password, "smp.catgirl.team");
 
         GroupListener listener = new GroupListener() {
@@ -28,33 +28,26 @@ public class GroupsExample {
 
             @Override
             public void onGroupJoined(Collar collar, GroupsFeature feature, Group group) {
-
             }
 
             @Override
             public void onGroupLeft(Collar collar, GroupsFeature feature, Group group) {
-
             }
 
             @Override
             public void onGroupMemberPositionUpdated(Collar collar, GroupsFeature feature, Group group) {
-
             }
 
             @Override
             public void onGroupMemberInvitationsSent(Collar collar, GroupsFeature feature, Group group) {
-
             }
 
             @Override
             public void onGroupInvited(Collar collar, GroupsFeature feature, GroupInvitation invitation) {
-
             }
         };
 
         Collar collar = Collar.create(minecraftSession, "http://localhost:3000", file, new CollarListener() {
-
-
 
             @Override
             public void onConfirmDeviceRegistration(Collar collar, String approvalUrl) {

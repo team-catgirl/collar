@@ -1,17 +1,22 @@
 package team.catgirl.collar.security.signal;
 
-import org.whispersystems.libsignal.SessionCipher;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.UntrustedIdentityException;
+import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.PreKeySignalMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
+import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
+import org.whispersystems.libsignal.ratchet.RatchetingSession;
+import org.whispersystems.libsignal.state.PreKeyBundle;
+import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
 
 import java.io.*;
+import java.security.interfaces.ECPublicKey;
+import java.util.Optional;
 
 public class SignalCypher implements Cypher {
 
@@ -44,26 +49,47 @@ public class SignalCypher implements Cypher {
                 throw new IllegalStateException(e);
             }
         } catch (UntrustedIdentityException e) {
-            throw new RuntimeException();
+            throw new IllegalStateException(e);
         }
     }
 
     @Override
     public byte[] decrypt(Identity sender, byte[] bytes) {
-        SessionCipher sessionCipher = new SessionCipher(store, signalProtocolAddressFrom(sender));
+        SignalProtocolAddress remoteAddress = signalProtocolAddressFrom(sender);
+        SessionCipher sessionCipher = new SessionCipher(store, remoteAddress);
         try {
-            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
-                try (ObjectInputStream objectStream = new ObjectInputStream(inputStream)) {
-                    int type = objectStream.readInt();
-                    byte[] serialized = PacketIO.toByteArray(objectStream);
-                    switch (type) {
-                        case 0:
-                            return sessionCipher.decrypt(new SignalMessage(serialized));
-                        case 1:
-                            return sessionCipher.decrypt(new PreKeySignalMessage(serialized));
-                        default:
-                            throw new IllegalStateException("unknown message type");
-                    }
+            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
+                 ObjectInputStream objectStream = new ObjectInputStream(inputStream)) {
+                int type = objectStream.readInt();
+                byte[] serialized = PacketIO.toByteArray(objectStream);
+                switch (type) {
+                    case 0:
+                        return sessionCipher.decrypt(new SignalMessage(serialized));
+                    case 1:
+                        PreKeySignalMessage message = new PreKeySignalMessage(serialized);
+                        SessionRecord sessionRecord = store.loadSession(remoteAddress);
+                        if (!sessionRecord.hasSessionState(message.getMessageVersion(), message.getBaseKey().serialize())) {
+                            IdentityKey theirIdentityKey = message.getIdentityKey();
+                            if (!store.isTrustedIdentity(remoteAddress, theirIdentityKey, null)) {
+                                throw new IllegalStateException(remoteAddress.getName());
+                            }
+                            store.saveIdentity(remoteAddress, theirIdentityKey);
+                            ECKeyPair ourSignedPreKey = store.loadSignedPreKey(message.getSignedPreKeyId()).getKeyPair();
+                            BobSignalProtocolParameters.Builder parameters = BobSignalProtocolParameters.newBuilder();
+                            parameters.setTheirBaseKey(message.getBaseKey())
+                                    .setTheirIdentityKey(message.getIdentityKey())
+                                    .setOurIdentityKey(store.getIdentityKeyPair())
+                                    .setOurSignedPreKey(ourSignedPreKey)
+                                    .setOurRatchetKey(ourSignedPreKey);
+                            if (!sessionRecord.isFresh()) sessionRecord.archiveCurrentState();
+                            RatchetingSession.initializeSession(sessionRecord.getSessionState(), parameters.create());
+                            sessionRecord.getSessionState().setLocalRegistrationId(store.getLocalRegistrationId());
+                            sessionRecord.getSessionState().setRemoteRegistrationId(message.getRegistrationId());
+                            sessionRecord.getSessionState().setAliceBaseKey(message.getBaseKey().serialize());
+                        }
+                        return sessionCipher.decrypt(message);
+                    default:
+                        throw new IllegalStateException("unknown message type");
                 }
             }
         } catch (Throwable e) {

@@ -13,7 +13,7 @@ public class AuthorizationExample {
     public static void main(String[] args) throws Exception {
         String username = args[0];
         String password = args[1];
-        File file = Files.createTempDir();
+        File file = new File("target");
         MinecraftSession minecraftSession = MinecraftSession.from(username, password, "smp.catgirl.team");
         Collar collar = Collar.create(minecraftSession, "http://localhost:3000/", file, new CollarListener() {
             @Override

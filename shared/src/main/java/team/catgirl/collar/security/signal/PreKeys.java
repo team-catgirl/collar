@@ -111,7 +111,7 @@ public class PreKeys {
 
     public static void generate(IdentityKeyStore identityKeyStore, PreKeyStore preKeyStore, SignedPreKeyStore signedPreKeyStore) {
         IdentityKeyPair identityKeyPair = identityKeyStore.getIdentityKeyPair();
-        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(0, 500);
+        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(1, 500);
         SignedPreKeyRecord signedPreKey;
         try {
             signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, Utils.createSecureRandom().nextInt(Medium.MAX_VALUE));

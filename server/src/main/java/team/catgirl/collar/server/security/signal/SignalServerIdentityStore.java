@@ -4,6 +4,7 @@ import com.google.common.base.Suppliers;
 import com.mongodb.client.MongoDatabase;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.state.PreKeyBundle;
+import org.whispersystems.libsignal.state.SessionRecord;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.ClientIdentity;

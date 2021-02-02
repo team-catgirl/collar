@@ -38,10 +38,8 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -164,7 +162,7 @@ public final class Collar {
         try (Response response = http.newCall(request).execute()) {
             if (response.code() == 200) {
                 byte[] bytes = Objects.requireNonNull(response.body()).bytes();
-                return Utils.createObjectMapper().readValue(bytes, aClass);
+                return Utils.jsonMapper().readValue(bytes, aClass);
             } else {
                 throw new ConnectionException("Failed to connect to server");
             }
@@ -174,7 +172,7 @@ public final class Collar {
     }
 
     class CollarWebSocket extends WebSocketListener {
-        private final ObjectMapper mapper = Utils.createObjectMapper();
+        private final ObjectMapper mapper = Utils.messagePackMapper();
         private final Collar collar;
         private KeepAlive keepAlive;
         private ServerIdentity serverIdentity;

@@ -64,10 +64,11 @@ public class Main {
 
         Configuration configuration = args.length > 0 && "environment".equals(args[0]) ? Configuration.fromEnvironment() : Configuration.defaultConfiguration();
 
-        ObjectMapper mapper = Utils.createObjectMapper();
+        ObjectMapper json = Utils.jsonMapper();
+        ObjectMapper ionMapper = Utils.messagePackMapper();
         AppUrlProvider urlProvider = configuration.appUrlProvider;
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
-        SessionManager sessions = new SessionManager(mapper, serverIdentityStore);
+        SessionManager sessions = new SessionManager(json, serverIdentityStore);
         PasswordHashing passwordHashing = configuration.passwordHashing;
         ProfileService profiles = new ProfileService(db, passwordHashing);
         DeviceService devices = new DeviceService(db);
@@ -79,7 +80,7 @@ public class Main {
         GroupService groups = new GroupService(serverIdentityStore.getIdentity(), sessions);
 
         // Always serialize objects returned as JSON
-        defaultResponseTransformer(mapper::writeValueAsString);
+        defaultResponseTransformer(json::writeValueAsString);
         exception(HttpException.class, (e, request, response) -> {
             response.status(e.code);
             response.body(e.getMessage());
@@ -98,7 +99,7 @@ public class Main {
         // WebSocket server
         List<ProtocolHandler> protocolHandlers = new ArrayList<>();
         protocolHandlers.add(new GroupsProtocolHandler(groups));
-        webSocket("/api/1/listen", new CollarServer(mapper, sessions, serverIdentityStore, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
+        webSocket("/api/1/listen", new CollarServer(ionMapper, sessions, serverIdentityStore, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
 
         // API routes
         path("/api", () -> {
@@ -134,7 +135,7 @@ public class Main {
                         return profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(uuid)).profile.toPublic();
                     });
                     get("/devices", (request, response) -> {
-                        return devices.findDevices(RequestContext.from(request), mapper.readValue(request.bodyAsBytes(), FindDevicesRequest.class));
+                        return devices.findDevices(RequestContext.from(request), json.readValue(request.bodyAsBytes(), FindDevicesRequest.class));
                     });
                     delete("/devices/:id", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
@@ -149,12 +150,12 @@ public class Main {
                     });
                     // Login
                     get("/login", (request, response) -> {
-                        LoginRequest req = mapper.readValue(request.bodyAsBytes(), LoginRequest.class);
+                        LoginRequest req = json.readValue(request.bodyAsBytes(), LoginRequest.class);
                         return auth.login(RequestContext.from(request), req);
                     });
                     // Create an account
                     get("/create", (request, response) -> {
-                        CreateAccountRequest req = mapper.readValue(request.bodyAsBytes(), CreateAccountRequest.class);
+                        CreateAccountRequest req = json.readValue(request.bodyAsBytes(), CreateAccountRequest.class);
                         return auth.createAccount(RequestContext.from(request), req);
                     });
                 });

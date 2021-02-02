@@ -19,9 +19,9 @@ public final class PreKeys {
 
     public static PreKeyBundle generate(SignalProtocolAddress address, SignalProtocolStore store) {
         ECKeyPair signedPreKey = Curve.generateKeyPair();
-        int signedPreKeyId = Utils.createSecureRandom().nextInt(Medium.MAX_VALUE);
+        int signedPreKeyId = Utils.secureRandom().nextInt(Medium.MAX_VALUE);
         ECKeyPair unsignedPreKey = Curve.generateKeyPair();
-        int unsignedPreKeyId = Utils.createSecureRandom().nextInt(Medium.MAX_VALUE);
+        int unsignedPreKeyId = Utils.secureRandom().nextInt(Medium.MAX_VALUE);
         byte[] signature;
         try {
             signature = Curve.calculateSignature(store.getIdentityKeyPair().getPrivateKey(), signedPreKey.getPublicKey().serialize());
@@ -94,7 +94,7 @@ public final class PreKeys {
         List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(1, 500);
         SignedPreKeyRecord signedPreKey;
         try {
-            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, Utils.createSecureRandom().nextInt(Medium.MAX_VALUE));
+            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, Utils.secureRandom().nextInt(Medium.MAX_VALUE));
         } catch (InvalidKeyException e) {
             throw new IllegalStateException("problem generating signed preKey", e);
         }

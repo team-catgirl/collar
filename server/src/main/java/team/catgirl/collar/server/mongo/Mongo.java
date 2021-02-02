@@ -2,6 +2,8 @@ package team.catgirl.collar.server.mongo;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.ReadConcern;
+import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
@@ -31,19 +33,26 @@ public final class Mongo {
     private static MongoClientSettings settings(ConnectionString uri) {
         return MongoClientSettings.builder()
                 .applyConnectionString(uri)
+                .readConcern(ReadConcern.MAJORITY)
+                .writeConcern(WriteConcern.MAJORITY)
                 .uuidRepresentation(UuidRepresentation.STANDARD).build();
     }
 
     private static MongoDatabase getDevelopmentDatabase() {
-        MongoClientSettings settings = MongoClientSettings.builder()
-                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+        MongoClientSettings settings = defaultSettings();
         return MongoClients.create(settings).getDatabase("collar-dev");
     }
 
     public static MongoDatabase getTestingDatabase() {
-        MongoClientSettings settings = MongoClientSettings.builder()
-                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+        MongoClientSettings settings = defaultSettings();
         return MongoClients.create(settings).getDatabase("collar-testing");
+    }
+
+    private static MongoClientSettings defaultSettings() {
+        return MongoClientSettings.builder()
+                .readConcern(ReadConcern.MAJORITY)
+                .writeConcern(WriteConcern.MAJORITY)
+                .uuidRepresentation(UuidRepresentation.STANDARD).build();
     }
 
     private Mongo() {}

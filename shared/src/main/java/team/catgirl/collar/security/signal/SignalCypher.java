@@ -1,14 +1,13 @@
 package team.catgirl.collar.security.signal;
 
-import org.whispersystems.libsignal.SessionCipher;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.UntrustedIdentityException;
+import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.PreKeySignalMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
+import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -75,11 +74,13 @@ public class SignalCypher implements Cypher {
                                 .setOurIdentityKey(store.getIdentityKeyPair())
                                 .setOurSignedPreKey(ourSignedPreKey)
                                 .setOurRatchetKey(ourSignedPreKey);
-                        if (message.getPreKeyId().isPresent()) {
-                            parameters.setOurOneTimePreKey(Optional.of(store.loadPreKey(message.getPreKeyId().get()).getKeyPair()));
+                        if (message.getPreKeyId().isPresent() && store.containsPreKey(message.getPreKeyId().get())) {
+                            PreKeyRecord preKeyRecord = store.loadPreKey(message.getPreKeyId().get());
+                            parameters.setOurOneTimePreKey(Optional.of(preKeyRecord.getKeyPair()));
                         } else {
-                            parameters.setOurOneTimePreKey(Optional.<ECKeyPair>absent());
+                            parameters.setOurOneTimePreKey(Optional.absent());
                         }
+                        parameters.setOurOneTimePreKey(Optional.absent());
                         if (!sessionRecord.isFresh()) sessionRecord.archiveCurrentState();
                         RatchetingSession.initializeSession(sessionRecord.getSessionState(), parameters.create());
                         sessionRecord.getSessionState().setLocalRegistrationId(store.getLocalRegistrationId());

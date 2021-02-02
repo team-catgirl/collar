@@ -7,8 +7,9 @@ import team.catgirl.collar.security.Identity;
 import java.io.*;
 
 /**
- * Encodes and decodes packets for/from the wire, handling encryption and differnet types of signal messages
+ * Encodes and decodes packets for/from the wire, handling encryption and different types of signal messages
  * Packet format is int(ENCRYPTEDMODE)+int(SIGNAL_MESSAGE_TYPE)+CiphertextMessage()
+ * TODO: stabilize packet format before 1.0
  */
 public final class PacketIO {
 

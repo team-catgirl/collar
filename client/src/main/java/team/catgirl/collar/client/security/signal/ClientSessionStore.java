@@ -172,7 +172,7 @@ public class ClientSessionStore implements SessionStore {
         File file = new File(homeDirectory.security(), "clientSessionStore.json");
         State state;
         if (file.exists()) {
-            state = Utils.createObjectMapper().readValue(file, State.class);
+            state = Utils.createJsonMapper().readValue(file, State.class);
         } else {
             state = new State(new HashMap<>());
         }

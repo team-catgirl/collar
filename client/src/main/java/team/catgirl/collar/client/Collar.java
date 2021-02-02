@@ -38,10 +38,8 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -164,7 +162,7 @@ public final class Collar {
         try (Response response = http.newCall(request).execute()) {
             if (response.code() == 200) {
                 byte[] bytes = Objects.requireNonNull(response.body()).bytes();
-                return Utils.createObjectMapper().readValue(bytes, aClass);
+                return Utils.createJsonMapper().readValue(bytes, aClass);
             } else {
                 throw new ConnectionException("Failed to connect to server");
             }
@@ -174,7 +172,7 @@ public final class Collar {
     }
 
     class CollarWebSocket extends WebSocketListener {
-        private final ObjectMapper mapper = Utils.createObjectMapper();
+        private final ObjectMapper protobuf = Utils.createProtobufMapper();
         private final Collar collar;
         private KeepAlive keepAlive;
         private ServerIdentity serverIdentity;
@@ -308,7 +306,7 @@ public final class Collar {
         }
 
         private ProtocolResponse readResponse(byte[] bytes) {
-            PacketIO packetIO = new PacketIO(mapper, identityStore == null ? null : identityStore.createCypher());
+            PacketIO packetIO = new PacketIO(protobuf, identityStore == null ? null : identityStore.createCypher());
             try {
                 return packetIO.decode(serverIdentity, bytes, ProtocolResponse.class);
             } catch (IOException e) {
@@ -317,7 +315,7 @@ public final class Collar {
         }
 
         public void sendRequest(WebSocket webSocket, ProtocolRequest req) {
-            PacketIO packetIO = identityStore == null ? new PacketIO(mapper, null) : new PacketIO(mapper, identityStore.createCypher());
+            PacketIO packetIO = identityStore == null ? new PacketIO(protobuf, null) : new PacketIO(protobuf, identityStore.createCypher());
             byte[] bytes;
             if (state == State.CONNECTED) {
                 try {

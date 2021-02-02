@@ -43,7 +43,7 @@ import java.util.logging.Logger;
 public class CollarServer {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
-    private final ObjectMapper mapper;
+    private final ObjectMapper protobuf;
     private final SessionManager sessions;
     private final ServerIdentityStore identityStore;
     private final ProfileService profiles;
@@ -51,8 +51,8 @@ public class CollarServer {
     private final MinecraftSessionVerifier minecraftSessionVerifier;
     private final List<ProtocolHandler> protocolHandlers;
 
-    public CollarServer(ObjectMapper mapper, SessionManager sessions, ServerIdentityStore identityStore, ProfileService profiles, AppUrlProvider urlProvider, MinecraftSessionVerifier minecraftSessionVerifier, List<ProtocolHandler> protocolHandlers) {
-        this.mapper = mapper;
+    public CollarServer(ObjectMapper protobuf, SessionManager sessions, ServerIdentityStore identityStore, ProfileService profiles, AppUrlProvider urlProvider, MinecraftSessionVerifier minecraftSessionVerifier, List<ProtocolHandler> protocolHandlers) {
+        this.protobuf = protobuf;
         this.sessions = sessions;
         this.identityStore = identityStore;
         this.profiles = profiles;
@@ -138,7 +138,7 @@ public class CollarServer {
     }
 
     public ProtocolRequest read(Session session, InputStream message) {
-        PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
+        PacketIO packetIO = new PacketIO(protobuf, identityStore.createCypher());
         try {
             return packetIO.decode(sessions.getIdentity(session), message, ProtocolRequest.class);
         } catch (IOException e) {
@@ -154,7 +154,7 @@ public class CollarServer {
                 send(anotherSession, response);
             });
         } else {
-            PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
+            PacketIO packetIO = new PacketIO(protobuf, identityStore.createCypher());
             byte[] bytes;
             if (sessions.isIdentified(session)) {
                 try {
@@ -174,7 +174,7 @@ public class CollarServer {
     }
 
     public void sendPlain(Session session, ProtocolResponse resp) {
-        PacketIO packetIO = new PacketIO(mapper, null);
+        PacketIO packetIO = new PacketIO(protobuf, null);
         byte[] bytes;
         try {
             bytes = packetIO.encodePlain(resp);

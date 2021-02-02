@@ -29,10 +29,6 @@
             <artifactId>signal-protocol-java</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.whispersystems</groupId>
-            <artifactId>signal-service-java</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.chris54721</groupId>
             <artifactId>openmcauthenticator</artifactId>
         </dependency>

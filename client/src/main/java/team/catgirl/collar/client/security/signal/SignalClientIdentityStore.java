@@ -24,8 +24,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class SignalClientIdentityStore implements ClientIdentityStore {
+
+    private static final Logger LOGGER = Logger.getLogger(SignalClientIdentityStore.class.getName());
 
     private final UUID owner;
     private final ClientSignalProtocolStore store;
@@ -68,6 +72,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         } catch (InvalidKeyException | UntrustedIdentityException e) {
             throw new IllegalStateException(e);
         }
+        LOGGER.log(Level.INFO, "Trusted identity and started signal session for " + address);
     }
 
     @Override

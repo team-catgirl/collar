@@ -49,28 +49,25 @@ public final class PacketIO {
     }
 
     public byte[] encodePlain(Object object) throws IOException {
-        return encode(null, object, MODE_PLAIN);
-    }
-
-    public byte[] encodeEncrypted(Identity recipient, Object object) throws IOException {
-        return encode(recipient, object, MODE_ENCRYPTED);
-    }
-
-    private byte[] encode(Identity recipient, Object object, int type) throws IOException {
         byte[] rawBytes = mapper.writeValueAsBytes(object);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             try (ObjectOutputStream objectStream = new ObjectOutputStream(outputStream)) {
-                objectStream.writeInt(type);
-                if (type == MODE_PLAIN) {
-                    objectStream.write(rawBytes);
-                } else if (type == MODE_ENCRYPTED) {
-                    if (recipient == null) {
-                        throw new IllegalArgumentException("recipient cannot be null when sending MODE_ENCRYPTED packets");
-                    }
-                    objectStream.write(cypher.crypt(recipient, rawBytes));
-                } else {
-                    throw new IllegalStateException("unknown packet type " + type);
+                objectStream.writeInt(MODE_PLAIN);
+                objectStream.write(rawBytes);
+            }
+            return outputStream.toByteArray();
+        }
+    }
+
+    public byte[] encodeEncrypted(Identity recipient, Object object) throws IOException {
+        byte[] rawBytes = mapper.writeValueAsBytes(object);
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            try (ObjectOutputStream objectStream = new ObjectOutputStream(outputStream)) {
+                objectStream.writeInt(MODE_ENCRYPTED);
+                if (recipient == null) {
+                    throw new IllegalArgumentException("recipient cannot be null when sending MODE_ENCRYPTED packets");
                 }
+                objectStream.write(cypher.crypt(recipient, rawBytes));
             }
             return outputStream.toByteArray();
         }

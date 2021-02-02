@@ -18,8 +18,12 @@ import team.catgirl.collar.server.security.ServerIdentityStore;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SignalServerIdentityStore implements ServerIdentityStore {
+
+    private static final Logger LOGGER = Logger.getLogger(SignalServerIdentityStore.class.getName());
 
     private final ServerSignalProtocolStore store;
     private final Supplier<ServerIdentity> serverIdentitySupplier;
@@ -56,6 +60,9 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         } catch (InvalidKeyException|UntrustedIdentityException e) {
             throw new IllegalStateException(e);
         }
+        SessionRecord sessionRecord = store.loadSession(address);
+        sessionRecord.getSessionState().clearUnacknowledgedPreKeyMessage();
+        LOGGER.log(Level.INFO, "Trusted identity and started signal session for " + address);
     }
 
     public boolean isTrustedIdentity(ClientIdentity clientIdentity) {

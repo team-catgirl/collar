@@ -23,12 +23,7 @@ public class AuthorizationExample {
 
             @Override
             public void onClientUntrusted(Collar collar, ClientIdentityStore store) {
-                try {
-                    System.out.println("Client is untrusted - resetting store");
-                    store.reset();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                System.out.println("Client is untrusted - resetting store?");
             }
 
             @Override

@@ -15,8 +15,7 @@ import team.catgirl.collar.utils.Utils;
 import java.io.*;
 import java.util.List;
 
-public class PreKeys {
-
+public final class PreKeys {
 
     public static PreKeyBundle generate(SignalProtocolAddress address, SignalProtocolStore store) {
         ECKeyPair signedPreKey = Curve.generateKeyPair();
@@ -38,7 +37,6 @@ public class PreKeys {
                 signedPreKey.getPublicKey(),
                 signature,
                 store.getIdentityKeyPair().getPublicKey());
-
         store.storeSignedPreKey(signedPreKeyId, new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), signedPreKey, signature));
         store.storePreKey(unsignedPreKeyId, new PreKeyRecord(unsignedPreKeyId, unsignedPreKey));
         store.saveIdentity(address, store.getIdentityKeyPair().getPublicKey());
@@ -52,15 +50,15 @@ public class PreKeys {
     public static byte[] preKeyBundleToBytes(PreKeyBundle bundle) throws IOException {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             try (ObjectOutputStream os = new ObjectOutputStream(bos)) {
-                os.write(bundle.getRegistrationId());
-                os.write(bundle.getDeviceId());
-                os.write(bundle.getPreKeyId());
-                saveBytes(os, bundle.getPreKey().serialize());
-                os.write(bundle.getSignedPreKeyId());
-                saveBytes(os, bundle.getSignedPreKey().serialize());
-                saveBytes(os, bundle.getSignedPreKeySignature());
+                os.writeInt(bundle.getRegistrationId());
+                os.writeInt(bundle.getDeviceId());
+                os.writeInt(bundle.getPreKeyId());
+                writeBytes(os, bundle.getPreKey().serialize());
+                os.writeInt(bundle.getSignedPreKeyId());
+                writeBytes(os, bundle.getSignedPreKey().serialize());
+                writeBytes(os, bundle.getSignedPreKeySignature());
                 byte[] identityKey = bundle.getIdentityKey().serialize();
-                saveBytes(os, identityKey);
+                writeBytes(os, identityKey);
             }
             return bos.toByteArray();
         }
@@ -68,11 +66,11 @@ public class PreKeys {
 
     public static PreKeyBundle preKeyBundleFromBytes(byte[] bytes) throws IOException {
         try (ObjectInputStream is = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
-            int registrationId = is.read();
-            int deviceId = is.read();
-            int preKeyId = is.read();
+            int registrationId = is.readInt();
+            int deviceId = is.readInt();
+            int preKeyId = is.readInt();
             byte[] preKeyBytes = readBytes(is);
-            int signedPreKeyId = is.read();
+            int signedPreKeyId = is.readInt();
             byte[] signedPreKeyBytes = readBytes(is);
             byte[] signedPreKeySignatureBytes = readBytes(is);
             byte[] identityKeyBytes = readBytes(is);
@@ -91,7 +89,20 @@ public class PreKeys {
         }
     }
 
-    private static void saveBytes(ObjectOutputStream os, byte[] bytes) throws IOException {
+    public static void generate(IdentityKeyStore identityKeyStore, PreKeyStore preKeyStore, SignedPreKeyStore signedPreKeyStore) {
+        IdentityKeyPair identityKeyPair = identityKeyStore.getIdentityKeyPair();
+        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(1, 500);
+        SignedPreKeyRecord signedPreKey;
+        try {
+            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, Utils.createSecureRandom().nextInt(Medium.MAX_VALUE));
+        } catch (InvalidKeyException e) {
+            throw new IllegalStateException("problem generating signed preKey", e);
+        }
+        preKeys.forEach(preKeyRecord -> preKeyStore.storePreKey(preKeyRecord.getId(), preKeyRecord));
+        signedPreKeyStore.storeSignedPreKey(signedPreKey.getId(), signedPreKey);
+    }
+
+    private static void writeBytes(ObjectOutputStream os, byte[] bytes) throws IOException {
         os.write(bytes.length);
         for (byte b : bytes) {
             os.write(b);
@@ -108,17 +119,4 @@ public class PreKeys {
     }
 
     private PreKeys() {}
-
-    public static void generate(IdentityKeyStore identityKeyStore, PreKeyStore preKeyStore, SignedPreKeyStore signedPreKeyStore) {
-        IdentityKeyPair identityKeyPair = identityKeyStore.getIdentityKeyPair();
-        List<PreKeyRecord> preKeys = KeyHelper.generatePreKeys(1, 500);
-        SignedPreKeyRecord signedPreKey;
-        try {
-            signedPreKey = KeyHelper.generateSignedPreKey(identityKeyPair, Utils.createSecureRandom().nextInt(Medium.MAX_VALUE));
-        } catch (InvalidKeyException e) {
-            throw new IllegalStateException("problem generating signed preKey", e);
-        }
-        preKeys.forEach(preKeyRecord -> preKeyStore.storePreKey(preKeyRecord.getId(), preKeyRecord));
-        signedPreKeyStore.storeSignedPreKey(signedPreKey.getId(), signedPreKey);
-    }
 }

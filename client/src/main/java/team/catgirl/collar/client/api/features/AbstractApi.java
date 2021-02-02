@@ -13,16 +13,16 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public abstract class AbstractFeature<T extends ApiListener> {
+public abstract class AbstractApi<T extends ApiListener> {
 
-    private static final Logger LOGGER = Logger.getLogger(AbstractFeature.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(AbstractApi.class.getName());
 
     private final Set<T> listeners = new HashSet<>();
     protected final Collar collar;
     private final Supplier<ClientIdentityStore> identityStoreSupplier;
     protected final Consumer<ProtocolRequest> sender;
 
-    public AbstractFeature(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
+    public AbstractApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
         this.collar = collar;
         this.identityStoreSupplier = identityStoreSupplier;
         this.sender = sender;

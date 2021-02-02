@@ -30,7 +30,7 @@ public final class Group {
     public static Group newGroup(UUID id, MinecraftPlayer owner, Position ownerPosition, List<MinecraftPlayer> members) {
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder()
                 .put(owner, new Member(owner, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerPosition));
-        members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, null)));
+        members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, Position.UNKNOWN)));
         return new Group(id, owner.server, state.build());
     }
 
@@ -70,7 +70,7 @@ public final class Group {
         List<Member> newMembers = new ArrayList<>();
         players.forEach(player -> {
             if (!this.members.containsKey(player)) {
-                Member newMember = new Member(player, role, membershipState, null);
+                Member newMember = new Member(player, role, membershipState, Position.UNKNOWN);
                 state.put(player, newMember);
                 newMembers.add(newMember);
             }
@@ -99,21 +99,21 @@ public final class Group {
         @JsonProperty("state")
         public final MembershipState membershipState;
         @JsonProperty("location")
-        public final Position location;
+        public final Position position;
 
         public Member(
                 @JsonProperty("player") MinecraftPlayer player,
                 @JsonProperty("role") MembershipRole membershipRole,
                 @JsonProperty("state") MembershipState membershipState,
-                @JsonProperty("location") Position location) {
+                @JsonProperty("location") Position position) {
             this.player = player;
             this.membershipRole = membershipRole;
             this.membershipState = membershipState;
-            this.location = location;
+            this.position = position;
         }
 
         public Member updateMembershipState(MembershipState membershipState) {
-            return new Member(player, membershipRole, membershipState, location);
+            return new Member(player, membershipRole, membershipState, position);
         }
 
         public Member updatePosition(Position position) {

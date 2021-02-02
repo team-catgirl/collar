@@ -149,7 +149,7 @@ public class CollarServer {
     public void send(Session session, ProtocolResponse resp) {
         if (resp instanceof BatchProtocolResponse) {
             BatchProtocolResponse batchResponse = (BatchProtocolResponse)resp;
-            batchResponse.responses.forEach((identity, response) -> {
+            batchResponse.responses.forEach((response, identity) -> {
                 Session anotherSession = sessions.getSession(identity);
                 send(anotherSession, response);
             });

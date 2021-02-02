@@ -3,9 +3,11 @@ package team.catgirl.collar.server.services.groups;
 import com.google.common.collect.ImmutableList;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
+import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
@@ -42,7 +44,7 @@ public final class GroupService {
         MinecraftPlayer player = sessions.findPlayer(req.identity);
         Group group = Group.newGroup(UUID.randomUUID(), player, null, players);
         synchronized (group.id) {
-            return refreshGroupState(group, req.identity, new CreateGroupResponse(serverIdentity, group));
+            return refreshGroupState(group, new CreateGroupResponse(serverIdentity, group));
         }
     }
 
@@ -60,7 +62,7 @@ public final class GroupService {
         synchronized (group.id) {
             Group.MembershipState state = req.state;
             group = group.updateMemberState(owner, state);
-            return refreshGroupState(group, req.identity, new AcceptGroupMembershipResponse(serverIdentity, group));
+            return refreshGroupState(group, new AcceptGroupMembershipResponse(serverIdentity, group));
         }
     }
 
@@ -79,8 +81,8 @@ public final class GroupService {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             group = group.removeMember(sender);
-            response = response.concat(refreshGroupState(group, req.identity, new LeaveGroupResponse(serverIdentity, group.id)));
-            response = response.concat(createGroupResponses(sender, group, new UpdateGroupsUpdatedResponse(serverIdentity, ImmutableList.of(group))));
+            response = response.concat(refreshGroupState(group, new LeaveGroupResponse(serverIdentity, group.id)));
+            response = response.concat(createGroupResponses(sender, group, (identity, group1, member) -> new UpdateGroupsUpdatedResponse(serverIdentity, ImmutableList.of(group1))));
         }
         LOGGER.log(Level.INFO, "Group count " + groupsById.size());
         return response;
@@ -92,11 +94,11 @@ public final class GroupService {
      */
     public BatchProtocolResponse removeUserFromAllGroups(MinecraftPlayer player) {
         List<Group> groups = findGroupsForPlayer(player);
-        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        BatchProtocolResponse response = new BatchProtocolResponse();
         for (Group group : groups) {
             synchronized (group.id) {
                 group = group.updateMemberState(player, Group.MembershipState.DECLINED);
-                response = response.concat(refreshGroupState(group, sessions.getIdentity(player), null));
+                response = response.concat(refreshGroupState(group, null));
             }
         }
         LOGGER.log(Level.INFO, "Removed user " + player + " from all groups");
@@ -117,7 +119,7 @@ public final class GroupService {
                     .filter(member -> member.membershipState == Group.MembershipState.PENDING)
                     .map(member -> member.player)
                     .collect(Collectors.toMap(sessions::getIdentity, o -> new GroupMembershipRequest(serverIdentity, group.id, sender, new ArrayList<>(group.members.keySet()))));
-            return new BatchProtocolResponse(serverIdentity, responseMap);
+            return new BatchProtocolResponse();
         }
     }
 
@@ -144,7 +146,6 @@ public final class GroupService {
             }
             BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
             Map<Group, List<Member>> groupToMembers = new HashMap<>();
-
             List<MinecraftPlayer> players = sessions.findPlayers(groupInviteRequest.identity, groupInviteRequest.players);
             group = group.addMembers(players, Group.MembershipRole.MEMBER, Group.MembershipState.PENDING, (newGroup, members) -> {
                 groupToMembers.put(newGroup, members);
@@ -165,12 +166,12 @@ public final class GroupService {
     public BatchProtocolResponse updatePosition(UpdateGroupMemberPositionRequest req) {
         MinecraftPlayer owner = sessions.findPlayer(req.identity);
         List<Group> groups = findGroupsForPlayer(owner);
-        BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
+        BatchProtocolResponse responses = new BatchProtocolResponse();
         for (Group group : groups) {
             synchronized (group.id) {
                 group = group.updateMemberPosition(owner, req.position);
                 responses = responses.concat(refreshGroupState(group, req.identity, null));
-                responses = responses.concat(createGroupResponses(owner, group, new UpdateGroupsUpdatedResponse(serverIdentity, groups)));
+                responses = responses.concat(createGroupResponses(owner, group, (identity, group1, member) -> new UpdateGroupsUpdatedResponse(serverIdentity, groups)));
             }
         }
         return responses.add(req.identity, new UpdateGroupsUpdatedResponse(serverIdentity, findGroupsForPlayer(owner)));
@@ -180,12 +181,12 @@ public final class GroupService {
         return groupsById.values().stream().filter(group -> group.members.containsKey(player)).collect(Collectors.toList());
     }
 
-    private BatchProtocolResponse createGroupResponses(MinecraftPlayer sender, Group group, ProtocolResponse response) {
+    private BatchProtocolResponse createGroupResponses(MinecraftPlayer sender, Group group, MessageCreator messageCreator) {
         synchronized (group.id) {
-            Map<ClientIdentity, ProtocolResponse> responses = group.members.entrySet().stream()
+            Map<ProtocolResponse, ClientIdentity> responses = group.members.entrySet().stream()
                     .filter(entry -> !entry.getKey().equals(sender))
                     .filter(entry -> entry.getValue().membershipState == Group.MembershipState.ACCEPTED)
-                    .collect(Collectors.toMap(minecraftPlayerMemberEntry -> sessions.getIdentity(minecraftPlayerMemberEntry.getKey()), minecraftPlayerMemberEntry -> response));
+                    .collect(Collectors.toMap(minecraftPlayerMemberEntry -> sessions.getIdentity(minecraftPlayerMemberEntry.getKey()), minecraftPlayerMemberEntry -> new Mie));
             return new BatchProtocolResponse(serverIdentity, responses);
         }
     }
@@ -201,12 +202,16 @@ public final class GroupService {
                 for (Member member : group.members.values()) {
                     List<Group> groupsForPlayer = findGroupsForPlayer(member.player);
                     if (!groupsForPlayer.isEmpty()) {
-                        BatchProtocolResponse groupResponses = createGroupResponses(null, group, new UpdateGroupsUpdatedResponse(serverIdentity, groupsForPlayer));
+                        BatchProtocolResponse groupResponses = createGroupResponses(null, group, (identity1, group1, member1) -> new UpdateGroupsUpdatedResponse(serverIdentity, groupsForPlayer));
                         response = groupResponses.concat(groupResponses);
                     }
                 }
             }
         }
         return response;
+    }
+
+    interface MessageCreator {
+        ProtocolResponse create(Identity identity, Group group, Member member);
     }
 }

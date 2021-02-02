@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.Random;
 
 public class GroupsExample {
     public static void main(String[] args) throws Exception {

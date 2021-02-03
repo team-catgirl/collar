@@ -130,6 +130,9 @@ public enum EntityType {
 	VINDICATOR("vindicator", 36),
 	WANDERING_TRADER("wandering_trader", EntityType.UNKNOWN_ID),
 	WITCH("witch", 66),
+	/**
+	 * pink wither in JE 2.0 hoax edition are just silverfish internally
+	 */
 	WITHER("wither", 64),
 	WITHER_SKELETON("wither_skeleton", 5),
 	WITHER_SKULL("wither_skull", 19),
@@ -139,9 +142,9 @@ public enum EntityType {
 	ZOMBIE_HORSE("zombie_horse", 29),
 	ZOMBIE_VILLAGER("zombie_villager", 27),
 	ZOMBIFIED_PIGLIN("zombified_piglin", 57),
-
-  @JsonEnumDefaultValue
-  UNKNOWN("unknown_id", EntityType.UNKNOWN_ID);
+	
+	@JsonEnumDefaultValue
+	UNKNOWN("unknown_id", EntityType.UNKNOWN_ID);
 
 	private static final int UNKNOWN_ID = Integer.MAX_VALUE - 1;
 	private final String lexiographicalID;

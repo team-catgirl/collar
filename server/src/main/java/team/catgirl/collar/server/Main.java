@@ -171,95 +171,98 @@ public class Main {
             return new DiscoverResponse(versions);
         });
 
-        // App Endpoints - to be replaced with a better app
-        get("/", (request, response) -> {
-            response.redirect("/app/login");
-            return "";
-        });
-        path("/app", () -> {
-            before("/*", (request, response) -> {
-                response.header("Content-Type", "text/html; charset=UTF-8");
-            });
-            get("/login", (request, response) -> {
-                Cookie cookie = Cookie.from(tokenCrypter, request);
-                if (cookie == null) {
-                    return render("login");
-                } else {
-                    response.redirect("/app");
-                    return "";
-                }
-            }, Object::toString);
-            post("/login", (request, response) -> {
-                String email = request.queryParamsSafe("email");
-                String password = request.queryParamsSafe("password");
-                Profile profile = auth.login(RequestContext.ANON, new LoginRequest(email, password)).profile;
-                Cookie cookie = new Cookie(profile.id, new Date().getTime() + TimeUnit.DAYS.toMillis(1));
-                cookie.set(tokenCrypter, response);
-                response.redirect("/app");
-                return "";
-            }, Object::toString);
-            get("/logout", (request, response) -> {
-                Cookie.remove(response);
+        // Basic web interface. Not for production use.
+        if (configuration.enableWeb) {
+            LOGGER.log(Level.SEVERE, "Builtin web interface is NOT for production use");
+            get("/", (request, response) -> {
                 response.redirect("/app/login");
                 return "";
-            }, Object::toString);
-            get("/signup", (request, response) -> {
-                return render("signup");
-            }, Object::toString);
-            post("/signup", (request, response) -> {
-                String name = request.queryParamsSafe("name");
-                String email = request.queryParamsSafe("email");
-                String password = request.queryParamsSafe("password");
-                String confirmPassword = request.queryParamsSafe("confirmPassword");
-                PublicProfile profile = auth.createAccount(RequestContext.ANON, new CreateAccountRequest(email, name, password, confirmPassword)).profile;
-                Cookie cookie = new Cookie(profile.id, new Date().getTime() * TimeUnit.DAYS.toMillis(1));
-                cookie.set(tokenCrypter, response);
-                response.redirect("/app");
-                return "";
-            }, Object::toString);
-            get("", (request, response) -> {
-                Cookie cookie = Cookie.from(tokenCrypter, request);
-                if (cookie == null) {
-                    response.redirect("/app/login");
-                    return "";
-                } else {
-                    Profile profile = profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
-                    Map<String, Object> ctx = new HashMap<>();
-                    ctx.put("name", profile.name);
-                    return render(ctx,"home");
-                }
-            }, Object::toString);
-
-            path("/devices", () -> {
-                get("/trust/:token", (request, response) -> {
+            });
+            path("/app", () -> {
+                before("/*", (request, response) -> {
+                    response.header("Content-Type", "text/html; charset=UTF-8");
+                });
+                get("/login", (request, response) -> {
                     Cookie cookie = Cookie.from(tokenCrypter, request);
                     if (cookie == null) {
-                        response.redirect("/app/login");
-                        return "";
+                        return render("login");
                     } else {
-                        Map<String, Object> ctx = new HashMap<>();
-                        ctx.put("token", request.params("token"));
-                        return render(ctx, "trust");
-                    }
-                }, Object::toString);
-                post("/trust/:id", (request, response) -> {
-                    Cookie cookie = Cookie.from(tokenCrypter, request);
-                    if (cookie == null) {
-                        response.redirect("/app/login");
-                        return "";
-                    } else {
-                        String token = request.queryParams("token");
-                        String name = request.queryParams("name");
-                        RequestContext context = new RequestContext(cookie.profileId);
-                        CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.owner, name));
-                        PublicProfile profile = profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile.toPublic();
-                        sessions.onDeviceRegistered(serverIdentityStore.getIdentity(), profile, token, device);
                         response.redirect("/app");
                         return "";
                     }
                 }, Object::toString);
+                post("/login", (request, response) -> {
+                    String email = request.queryParamsSafe("email");
+                    String password = request.queryParamsSafe("password");
+                    Profile profile = auth.login(RequestContext.ANON, new LoginRequest(email, password)).profile;
+                    Cookie cookie = new Cookie(profile.id, new Date().getTime() + TimeUnit.DAYS.toMillis(1));
+                    cookie.set(tokenCrypter, response);
+                    response.redirect("/app");
+                    return "";
+                }, Object::toString);
+                get("/logout", (request, response) -> {
+                    Cookie.remove(response);
+                    response.redirect("/app/login");
+                    return "";
+                }, Object::toString);
+                get("/signup", (request, response) -> {
+                    return render("signup");
+                }, Object::toString);
+                post("/signup", (request, response) -> {
+                    String name = request.queryParamsSafe("name");
+                    String email = request.queryParamsSafe("email");
+                    String password = request.queryParamsSafe("password");
+                    String confirmPassword = request.queryParamsSafe("confirmPassword");
+                    PublicProfile profile = auth.createAccount(RequestContext.ANON, new CreateAccountRequest(email, name, password, confirmPassword)).profile;
+                    Cookie cookie = new Cookie(profile.id, new Date().getTime() * TimeUnit.DAYS.toMillis(1));
+                    cookie.set(tokenCrypter, response);
+                    response.redirect("/app");
+                    return "";
+                }, Object::toString);
+                get("", (request, response) -> {
+                    Cookie cookie = Cookie.from(tokenCrypter, request);
+                    if (cookie == null) {
+                        response.redirect("/app/login");
+                        return "";
+                    } else {
+                        Profile profile = profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
+                        Map<String, Object> ctx = new HashMap<>();
+                        ctx.put("name", profile.name);
+                        return render(ctx, "home");
+                    }
+                }, Object::toString);
+
+                path("/devices", () -> {
+                    get("/trust/:token", (request, response) -> {
+                        Cookie cookie = Cookie.from(tokenCrypter, request);
+                        if (cookie == null) {
+                            response.redirect("/app/login");
+                            return "";
+                        } else {
+                            Map<String, Object> ctx = new HashMap<>();
+                            ctx.put("token", request.params("token"));
+                            return render(ctx, "trust");
+                        }
+                    }, Object::toString);
+                    post("/trust/:id", (request, response) -> {
+                        Cookie cookie = Cookie.from(tokenCrypter, request);
+                        if (cookie == null) {
+                            response.redirect("/app/login");
+                            return "";
+                        } else {
+                            String token = request.queryParams("token");
+                            String name = request.queryParams("name");
+                            RequestContext context = new RequestContext(cookie.profileId);
+                            CreateDeviceResponse device = devices.createDevice(context, new CreateDeviceRequest(context.owner, name));
+                            PublicProfile profile = profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile.toPublic();
+                            sessions.onDeviceRegistered(serverIdentityStore.getIdentity(), profile, token, device);
+                            response.redirect("/app");
+                            return "";
+                        }
+                    }, Object::toString);
+                });
             });
-        });
+        }
 
         LOGGER.info("Collar server started.");
         LOGGER.info("Do you want to play a block game game?");

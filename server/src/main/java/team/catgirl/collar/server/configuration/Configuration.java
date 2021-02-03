@@ -22,14 +22,16 @@ public class Configuration {
     public final PasswordHashing passwordHashing;
     public final MinecraftSessionVerifier minecraftSessionVerifier;
     public final String corsOrigin;
+    public final boolean enableWeb;
 
-    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier, String corsOrigin) {
+    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier, String corsOrigin, boolean enableWeb) {
         this.database = database;
         this.appUrlProvider = appUrlProvider;
         this.tokenCrypter = tokenCrypter;
         this.passwordHashing = passwordHashing;
         this.minecraftSessionVerifier = minecraftSessionVerifier;
         this.corsOrigin = corsOrigin;
+        this.enableWeb = enableWeb;
     }
 
     public static Configuration fromEnvironment() {
@@ -51,13 +53,15 @@ public class Configuration {
         }
         boolean useMojang = Boolean.parseBoolean(verifyMojangSessions);
         String corsOrigin = System.getenv("COLLAR_CORS_ORIGIN");
+        boolean enableWeb = Boolean.parseBoolean(System.getenv("COLLAR_ENABLED_WEB"));
         return new Configuration(
                 Mongo.database(),
                 new DefaultAppUrlProvider(baseUrl),
                 new TokenCrypter(crypterPassword),
                 new PasswordHashing(passwordSalt),
                 useMojang ? new MojangMinecraftSessionVerifier() : new NojangMinecraftSessionVerifier(),
-                corsOrigin);
+                corsOrigin,
+                enableWeb);
     }
 
     public static Configuration defaultConfiguration() {
@@ -68,6 +72,7 @@ public class Configuration {
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
                 new NojangMinecraftSessionVerifier(),
-                "*");
+                "*",
+                true);
     }
 }

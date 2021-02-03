@@ -3,6 +3,7 @@ package team.catgirl.collar.server.protocol;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.services.groups.GroupService;
 
@@ -45,6 +46,9 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
         } else if (req instanceof RemoveGroupMemberRequest) {
             RemoveGroupMemberRequest request = (RemoveGroupMemberRequest) req;
             resp = groups.removeMember(request);
+        } else if (req instanceof CreateWaypointRequest) {
+            CreateWaypointRequest request = (CreateWaypointRequest)req;
+            resp = groups.createWaypoint(request);
         } else {
             resp = null;
         }

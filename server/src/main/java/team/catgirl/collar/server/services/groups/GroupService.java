@@ -3,8 +3,11 @@ package team.catgirl.collar.server.services.groups;
 import com.google.common.collect.ImmutableList;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
@@ -236,5 +239,23 @@ public final class GroupService {
         } else {
             return new RemoveGroupMemberResponse(serverIdentity, group.id, null);
         }
+    }
+
+    public ProtocolResponse createWaypoint(CreateWaypointRequest req) {
+        Group group = groupsById.get(req.groupId);
+        if (group == null) {
+            return new CreateWaypointResponse();
+        }
+        BatchProtocolResponse responses = BatchProtocolResponse.one(req.identity, new CreateWaypointResponse());
+        synchronized (group.id) {
+            if (!group.members.values().stream().anyMatch(member -> req.identity.equals(req.identity))) {
+                return new CreateWaypointResponse();
+            }
+            group = group.addWaypoint(new Waypoint(req.waypointName, req.position));
+            responses = responses.concat(refreshGroupState(group, req.identity, null));
+            MinecraftPlayer player = sessions.findPlayer(req.identity);
+            responses = responses.concat(createGroupResponses(player, group, new UpdateGroupsUpdatedResponse(serverIdentity, List.of(group))));
+        }
+        return responses;
     }
 }

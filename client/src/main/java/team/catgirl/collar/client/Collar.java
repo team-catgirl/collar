@@ -162,7 +162,7 @@ public final class Collar {
         try (Response response = http.newCall(request).execute()) {
             if (response.code() == 200) {
                 byte[] bytes = Objects.requireNonNull(response.body()).bytes();
-                return Utils.createObjectMapper().readValue(bytes, aClass);
+                return Utils.jsonMapper().readValue(bytes, aClass);
             } else {
                 throw new ConnectionException("Failed to connect to server");
             }
@@ -172,7 +172,7 @@ public final class Collar {
     }
 
     class CollarWebSocket extends WebSocketListener {
-        private final ObjectMapper mapper = Utils.createObjectMapper();
+        private final ObjectMapper mapper = Utils.messagePackMapper();
         private final Collar collar;
         private KeepAlive keepAlive;
         private ServerIdentity serverIdentity;

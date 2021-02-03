@@ -56,6 +56,11 @@
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson-databind.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.msgpack</groupId>
+                <artifactId>jackson-dataformat-msgpack</artifactId>
+                <version>0.7.1</version>
+            </dependency>
             <!-- likewise I am not using some brain dead http library -->
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>

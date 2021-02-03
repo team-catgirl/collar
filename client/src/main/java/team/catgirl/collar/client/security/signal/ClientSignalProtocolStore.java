@@ -153,7 +153,7 @@ public class ClientSignalProtocolStore implements SignalProtocolStore {
                 gen.writeFieldName(value.name + ":" + value.deviceId);
             }
         });
-        ObjectMapper mapper = Utils.createObjectMapper().registerModule(simpleModule);
+        ObjectMapper mapper = Utils.jsonMapper().registerModule(simpleModule);
         return new ClientSignalProtocolStore(
                 ClientIdentityKeyStore.from(home, mapper),
                 ClientPreKeyStore.from(home, mapper),

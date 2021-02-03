@@ -97,7 +97,7 @@ public final class ClientPreKeyStore implements PreKeyStore {
         File file = new File(home.security(), "clientPreKeyStore.json");
         State state;
         if (file.exists()) {
-            state = Utils.createObjectMapper().readValue(file, State.class);
+            state = Utils.jsonMapper().readValue(file, State.class);
         } else {
             state = new State(new HashMap<>());
         }

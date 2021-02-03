@@ -6,7 +6,7 @@ import team.catgirl.collar.utils.Utils;
 import java.security.SecureRandom;
 
 public final class TokenGenerator {
-    private static final SecureRandom RANDOM = Utils.createSecureRandom();
+    private static final SecureRandom RANDOM = Utils.secureRandom();
 
     public static String verificationCode() {
         StringBuilder buffer = new StringBuilder();

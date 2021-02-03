@@ -49,11 +49,11 @@ public final class SessionManager {
             .expireAfterWrite(10, TimeUnit.MINUTES)
             .build();
 
-    private final ObjectMapper mapper;
+    private final ObjectMapper protobuf;
     private final ServerIdentityStore store;
 
     public SessionManager(ObjectMapper mapper, ServerIdentityStore store) {
-        this.mapper = mapper;
+        this.protobuf = mapper;
         this.store = store;
     }
 
@@ -116,7 +116,7 @@ public final class SessionManager {
     }
 
     public void send(Session session, ClientIdentity recipient, ProtocolResponse resp) throws IOException {
-        PacketIO packetIO = new PacketIO(mapper, store.createCypher());
+        PacketIO packetIO = new PacketIO(protobuf, store.createCypher());
         ByteBuffer buffer;
         if (isIdentified(session)) {
             buffer = ByteBuffer.wrap(packetIO.encodeEncrypted(recipient, resp));

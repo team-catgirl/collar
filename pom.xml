@@ -105,6 +105,11 @@
                 <artifactId>commons-lang3</artifactId>
                 <version>3.11</version>
             </dependency>
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>1.3.2</version>
+            </dependency>
             <!-- hopefully not wishful thinking -->
             <dependency>
                 <groupId>junit</groupId>
@@ -114,6 +119,13 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+    </dependencies>
 
     <repositories>
         <repository>

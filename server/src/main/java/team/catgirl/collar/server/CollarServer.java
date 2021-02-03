@@ -22,7 +22,9 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
@@ -36,6 +38,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -50,6 +54,7 @@ public class CollarServer {
     private final AppUrlProvider urlProvider;
     private final MinecraftSessionVerifier minecraftSessionVerifier;
     private final List<ProtocolHandler> protocolHandlers;
+    private final BiConsumer<ClientIdentity, MinecraftPlayer> sessionStopped;
 
     public CollarServer(ObjectMapper mapper, SessionManager sessions, ServerIdentityStore identityStore, ProfileService profiles, AppUrlProvider urlProvider, MinecraftSessionVerifier minecraftSessionVerifier, List<ProtocolHandler> protocolHandlers) {
         this.mapper = mapper;
@@ -59,6 +64,9 @@ public class CollarServer {
         this.urlProvider = urlProvider;
         this.minecraftSessionVerifier = minecraftSessionVerifier;
         this.protocolHandlers = protocolHandlers;
+        this.sessionStopped = (identity, player) -> protocolHandlers.forEach(protocolHandler -> protocolHandler.onSessionStopped(identity, player, protocolResponse -> {
+            send(null, protocolResponse);
+        }));
     }
 
     @OnWebSocketConnect
@@ -69,13 +77,13 @@ public class CollarServer {
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason) {
         LOGGER.log(Level.INFO, "Session closed " + statusCode + " " + reason);
-        sessions.stopSession(session, reason, null);
+        sessions.stopSession(session, reason, null, sessionStopped);
     }
 
     @OnWebSocketError
     public void onError(Session session, Throwable e) {
         LOGGER.log(Level.SEVERE, "Unrecoverable error", e);
-        sessions.stopSession(session, "Unrecoverable error", null);
+        sessions.stopSession(session, "Unrecoverable error", null, sessionStopped);
     }
 
     @OnWebSocketMessage
@@ -116,7 +124,7 @@ public class CollarServer {
                 sessions.identify(session, req.identity, request.session.toPlayer());
             } else {
                 sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
-                sessions.stopSession(session, "Minecraft session invalid", null);
+                sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
@@ -147,6 +155,9 @@ public class CollarServer {
     }
 
     public void send(Session session, ProtocolResponse resp) {
+        if (!session.isOpen()) {
+            return;
+        }
         if (resp instanceof BatchProtocolResponse) {
             BatchProtocolResponse batchResponse = (BatchProtocolResponse)resp;
             batchResponse.responses.forEach((response, identity) -> {
@@ -174,6 +185,9 @@ public class CollarServer {
     }
 
     public void sendPlain(Session session, ProtocolResponse resp) {
+        if (!session.isOpen()) {
+            return;
+        }
         PacketIO packetIO = new PacketIO(mapper, null);
         byte[] bytes;
         try {

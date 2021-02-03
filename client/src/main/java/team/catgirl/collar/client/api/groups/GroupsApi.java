@@ -181,10 +181,10 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         }
         // Update the position
         if (positionUpdater != null) {
-            if (groups.isEmpty()) {
+            if (groups.isEmpty() && positionUpdater.isRunning()) {
                 positionUpdater.stop();
                 positionUpdater = null;
-            } else {
+            } else if (!positionUpdater.isRunning()) {
                 positionUpdater.start();
             }
         } else if (!groups.isEmpty()) {
@@ -208,6 +208,10 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             this.identity = identity;
             this.groupsApi = groupsApi;
             this.position = position;
+        }
+
+        public boolean isRunning() {
+            return !scheduler.isShutdown();
         }
 
         public void start() {

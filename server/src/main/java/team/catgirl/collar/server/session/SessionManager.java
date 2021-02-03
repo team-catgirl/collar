@@ -26,6 +26,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -84,7 +86,14 @@ public final class SessionManager {
         return clientIdentityToSession.containsValue(session);
     }
 
-    public void stopSession(Session session, String reason, IOException e) {
+    public void stopSession(Session session, String reason, IOException e, BiConsumer<ClientIdentity, MinecraftPlayer> callback) {
+        // Run callback
+        ClientIdentity clientIdentity = sessionToClientIdentity.get(session);
+        MinecraftPlayer minecraftPlayer = sessionToPlayer.get(session);
+        if (clientIdentity != null) {
+            callback.accept(clientIdentity, minecraftPlayer);
+        }
+        // Start removing state
         LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
         ClientIdentity playerIdentity = sessionToClientIdentity.remove(session);
         if (playerIdentity != null) {

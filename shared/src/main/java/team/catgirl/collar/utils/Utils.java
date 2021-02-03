@@ -30,6 +30,7 @@ public final class Utils {
         });
 
         MAPPER = new ObjectMapper()
+                .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
                 .registerModules(keys);

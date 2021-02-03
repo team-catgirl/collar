@@ -1,6 +1,7 @@
 package team.catgirl.collar.examples;
 
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
@@ -14,6 +15,7 @@ import team.catgirl.collar.security.mojang.MinecraftSession;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Random;
 
 public class GroupsExample {
@@ -90,7 +92,7 @@ public class GroupsExample {
                 .withMojangAuthentication(() -> MinecraftSession.from(username, password, "smp.catgirl.team"))
                 .withPlayerPosition(() -> {
                     Random random = new Random();
-                    return new Position(random.nextDouble(), random.nextDouble(), random.nextDouble(), 0);
+                    return new Position(random.nextDouble(), random.nextDouble(), random.nextDouble(), Dimension.OVERWORLD);
                 })
                 .withListener(collarListener)
                 .build();

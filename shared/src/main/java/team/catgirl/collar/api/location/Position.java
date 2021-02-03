@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public final class Position {
 
-    public static final Position UNKNOWN = new Position(-1d, -1d, -1d, -100);
+    public static final Position UNKNOWN = new Position(-1d, -1d, -1d, Dimension.UNKNOWN);
 
     @JsonProperty("x")
     public final Double x;
@@ -13,9 +13,9 @@ public final class Position {
     @JsonProperty("z")
     public final Double z;
     @JsonProperty("dimension")
-    public final Integer dimension;
+    public final Dimension dimension;
 
-    public Position(@JsonProperty("x") Double x, @JsonProperty("y") Double y, @JsonProperty("z") Double z, @JsonProperty("dimension") Integer dimension) {
+    public Position(@JsonProperty("x") Double x, @JsonProperty("y") Double y, @JsonProperty("z") Double z, @JsonProperty("dimension") Dimension dimension) {
         this.x = x;
         this.y = y;
         this.z = z;

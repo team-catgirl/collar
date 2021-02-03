@@ -21,13 +21,15 @@ public class Configuration {
     public final TokenCrypter tokenCrypter;
     public final PasswordHashing passwordHashing;
     public final MinecraftSessionVerifier minecraftSessionVerifier;
+    public final String corsOrigin;
 
-    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier) {
+    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier, String corsOrigin) {
         this.database = database;
         this.appUrlProvider = appUrlProvider;
         this.tokenCrypter = tokenCrypter;
         this.passwordHashing = passwordHashing;
         this.minecraftSessionVerifier = minecraftSessionVerifier;
+        this.corsOrigin = corsOrigin;
     }
 
     public static Configuration fromEnvironment() {
@@ -48,13 +50,14 @@ public class Configuration {
             throw new IllegalStateException("COLLAR_VERIFY_MOJANG_SESSIONS not set");
         }
         boolean useMojang = Boolean.parseBoolean(verifyMojangSessions);
+        String corsOrigin = System.getenv("COLLAR_CORS_ORIGIN");
         return new Configuration(
                 Mongo.database(),
                 new DefaultAppUrlProvider(baseUrl),
                 new TokenCrypter(crypterPassword),
                 new PasswordHashing(passwordSalt),
-                useMojang ? new MojangMinecraftSessionVerifier() : new NojangMinecraftSessionVerifier()
-        );
+                useMojang ? new MojangMinecraftSessionVerifier() : new NojangMinecraftSessionVerifier(),
+                corsOrigin);
     }
 
     public static Configuration defaultConfiguration() {
@@ -64,7 +67,7 @@ public class Configuration {
                 new DefaultAppUrlProvider("http://localhost:3000"),
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
-                new NojangMinecraftSessionVerifier()
-        );
+                new NojangMinecraftSessionVerifier(),
+                "*");
     }
 }

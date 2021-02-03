@@ -102,6 +102,12 @@ public class Main {
 
         // API routes
         path("/api", () -> {
+
+            after((request, response) -> {
+                response.header("Access-Control-Allow-Origin", configuration.corsOrigin);
+                response.header("Access-Control-Allow-Methods", "*");
+            });
+
             // Version 1
             path("/1", () -> {
 

@@ -150,7 +150,7 @@ public final class Collar {
         DiscoverResponse response = httpGet(http, UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover").toString(), DiscoverResponse.class);
         StringJoiner versions = new StringJoiner(",");
         response.versions.stream()
-                .peek(collarVersion -> versions.add(versions.toString()))
+                .peek(collarVersion -> versions.add(collarVersion.major + "." + collarVersion.minor))
                 .filter(collarVersion -> collarVersion.equals(VERSION))
                 .findFirst()
                 .orElseThrow(() -> new UnsupportedServerVersionException(VERSION + " is not supported by server. Server supports versions " + versions.toString()));
@@ -165,8 +165,6 @@ public final class Collar {
                 throw new IllegalStateException("mojang verification scheme requested but was provided an invalid MinecraftSession");
             } else if ("nojang".equals(collarFeature.value) && minecraftSession.clientToken != null && minecraftSession.accessToken != null) {
                 throw new IllegalStateException("nojang verification scheme requested but was provided an invalid MinecraftSession");
-            } else {
-                throw new IllegalStateException("Unsupported auth:verification_scheme '" + collarFeature.value + "'");
             }
         });
         findFeature(response, "groups:coordinates").orElseThrow(() -> new IllegalStateException("Server does not support groups:coordinates"));

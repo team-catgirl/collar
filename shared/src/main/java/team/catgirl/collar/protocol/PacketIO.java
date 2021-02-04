@@ -31,7 +31,7 @@ public final class PacketIO {
     public <T> T decode(Identity sender, byte[] bytes, Class<T> type) throws IOException {
         try (ByteArrayInputStream is = new ByteArrayInputStream(bytes)) {
             int packetType;
-            try (ObjectInputStream objectStream = new ObjectInputStream(is)) {
+            try (DataInputStream objectStream = new DataInputStream(is)) {
                 packetType = objectStream.readInt();
                 byte[] remainingBytes = toByteArray(objectStream);
                 if (packetType == MODE_PLAIN) {
@@ -52,7 +52,7 @@ public final class PacketIO {
     public byte[] encodePlain(Object object) throws IOException {
         byte[] rawBytes = mapper.writeValueAsBytes(object);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            try (ObjectOutputStream objectStream = new ObjectOutputStream(outputStream)) {
+            try (DataOutputStream objectStream = new DataOutputStream(outputStream)) {
                 objectStream.writeInt(MODE_PLAIN);
                 objectStream.write(rawBytes);
             }
@@ -63,7 +63,7 @@ public final class PacketIO {
     public byte[] encodeEncrypted(Identity recipient, Object object) throws IOException {
         byte[] rawBytes = mapper.writeValueAsBytes(object);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            try (ObjectOutputStream objectStream = new ObjectOutputStream(outputStream)) {
+            try (DataOutputStream objectStream = new DataOutputStream(outputStream)) {
                 objectStream.writeInt(MODE_ENCRYPTED);
                 if (recipient == null) {
                     throw new IllegalArgumentException("recipient cannot be null when sending MODE_ENCRYPTED packets");

@@ -15,9 +15,18 @@ import java.util.logging.Logger;
 public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier {
 
     private static final Logger LOGGER = Logger.getLogger(MojangMinecraftSessionVerifier.class.getName());
+    private static final String NAME = "mojang";
+
+    @Override
+    public String getName() {
+        return NAME;
+    }
 
     @Override
     public boolean verify(MinecraftSession session) {
+        if (session.accessToken == null || session.clientToken == null) {
+            return false;
+        }
         try {
             RefreshResponse resp = OpenMCAuthenticator.refresh(session.accessToken, session.clientToken);
             return resp.getSelectedProfile().getUUID().equals(session.id);

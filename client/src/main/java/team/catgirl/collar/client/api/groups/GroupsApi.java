@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.api.groups;
 
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.features.AbstractApi;
@@ -9,6 +10,7 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -87,6 +89,15 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     }
 
     /**
+     * Remove the member from the group
+     * @param group to remove player from
+     * @param member the member to remove
+     */
+    public void removeMember(Group group, Member member) {
+        sender.accept(new RemoveGroupMemberRequest(identity(), group.id, member.player.id));
+    }
+
+    /**
      * Start sharing your coordinates with a group
      * @param group to share with
      */
@@ -135,6 +146,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         } else if (resp instanceof GroupInviteResponse) {
             GroupInviteResponse response = (GroupInviteResponse)resp;
             Group group = groups.get(response.groupId);
+            if (group == null) {
+                return false;
+            }
             fireListener("onGroupMemberInvitationsSent", groupsListener -> {
                 groupsListener.onGroupMemberInvitationsSent(collar, this, group);
             });
@@ -143,6 +157,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         } else if (resp instanceof LeaveGroupResponse) {
             LeaveGroupResponse response = (LeaveGroupResponse)resp;
             Group group = groups.remove(response.groupId);
+            if (group == null) {
+                return false;
+            }
             fireListener("onGroupLeft", groupsListener -> {
                 groupsListener.onGroupLeft(collar, this, group);
             });
@@ -166,6 +183,19 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             });
             startOrStopSharingPosition();
             return true;
+        } else if (resp instanceof RemoveGroupMemberResponse) {
+            RemoveGroupMemberResponse response = (RemoveGroupMemberResponse)resp;
+            Group group = groups.get(response.groupId);
+            if (group == null) {
+                return false;
+            }
+            MinecraftPlayer minecraftPlayer = group.members.keySet().stream()
+                    .filter(player -> response.player.equals(player.id))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Could not find player " + response.player));
+            fireListener("GroupMembershipRequest", groupListener -> {
+                groupListener.onGroupMemberRemoved(collar, group, minecraftPlayer);
+            });
         }
         return false;
     }

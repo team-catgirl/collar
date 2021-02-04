@@ -6,9 +6,8 @@ import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.CollarListener;
-import team.catgirl.collar.client.api.groups.GroupInvitation;
+import team.catgirl.collar.client.api.groups.*;
 import team.catgirl.collar.client.api.groups.GroupsListener;
-import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 
@@ -16,12 +15,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.UUID;
 
 public class GroupsExample {
     public static void main(String[] args) throws Exception {
-        String username = args[0];
-        String password = args[1];
-        File file = new File("target");
 
         GroupsListener listener = new GroupsListener() {
             @Override
@@ -88,7 +85,7 @@ public class GroupsExample {
         CollarConfiguration configuration = new CollarConfiguration.Builder()
                 .withCollarServer("http://localhost:3000/")
                 .withHomeDirectory(new File("target"))
-                .withMojangAuthentication(() -> MinecraftSession.from(username, password, "smp.catgirl.team"))
+                .withMojangAuthentication(() -> MinecraftSession.noJang(UUID.randomUUID(), "smp.catgirl.team"))
                 .withPlayerPosition(() -> {
                     Random random = new Random();
                     return new Position(random.nextDouble(), random.nextDouble(), random.nextDouble(), Dimension.OVERWORLD);

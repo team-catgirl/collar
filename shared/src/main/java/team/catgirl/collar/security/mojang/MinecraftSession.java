@@ -61,6 +61,15 @@ public final class MinecraftSession {
     }
 
     /**
+     * @param id of the minecraft user
+     * @param serverIP of the minecraft server the client is connected to
+     * @return minecraft session info
+     */
+    public static MinecraftSession noJang(UUID id, String serverIP) {
+        return new MinecraftSession(id, null, null, serverIP);
+    }
+
+    /**
      *
      * @param username of minecraft user
      * @param password of minecraft password

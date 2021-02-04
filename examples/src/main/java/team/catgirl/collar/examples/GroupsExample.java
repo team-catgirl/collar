@@ -15,13 +15,10 @@ import team.catgirl.collar.security.mojang.MinecraftSession;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class GroupsExample {
     public static void main(String[] args) throws Exception {
-        String username = args[0];
-        String password = args[1];
-        File file = new File("target");
-
         GroupListener listener = new GroupListener() {
             @Override
             public void onGroupCreated(Collar collar, GroupsFeature feature, Group group) {
@@ -83,7 +80,7 @@ public class GroupsExample {
         CollarConfiguration configuration = new CollarConfiguration.Builder()
                 .withCollarServer("http://localhost:3000/")
                 .withHomeDirectory(new File("target"))
-                .withMojangAuthentication(() -> MinecraftSession.from(username, password, "smp.catgirl.team"))
+                .withMojangAuthentication(() -> MinecraftSession.noJang(UUID.randomUUID(), "smp.catgirl.team"))
                 .withPlayerPosition(() -> new Position(1d, 1d, 1d, Dimension.OVERWORLD))
                 .withListener(collarListener)
                 .build();

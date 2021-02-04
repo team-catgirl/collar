@@ -1,6 +1,5 @@
 package team.catgirl.collar.examples;
 
-import com.google.common.io.Files;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.client.Collar;
@@ -10,13 +9,10 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 
 import java.io.File;
-import java.io.IOException;
+import java.util.UUID;
 
 public class AuthorizationExample {
     public static void main(String[] args) throws Exception {
-        String username = args[0];
-        String password = args[1];
-
         CollarListener collarListener = new CollarListener() {
             @Override
             public void onConfirmDeviceRegistration(Collar collar, String approvalUrl) {
@@ -37,7 +33,7 @@ public class AuthorizationExample {
         CollarConfiguration configuration = new CollarConfiguration.Builder()
                 .withCollarServer("http://localhost:3000/")
                 .withHomeDirectory(new File("target"))
-                .withMojangAuthentication(() -> MinecraftSession.from(username, password, "smp.catgirl.team"))
+                .withMojangAuthentication(() -> MinecraftSession.noJang(UUID.randomUUID(), "smp.catgirl.team"))
                 .withPlayerPosition(() -> new Position(1d, 1d, 1d, Dimension.OVERWORLD))
                 .withListener(collarListener)
                 .build();

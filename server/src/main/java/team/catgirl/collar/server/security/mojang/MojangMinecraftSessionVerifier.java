@@ -15,6 +15,12 @@ import java.util.logging.Logger;
 public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier {
 
     private static final Logger LOGGER = Logger.getLogger(MojangMinecraftSessionVerifier.class.getName());
+    private static final String NAME = "mojang";
+
+    @Override
+    public String getName() {
+        return NAME;
+    }
 
     @Override
     public boolean verify(MinecraftSession session) {

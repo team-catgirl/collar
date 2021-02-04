@@ -7,6 +7,7 @@ import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKey;
+import team.catgirl.collar.api.http.CollarFeature;
 import team.catgirl.collar.api.http.CollarVersion;
 import team.catgirl.collar.api.http.DiscoverResponse;
 import team.catgirl.collar.client.CollarException.ConnectionException;
@@ -38,10 +39,10 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -86,7 +87,7 @@ public final class Collar {
      * Connect to server
      */
     public void connect() {
-        checkVersionCompatibility(http, configuration.collarServerURL);
+        checkServerCompatibility(http, configuration);
         String url = UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/1/listen").toString();
         LOGGER.log(Level.INFO, "Connecting to server " + url);
         webSocket = http.newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
@@ -141,18 +142,31 @@ public final class Collar {
     }
 
     /**
-     * Test that the client version is supported by the server
+     * Test that the client version is supported by the server and that the client is configured correctly for its features
      * @param http client
+     * @param configuration of the client
      */
-    private static void checkVersionCompatibility(OkHttpClient http, URL baseUrl) {
-        DiscoverResponse response = httpGet(http, UrlBuilder.fromUrl(baseUrl).withPath("/api/discover").toString(), DiscoverResponse.class);
+    private static void checkServerCompatibility(OkHttpClient http, CollarConfiguration configuration) {
+        DiscoverResponse response = httpGet(http, UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover").toString(), DiscoverResponse.class);
         StringJoiner versions = new StringJoiner(",");
         response.versions.stream()
                 .peek(collarVersion -> versions.add(versions.toString()))
                 .filter(collarVersion -> collarVersion.equals(VERSION))
                 .findFirst()
                 .orElseThrow(() -> new UnsupportedServerVersionException(VERSION + " is not supported by server. Server supports versions " + versions.toString()));
+        CollarFeature verificationScheme = response.features.stream()
+                .filter(collarFeature -> "auth:verification_scheme".equals(collarFeature.value))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Could not discover the verification scheme"));
+        MinecraftSession minecraftSession = configuration.sessionSupplier.get();
         LOGGER.log(Level.INFO, "Server supports versions " + versions);
+        if ("mojang".equals(verificationScheme.value) && minecraftSession.clientToken == null && minecraftSession.accessToken == null) {
+            throw new IllegalStateException("mojang verification scheme requested but was provided an invalid MinecraftSession");
+        } else if ("nojang".equals(verificationScheme.value) && minecraftSession.clientToken != null && minecraftSession.accessToken != null) {
+            throw new IllegalStateException("nojang verification scheme requested but was provided an invalid MinecraftSession");
+        } else {
+            throw new IllegalStateException("Unsupported auth:verification_scheme '" + verificationScheme.value + "'");
+        }
     }
 
     private static <T> T httpGet(OkHttpClient http, String url, Class<T> aClass) {

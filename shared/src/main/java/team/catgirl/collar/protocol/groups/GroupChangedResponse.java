@@ -7,11 +7,11 @@ import team.catgirl.collar.security.ServerIdentity;
 
 import java.util.List;
 
-public final class UpdateGroupsUpdatedResponse extends ProtocolResponse {
+public final class GroupChangedResponse extends ProtocolResponse {
     @JsonProperty("groups")
     public final List<Group> groups;
 
-    public UpdateGroupsUpdatedResponse(@JsonProperty("group") ServerIdentity identity, @JsonProperty("groups") List<Group> groups) {
+    public GroupChangedResponse(@JsonProperty("group") ServerIdentity identity, @JsonProperty("groups") List<Group> groups) {
         super(identity);
         this.groups = groups;
     }

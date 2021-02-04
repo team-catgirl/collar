@@ -3,12 +3,21 @@ package team.catgirl.collar.client.api.groups;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Position;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.features.AbstractFeature;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointFailedResponse;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointSuccessResponse;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointFailedResponse;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointSuccessResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
@@ -19,7 +28,6 @@ import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 
 public final class GroupsFeature extends AbstractFeature<GroupListener> {
     private final ConcurrentMap<UUID, Group> groups = new ConcurrentHashMap<>();
@@ -115,6 +123,25 @@ public final class GroupsFeature extends AbstractFeature<GroupListener> {
     }
 
     /**
+     * Add a shared {@link team.catgirl.collar.api.waypoints.Waypoint} to the group
+     * @param group to add waypoint to
+     * @param name of the waypoint
+     * @param position of the waypoint
+     */
+    public void addWaypoint(Group group, String name, Position position) {
+        sender.accept(new CreateWaypointRequest(identity(), group.id, name, position));
+    }
+
+    /**
+     * Remove a shared {@link Waypoint} from a group
+     * @param group to the waypoint belongs to
+     * @param waypoint the waypoint to remove
+     */
+    public void removeWaypoint(Group group, Waypoint waypoint) {
+        sender.accept(new RemoveWaypointRequest(identity(), group.id, waypoint.id));
+    }
+
+    /**
      * Tests if you are currently sharing with the group
      * @param group to test
      * @return sharing
@@ -164,8 +191,8 @@ public final class GroupsFeature extends AbstractFeature<GroupListener> {
             });
             startOrStopSharingPosition();
             return true;
-        } else if (resp instanceof UpdateGroupsUpdatedResponse) {
-            UpdateGroupsUpdatedResponse response = (UpdateGroupsUpdatedResponse)resp;
+        } else if (resp instanceof GroupChangedResponse) {
+            GroupChangedResponse response = (GroupChangedResponse)resp;
             response.groups.forEach(group -> {
                 fireListener("onGroupsUpdated", groupListener -> {
                     groupListener.onGroupsUpdated(collar, this, group);
@@ -195,12 +222,80 @@ public final class GroupsFeature extends AbstractFeature<GroupListener> {
             fireListener("GroupMembershipRequest", groupListener -> {
                 groupListener.onGroupMemberRemoved(collar, group, minecraftPlayer);
             });
+        } else if (resp instanceof CreateWaypointResponse) {
+            Group group = groups.get(((CreateWaypointResponse) resp).groupId);
+            if (group == null) {
+                return false;
+            }
+            if (resp instanceof CreateWaypointSuccessResponse) {
+                CreateWaypointSuccessResponse response = (CreateWaypointSuccessResponse)resp;
+                if (!updateGroup(group, () -> group.addWaypoint(response.waypoint))) {
+                    return false;
+                }
+                fireListener("CreateWaypointSuccessResponse", groupListener -> {
+                    groupListener.onWaypointCreatedSuccess(collar, this, group, response.waypoint);
+                });
+                return true;
+            } else if (resp instanceof CreateWaypointFailedResponse) {
+                CreateWaypointFailedResponse response = (CreateWaypointFailedResponse)resp;
+                fireListener("CreateWaypointFailedResponse", groupListener -> {
+                    groupListener.onWaypointCreatedFailed(collar, this, group, response.waypointName);
+                });
+            }
+        } else if (resp instanceof RemoveWaypointResponse) {
+            Group group = groups.get(((RemoveWaypointResponse) resp).groupId);
+            if (group == null) {
+                return false;
+            }
+            if (resp instanceof RemoveWaypointSuccessResponse) {
+                RemoveWaypointSuccessResponse response = (RemoveWaypointSuccessResponse) resp;
+                if (!updateGroup(group, () -> group.removeWaypoint(response.waypointId))) {
+                    return false;
+                }
+                Waypoint waypoint = group.waypoints.get(response.waypointId);
+                if (waypoint == null) {
+                    return false;
+                }
+                fireListener("RemoveWaypointSuccessResponse", groupListener -> {
+                    groupListener.onWaypointRemovedSuccess(collar, this, group, waypoint);
+                });
+            }
+            if (resp instanceof RemoveWaypointFailedResponse) {
+                RemoveWaypointFailedResponse response = (RemoveWaypointFailedResponse) resp;
+                Waypoint waypoint = group.waypoints.get(response.waypointId);
+                if (waypoint == null) {
+                    return false;
+                }
+                if (!updateGroup(group, () -> group.removeWaypoint(response.waypointId))) {
+                    return false;
+                }
+                fireListener("RemoveWaypointFailedResponse", groupListener -> {
+                    groupListener.onWaypointRemovedFailed(collar, this, group, waypoint);
+                });
+            }
         }
         return false;
     }
 
     private void updatePosition(UpdateGroupMemberPositionRequest req) {
         sender.accept(req);
+    }
+
+    /**
+     * Safely update the group state
+     * @param group group to update
+     * @param updater to update the group
+     * @return group was updated
+     */
+    public boolean updateGroup(Group group, Supplier<Group> updater) {
+        synchronized (group.id) {
+            Group updated = updater.get();
+            if (updated == null) {
+                return false;
+            }
+            groups.put(updated.id, group);
+            return true;
+        }
     }
 
     private void startOrStopSharingPosition() {

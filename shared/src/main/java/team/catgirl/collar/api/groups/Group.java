@@ -18,9 +18,10 @@ public final class Group {
     public final String server;
     @JsonProperty("members")
     public final Map<MinecraftPlayer, Member> members;
-    public final Map<String, Waypoint> waypoints;
+    @JsonProperty("waypoints")
+    public final Map<UUID, Waypoint> waypoints;
 
-    public Group(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("members") Map<MinecraftPlayer, Member> members, Map<String, Waypoint> waypoints) {
+    public Group(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("members") Map<MinecraftPlayer, Member> members, Map<UUID, Waypoint> waypoints) {
         this.id = id;
         this.server = server;
         this.members = members;
@@ -81,15 +82,15 @@ public final class Group {
     }
 
     public Group addWaypoint(Waypoint waypoint) {
-        Map<String, Waypoint> waypoints = new HashMap<>(this.waypoints);
-        waypoints.put(waypoint.name.toLowerCase(), waypoint);
+        Map<UUID, Waypoint> waypoints = new HashMap<>(this.waypoints);
+        waypoints.put(waypoint.id, waypoint);
         return new Group(id, server, members, waypoints);
     }
 
-    public Group removeWaypoint(String waypointName) {
-        Map<String, Waypoint> waypoints = new HashMap<>(this.waypoints);
-        waypoints.remove(waypointName.toLowerCase());
-        return new Group(id, server, members, waypoints);
+    public Group removeWaypoint(UUID waypointId) {
+        Map<UUID, Waypoint> waypoints = new HashMap<>(this.waypoints);
+        Waypoint removed = waypoints.remove(waypointId);
+        return removed != null ? new Group(id, server, members, waypoints) : null;
     }
 
     public enum MembershipRole {

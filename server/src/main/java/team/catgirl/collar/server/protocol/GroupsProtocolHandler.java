@@ -5,6 +5,8 @@ import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
+import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.services.groups.GroupService;
 
@@ -61,5 +63,12 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void onSessionStopped(ClientIdentity identity, MinecraftPlayer player, Consumer<ProtocolResponse> sender) {
+        if (player != null) {
+            sender.accept(groups.removeUserFromAllGroups(player));
+        }
     }
 }

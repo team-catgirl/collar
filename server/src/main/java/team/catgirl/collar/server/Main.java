@@ -4,11 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoDatabase;
 import spark.ModelAndView;
 import spark.Request;
-import team.catgirl.collar.api.http.CollarVersion;
-import team.catgirl.collar.api.http.DiscoverResponse;
-import team.catgirl.collar.api.http.HttpException;
+import team.catgirl.collar.api.http.*;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
-import team.catgirl.collar.api.http.ServerStatusResponse;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.configuration.Configuration;
@@ -165,11 +162,15 @@ public class Main {
         // Reports server version
         // This contract is forever, please change with care!
         get("/api/version", (request, response) -> ServerVersion.version());
-        // Query this route to discover what version of the APIs are supported
+        // Query this route to discover what version of the APIs are supported and how the server is configured
         get("/api/discover", (request, response) -> {
             List<CollarVersion> versions = new ArrayList<>();
             versions.add(new CollarVersion(0, 1));
-            return new DiscoverResponse(versions);
+            List<CollarFeature> features = new ArrayList<>();
+            features.add(new CollarFeature("auth:verification_scheme", configuration.minecraftSessionVerifier.getName()));
+            features.add(new CollarFeature("groups:coordinates", true));
+            features.add(new CollarFeature("groups:waypoints", true));
+            return new DiscoverResponse(versions, features);
         });
 
         // Basic web interface. Not for production use.

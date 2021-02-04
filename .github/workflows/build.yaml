@@ -8,9 +8,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
+      - name: Set up JDK
         uses: actions/setup-java@v1
         with:
-          java-version: 1.8
+          java-version: 15
+      - name: Set up MongoDB
+        uses: supercharge/mongodb-github-action@1.3.0
+        with:
+          image-version: latest
+          port: 27017
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify

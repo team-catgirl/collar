@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public final class Position {
 
-    public static final Position UNKNOWN = new Position(-1d, -1d, -1d, Dimension.UNKNOWN);
+    public static final Position UNKNOWN = new Position(Double.MIN_VALUE, Double.MIN_VALUE , Double.MIN_VALUE, Dimension.UNKNOWN);
 
     @JsonProperty("x")
     public final Double x;
@@ -28,7 +28,7 @@ public final class Position {
 
     @Override
     public String toString() {
-        return "[" + x + "," + y + "," + z + "]";
+        return "[" + x + "," + y + "," + z + "," + dimension + "]";
     }
 }
 

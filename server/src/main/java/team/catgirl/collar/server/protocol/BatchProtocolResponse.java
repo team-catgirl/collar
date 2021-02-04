@@ -9,9 +9,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class BatchProtocolResponse extends ProtocolResponse {
-    public final Map<ClientIdentity, ProtocolResponse> responses;
+    public final Map<ProtocolResponse, ClientIdentity> responses;
 
-    public BatchProtocolResponse(ServerIdentity identity, Map<ClientIdentity, ProtocolResponse> responses) {
+    public BatchProtocolResponse(ServerIdentity identity, Map<ProtocolResponse, ClientIdentity> responses) {
         super(identity);
         this.responses = responses;
     }
@@ -21,20 +21,20 @@ public final class BatchProtocolResponse extends ProtocolResponse {
     }
 
     public BatchProtocolResponse add(ClientIdentity identity, ProtocolResponse response) {
-        Map<ClientIdentity, ProtocolResponse> responsesCopy = new HashMap<>();
-        responsesCopy.put(identity, response);
+        Map<ProtocolResponse, ClientIdentity> responsesCopy = new HashMap<>();
+        responsesCopy.put(response, identity);
         responsesCopy.putAll(responses);
         return new BatchProtocolResponse(this.identity, responsesCopy);
     }
 
     public BatchProtocolResponse concat(BatchProtocolResponse response) {
-        Map<ClientIdentity, ProtocolResponse> responsesCopy = new HashMap<>();
+        Map<ProtocolResponse, ClientIdentity> responsesCopy = new HashMap<>();
         responsesCopy.putAll(responses);
         responsesCopy.putAll(response.responses);
         return new BatchProtocolResponse(identity, responsesCopy);
     }
 
     public static BatchProtocolResponse one(ClientIdentity identity, ProtocolResponse response) {
-        return new BatchProtocolResponse(response.identity, ImmutableMap.of(identity, response));
+        return new BatchProtocolResponse(response.identity, ImmutableMap.of(response, identity));
     }
 }

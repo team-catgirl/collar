@@ -21,6 +21,18 @@
         <jackson-databind.version>2.11.2</jackson-databind.version>
     </properties>
 
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.1</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
     <dependencyManagement>
         <dependencies>
             <!-- modules -->
@@ -124,13 +136,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <dependencies>
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-        </dependency>
-    </dependencies>
 
     <repositories>
         <repository>

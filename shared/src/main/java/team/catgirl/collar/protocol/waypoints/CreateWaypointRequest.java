@@ -1,5 +1,6 @@
 package team.catgirl.collar.protocol.waypoints;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.location.Position;
 import team.catgirl.collar.protocol.ProtocolRequest;
@@ -15,6 +16,7 @@ public final class CreateWaypointRequest extends ProtocolRequest {
     @JsonProperty("position")
     public final Position position;
 
+    @JsonCreator
     public CreateWaypointRequest(
             @JsonProperty("identity") ClientIdentity identity,
             @JsonProperty("groupId") UUID groupId,

@@ -19,6 +19,8 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceResponse;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -48,11 +50,11 @@ public final class SessionManager {
             .expireAfterWrite(10, TimeUnit.MINUTES)
             .build();
 
-    private final ObjectMapper protobuf;
+    private final ObjectMapper messagePack;
     private final ServerIdentityStore store;
 
-    public SessionManager(ObjectMapper mapper, ServerIdentityStore store) {
-        this.protobuf = mapper;
+    public SessionManager(ObjectMapper messagePack, ServerIdentityStore store) {
+        this.messagePack = messagePack;
         this.store = store;
     }
 
@@ -63,13 +65,16 @@ public final class SessionManager {
         sessionToPlayer.put(session, player);
     }
 
-    public String createDeviceRegistrationToken(Session session) {
+    public String createDeviceRegistrationToken(@Nonnull Session session) {
         String token = TokenGenerator.urlToken();
         devicesWaitingToRegister.put(token, session);
         return token;
     }
 
-    public void onDeviceRegistered(ServerIdentity identity, PublicProfile profile, String token, CreateDeviceResponse resp) {
+    public void onDeviceRegistered(@Nonnull ServerIdentity identity,
+                                   @Nonnull PublicProfile profile,
+                                   @Nonnull String token,
+                                   @Nonnull CreateDeviceResponse resp) {
         Session session = devicesWaitingToRegister.getIfPresent(token);
         if (session == null) {
             throw new NotFoundException("session does not exist");
@@ -81,15 +86,18 @@ public final class SessionManager {
         }
     }
 
-    public boolean isIdentified(Session session) {
+    public boolean isIdentified(@Nullable Session session) {
         return clientIdentityToSession.containsValue(session);
     }
 
-    public void stopSession(Session session, String reason, IOException e, BiConsumer<ClientIdentity, MinecraftPlayer> callback) {
+    public void stopSession(@Nonnull Session session,
+                            @Nonnull String reason,
+                            @Nullable IOException e,
+                            @Nullable BiConsumer<ClientIdentity, MinecraftPlayer> callback) {
         // Run callback
         ClientIdentity clientIdentity = sessionToClientIdentity.get(session);
         MinecraftPlayer minecraftPlayer = sessionToPlayer.get(session);
-        if (clientIdentity != null) {
+        if (clientIdentity != null && callback != null) {
             callback.accept(clientIdentity, minecraftPlayer);
         }
         // Start removing state
@@ -114,8 +122,8 @@ public final class SessionManager {
         }
     }
 
-    public void send(Session session, ClientIdentity recipient, ProtocolResponse resp) throws IOException {
-        PacketIO packetIO = new PacketIO(protobuf, store.createCypher());
+    public void send(@Nonnull Session session, @Nullable ClientIdentity recipient, @Nonnull ProtocolResponse resp) throws IOException {
+        PacketIO packetIO = new PacketIO(messagePack, store.createCypher());
         ByteBuffer buffer;
         if (isIdentified(session)) {
             buffer = ByteBuffer.wrap(packetIO.encodeEncrypted(recipient, resp));
@@ -130,15 +138,18 @@ public final class SessionManager {
         return clientIdentity == null ? null : clientIdentityToSession.get(clientIdentity);
     }
 
-    public ClientIdentity getIdentity(Session session) {
+    @Nullable
+    public ClientIdentity getIdentity(@Nonnull Session session) {
         return sessionToClientIdentity.get(session);
     }
 
-    public ClientIdentity getIdentity(MinecraftPlayer player) {
+    @Nullable
+    public ClientIdentity getIdentity(@Nonnull MinecraftPlayer player) {
         return playerToClient.get(player);
     }
 
-    public List<MinecraftPlayer> findPlayers(ClientIdentity identity, List<UUID> players) {
+    @Nonnull
+    public List<MinecraftPlayer> findPlayers(@Nonnull ClientIdentity identity, @Nonnull List<UUID> players) {
         Session callerSession = clientIdentityToSession.get(identity);
         MinecraftPlayer callerPlayer = sessionToPlayer.get(callerSession);
         return sessionToPlayer.values().stream()
@@ -147,12 +158,14 @@ public final class SessionManager {
                 .collect(Collectors.toList());
     }
 
-    public MinecraftPlayer findPlayer(ClientIdentity identity) {
+    @Nullable
+    public MinecraftPlayer findPlayer(@Nonnull ClientIdentity identity) {
         Session session = clientIdentityToSession.get(identity);
         return sessionToPlayer.get(session);
     }
 
-    public Session getSession(ClientIdentity identity) {
+    @Nullable
+    public Session getSession(@Nonnull ClientIdentity identity) {
         return clientIdentityToSession.get(identity);
     }
 }

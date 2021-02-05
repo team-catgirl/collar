@@ -62,10 +62,10 @@ public class Main {
         Configuration configuration = args.length > 0 && "environment".equals(args[0]) ? Configuration.fromEnvironment() : Configuration.defaultConfiguration();
 
         ObjectMapper json = Utils.jsonMapper();
-        ObjectMapper ionMapper = Utils.messagePackMapper();
+        ObjectMapper messagePack = Utils.messagePackMapper();
         AppUrlProvider urlProvider = configuration.appUrlProvider;
         ServerIdentityStore serverIdentityStore = new SignalServerIdentityStore(db);
-        SessionManager sessions = new SessionManager(json, serverIdentityStore);
+        SessionManager sessions = new SessionManager(messagePack, serverIdentityStore);
         PasswordHashing passwordHashing = configuration.passwordHashing;
         ProfileService profiles = new ProfileService(db, passwordHashing);
         DeviceService devices = new DeviceService(db);
@@ -96,7 +96,7 @@ public class Main {
         // WebSocket server
         List<ProtocolHandler> protocolHandlers = new ArrayList<>();
         protocolHandlers.add(new GroupsProtocolHandler(groups));
-        webSocket("/api/1/listen", new CollarServer(ionMapper, sessions, serverIdentityStore, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
+        webSocket("/api/1/listen", new CollarServer(messagePack, sessions, serverIdentityStore, profiles, urlProvider, minecraftSessionVerifier, protocolHandlers));
 
         // API routes
         path("/api", () -> {
@@ -267,6 +267,7 @@ public class Main {
         }
 
         LOGGER.info("Collar server started.");
+        LOGGER.info(urlProvider.homeUrl());
         LOGGER.info("Do you want to play a block game game?");
     }
 

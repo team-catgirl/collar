@@ -92,7 +92,6 @@ public final class Collar {
         LOGGER.log(Level.INFO, "Connecting to server " + url);
         webSocket = http.newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
         webSocket.request();
-        http.dispatcher().executorService().shutdown();
         changeState(State.CONNECTING);
     }
 
@@ -100,7 +99,7 @@ public final class Collar {
      * Disconnect from server
      */
     public void disconnect() {
-        if (this.webSocket != null && state != State.DISCONNECTED) {
+        if (this.webSocket != null) {
             LOGGER.log(Level.INFO, "Disconnected");
             this.webSocket.close(1000, "Client was disconnected");
             this.webSocket = null;
@@ -127,7 +126,7 @@ public final class Collar {
         State previousState = this.state;
         if (previousState != state) {
             this.state = state;
-            if (state == State.DISCONNECTED) {
+            if (previousState != null && state == State.DISCONNECTED) {
                 disconnect();
             }
             if (previousState == null) {
@@ -188,7 +187,8 @@ public final class Collar {
             } else {
                 throw new ConnectionException("Failed to connect to server");
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Connection issue", e);
             throw new ConnectionException("Failed to connect to server");
         }
     }

@@ -32,8 +32,11 @@ import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.security.mojang.MinecraftSessionVerifier;
 import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.session.SessionManager;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -103,9 +106,12 @@ public class CollarServer {
             } else {
                 PublicProfile profile;
                 try {
-                    profile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(req.identity.id())).profile.toPublic();
+                    profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(req.identity.id())).profile.toPublic();
                 } catch (NotFoundException e) {
-                    throw new IllegalStateException("Profile " + request.identity.id() + " does not exist but the client thinks it should");
+                    LOGGER.log(Level.SEVERE, "Profile " + request.identity.id() + " does not exist but the client thinks it should.");
+                    sendPlain(session, new IsUntrustedRelationshipResponse(serverIdentity));
+                    sessions.stopSession(session, "Identity " + request.identity.id() + " was not found", null, null);
+                    return;
                 }
                 LOGGER.log(Level.INFO, "Profile found for " + req.identity.id());
                 sendPlain(session, new IdentifyResponse(serverIdentity, profile));
@@ -127,15 +133,16 @@ public class CollarServer {
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
-            CheckTrustRelationshipResponse response;
             if (identityStore.isTrustedIdentity(req.identity)) {
                 LOGGER.log(Level.INFO, "Identity is trusted. Signaling client to start encryption.");
-                response = new IsTrustedRelationshipResponse(serverIdentity);
+                CheckTrustRelationshipResponse response = new IsTrustedRelationshipResponse(serverIdentity);
+                sendPlain(session, response);
             } else {
                 LOGGER.log(Level.INFO, "Identity is NOT trusted. Signaling client to restart registration.");
-                response = new IsUntrustedRelationshipResponse(serverIdentity);
+                CheckTrustRelationshipResponse response = new IsUntrustedRelationshipResponse(serverIdentity);
+                sendPlain(session, response);
+                sessions.stopSession(session, "Identity not trusted", null, null);
             }
-            sendPlain(session, response);
         } else {
             protocolHandlers.stream()
                     .map(protocolHandler -> protocolHandler.handleRequest(this, req, response -> send(session, response)))
@@ -144,7 +151,8 @@ public class CollarServer {
         }
     }
 
-    public ProtocolRequest read(Session session, InputStream message) {
+    @Nonnull
+    public ProtocolRequest read(@Nonnull Session session, @Nonnull InputStream message) {
         PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
         try {
             return packetIO.decode(sessions.getIdentity(session), message, ProtocolRequest.class);
@@ -153,15 +161,17 @@ public class CollarServer {
         }
     }
 
-    public void send(Session session, ProtocolResponse resp) {
-        if (!session.isOpen()) {
+    public void send(@Nullable Session session, @Nonnull ProtocolResponse resp) {
+        if (session != null && !session.isOpen()) {
             return;
         }
         if (resp instanceof BatchProtocolResponse) {
             BatchProtocolResponse batchResponse = (BatchProtocolResponse)resp;
             batchResponse.responses.forEach((response, identity) -> {
                 Session anotherSession = sessions.getSession(identity);
-                send(anotherSession, response);
+                if (anotherSession != null) {
+                    send(anotherSession, response);
+                }
             });
         } else {
             PacketIO packetIO = new PacketIO(mapper, identityStore.createCypher());
@@ -183,7 +193,7 @@ public class CollarServer {
         }
     }
 
-    public void sendPlain(Session session, ProtocolResponse resp) {
+    public void sendPlain(@Nonnull Session session, @Nonnull ProtocolResponse resp) {
         if (!session.isOpen()) {
             return;
         }
@@ -197,7 +207,7 @@ public class CollarServer {
         sendBytes(session, bytes);
     }
 
-    private void sendBytes(Session session, byte[] bytes) {
+    private void sendBytes(@Nonnull Session session, @Nonnull byte[] bytes) {
         session.getRemote().sendBytesByFuture(ByteBuffer.wrap(bytes));
     }
 }

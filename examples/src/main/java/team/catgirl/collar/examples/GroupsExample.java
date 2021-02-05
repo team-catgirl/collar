@@ -64,6 +64,7 @@ public class GroupsExample {
                 try {
                     System.out.println("Client is untrusted - resetting store");
                     store.reset();
+                    collar.connect();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

@@ -1,5 +1,6 @@
 package team.catgirl.collar.protocol.session;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
@@ -20,6 +21,7 @@ public abstract class SessionFailedResponse extends ProtocolResponse {
         @JsonProperty("minecraftSession")
         public final MinecraftSession minecraftSession;
 
+        @JsonCreator
         public MojangVerificationFailedResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("minecraftSession") MinecraftSession minecraftSession) {
             super(identity);
             this.minecraftSession = minecraftSession;
@@ -30,6 +32,7 @@ public abstract class SessionFailedResponse extends ProtocolResponse {
      * Fired when the server encounters an error and the client must reconnect
      */
     public static final class SessionErrorResponse extends SessionFailedResponse {
+        @JsonCreator
         public SessionErrorResponse(@JsonProperty("identity") ServerIdentity identity) {
             super(identity);
         }

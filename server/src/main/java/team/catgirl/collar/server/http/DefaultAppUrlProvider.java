@@ -10,6 +10,21 @@ public class DefaultAppUrlProvider implements AppUrlProvider {
     }
 
     @Override
+    public String homeUrl() {
+        return this.baseUrl.withPath("/app").toString();
+    }
+
+    @Override
+    public String loginUrl() {
+        return this.baseUrl.withPath("/app/login").toString();
+    }
+
+    @Override
+    public String signupUrl() {
+        return this.baseUrl.withPath("/app/signup").toString();
+    }
+
+    @Override
     public String deviceVerificationUrl(String token) {
         return this.baseUrl.withPath("/app/devices/trust/" + token).toString();
     }

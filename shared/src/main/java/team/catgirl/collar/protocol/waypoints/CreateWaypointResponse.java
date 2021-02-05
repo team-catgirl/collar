@@ -1,5 +1,6 @@
 package team.catgirl.collar.protocol.waypoints;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -10,6 +11,7 @@ import java.util.UUID;
 public abstract class CreateWaypointResponse extends ProtocolResponse {
     public final UUID groupId;
 
+    @JsonCreator
     public CreateWaypointResponse(@JsonProperty("identity") ServerIdentity identity, UUID groupId) {
         super(identity);
         this.groupId = groupId;
@@ -19,6 +21,7 @@ public abstract class CreateWaypointResponse extends ProtocolResponse {
         @JsonProperty("waypoint")
         public final Waypoint waypoint;
 
+        @JsonCreator
         public CreateWaypointSuccessResponse(
                 @JsonProperty("identity") ServerIdentity identity,
                 @JsonProperty("groupId") UUID groupId,
@@ -32,6 +35,7 @@ public abstract class CreateWaypointResponse extends ProtocolResponse {
         @JsonProperty("name")
         public final String waypointName;
 
+        @JsonCreator
         public CreateWaypointFailedResponse(
                 @JsonProperty("identity") ServerIdentity identity,
                 @JsonProperty("groupId") UUID groupId,

@@ -1,5 +1,6 @@
 package team.catgirl.collar.protocol.groups;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
@@ -13,6 +14,7 @@ public final class RemoveGroupMemberResponse extends ProtocolResponse {
     @JsonProperty("player")
     public final UUID player;
 
+    @JsonCreator
     public RemoveGroupMemberResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("groupId") UUID groupId, @JsonProperty("player") UUID player) {
         super(identity);
         this.groupId = groupId;

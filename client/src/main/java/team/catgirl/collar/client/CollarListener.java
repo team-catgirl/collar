@@ -7,9 +7,10 @@ public interface CollarListener {
     /**
      * Fired on new installation, to confirm that the device is trusted with an authorized collar user
      * @param collar client
+     * @param token the approval token
      * @param approvalUrl for the user to follow and approve installation on the collar server website
      */
-    default void onConfirmDeviceRegistration(Collar collar, String approvalUrl) {}
+    default void onConfirmDeviceRegistration(Collar collar, String token, String approvalUrl) {}
 
     /**
      * Fired when the state of the client changes

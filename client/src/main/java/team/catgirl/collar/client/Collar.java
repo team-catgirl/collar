@@ -277,7 +277,7 @@ public final class Collar {
             } else if (resp instanceof RegisterDeviceResponse) {
                 RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
                 LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
-                configuration.listener.onConfirmDeviceRegistration(collar, registerDeviceResponse.approvalUrl);
+                configuration.listener.onConfirmDeviceRegistration(collar, registerDeviceResponse.approvalToken, registerDeviceResponse.approvalUrl);
             } else if (resp instanceof DeviceRegisteredResponse) {
                 DeviceRegisteredResponse response = (DeviceRegisteredResponse)resp;
                 identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);

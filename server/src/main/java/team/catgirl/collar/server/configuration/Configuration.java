@@ -23,8 +23,9 @@ public class Configuration {
     public final MinecraftSessionVerifier minecraftSessionVerifier;
     public final String corsOrigin;
     public final boolean enableWeb;
+    public final int httpPort;
 
-    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier, String corsOrigin, boolean enableWeb) {
+    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier, String corsOrigin, boolean enableWeb, int httpPort) {
         this.database = database;
         this.appUrlProvider = appUrlProvider;
         this.tokenCrypter = tokenCrypter;
@@ -32,6 +33,7 @@ public class Configuration {
         this.minecraftSessionVerifier = minecraftSessionVerifier;
         this.corsOrigin = corsOrigin;
         this.enableWeb = enableWeb;
+        this.httpPort = httpPort;
     }
 
     public static Configuration fromEnvironment() {
@@ -61,7 +63,8 @@ public class Configuration {
                 new PasswordHashing(passwordSalt),
                 useMojang ? new MojangMinecraftSessionVerifier() : new NojangMinecraftSessionVerifier(),
                 corsOrigin,
-                enableWeb);
+                enableWeb,
+                httpPort());
     }
 
     public static Configuration defaultConfiguration() {
@@ -73,6 +76,25 @@ public class Configuration {
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
                 new NojangMinecraftSessionVerifier(),
                 "*",
-                true);
+                true,
+                httpPort());
+    }
+
+    public static Configuration testConfiguration() {
+        LOGGER.log(Level.SEVERE, "Starting in insecure development mode. Do not use in production.");
+        return new Configuration(
+                Mongo.database("mongodb://localhost/collar-dev"),
+                new DefaultAppUrlProvider("http://localhost:3001"),
+                new TokenCrypter("insecureTokenCrypterPassword"),
+                new PasswordHashing("VSZL*bR8-=r]r5P_"),
+                new NojangMinecraftSessionVerifier(),
+                "*",
+                true,
+                3001);
+    }
+
+    private static int httpPort() {
+        String portValue = System.getenv("PORT");
+        return portValue != null ? Integer.parseInt(portValue) : 3000;
     }
 }

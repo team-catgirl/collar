@@ -2,8 +2,6 @@ package team.catgirl.collar.server.session;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
@@ -27,7 +25,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,9 +43,7 @@ public final class SessionManager {
     private final ConcurrentMap<Session, ClientIdentity> sessionToClientIdentity = new ConcurrentHashMap<>();
 
     // TODO: move all this to device service records
-    private final Cache<String, Session> devicesWaitingToRegister = CacheBuilder.newBuilder()
-            .expireAfterWrite(10, TimeUnit.MINUTES)
-            .build();
+    private final ConcurrentMap<String, Session> devicesWaitingToRegister = new ConcurrentHashMap<>();
 
     private final ObjectMapper messagePack;
     private final ServerIdentityStore store;
@@ -75,7 +70,7 @@ public final class SessionManager {
                                    @Nonnull PublicProfile profile,
                                    @Nonnull String token,
                                    @Nonnull CreateDeviceResponse resp) {
-        Session session = devicesWaitingToRegister.getIfPresent(token);
+        Session session = devicesWaitingToRegister.get(token);
         if (session == null) {
             throw new NotFoundException("session does not exist");
         }

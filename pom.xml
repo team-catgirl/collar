@@ -13,6 +13,7 @@
         <module>client</module>
         <module>shared</module>
         <module>examples</module>
+        <module>tests</module>
     </modules>
 
     <properties>

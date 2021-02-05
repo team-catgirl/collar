@@ -15,7 +15,7 @@ public class AuthorizationExample {
     public static void main(String[] args) throws Exception {
         CollarListener collarListener = new CollarListener() {
             @Override
-            public void onConfirmDeviceRegistration(Collar collar, String approvalUrl) {
+            public void onConfirmDeviceRegistration(Collar collar, String token, String approvalUrl) {
                 System.out.println("Please follow the following link to confirm: " + approvalUrl);
             }
 

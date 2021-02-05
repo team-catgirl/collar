@@ -89,7 +89,7 @@ public class Configuration {
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
                 new NojangMinecraftSessionVerifier(),
                 "*",
-                true,
+                false,
                 3001);
     }
 

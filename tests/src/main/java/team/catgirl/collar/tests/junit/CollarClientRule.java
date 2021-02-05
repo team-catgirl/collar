@@ -26,10 +26,10 @@ public final class CollarClientRule implements TestRule {
         } while (collar.getState() != Collar.State.DISCONNECTED);
     }, "Collar Client Test Loop");
 
-    public CollarClientRule(CollarConfiguration.Builder builder) {
+    public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder) {
         this.builder = builder.withCollarServer("http://localhost:3001")
                 .withHomeDirectory(Files.createTempDir())
-                .withNoJangAuthentication(UUID.randomUUID(), "hypixel.net");
+                .withNoJangAuthentication(playerId, "hypixel.net");
     }
 
     @Override

@@ -12,6 +12,7 @@ import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
@@ -22,6 +23,9 @@ public abstract class CollarTest {
     protected Profile aliceProfile;
     protected Profile bobProfile;
     protected Profile eveProfile;
+    protected final UUID alicePlayerId = UUID.randomUUID();
+    protected final UUID bobPlayerId = UUID.randomUUID();
+    protected final UUID evePlayerId = UUID.randomUUID();
 
     private final AtomicInteger devicesConfirmed = new AtomicInteger(0);
 
@@ -65,20 +69,20 @@ public abstract class CollarTest {
     };
 
     @Rule
-    public CollarClientRule aliceUser = new CollarClientRule(new CollarConfiguration.Builder().withListener(listener));
+    public CollarClientRule alicePlayer = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder().withListener(listener));
 
     @Rule
-    public CollarClientRule bobUser = new CollarClientRule(new CollarConfiguration.Builder().withListener(listener));
+    public CollarClientRule bobPlayer = new CollarClientRule(bobPlayerId, new CollarConfiguration.Builder().withListener(listener));
 
     @Rule
-    public CollarClientRule eveUser = new CollarClientRule(new CollarConfiguration.Builder().withListener(listener));
+    public CollarClientRule evePlayer = new CollarClientRule(evePlayerId, new CollarConfiguration.Builder().withListener(listener));
 
     @Before
     public void startStopServer() throws InterruptedException {
         waitForCondition("server started", () -> serverRule.isServerStarted());
         waitForCondition("device registered", () -> devicesConfirmed.get() == 3);
-        waitForCondition("client connected", () -> aliceUser.collar.getState() == Collar.State.CONNECTED);
-        waitForCondition("client connected", () -> bobUser.collar.getState() == Collar.State.CONNECTED);
-        waitForCondition("client connected", () -> eveUser.collar.getState() == Collar.State.CONNECTED);
+        waitForCondition("client connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED);
+        waitForCondition("client connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED);
+        waitForCondition("client connected", () -> evePlayer.collar.getState() == Collar.State.CONNECTED);
     }
 }

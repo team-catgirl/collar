@@ -31,16 +31,16 @@ public final class Mongo {
     }
 
     private static MongoClientSettings settings(ConnectionString uri) {
-        return MongoClientSettings.builder()
-                .applyConnectionString(uri)
-                .readConcern(ReadConcern.MAJORITY)
-                .writeConcern(WriteConcern.MAJORITY)
-                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+        return getSettingsBuilder(MongoClientSettings.builder()
+                .applyConnectionString(uri))
+                .build();
     }
 
-    private static MongoDatabase getDevelopmentDatabase() {
-        MongoClientSettings settings = defaultSettings();
-        return MongoClients.create(settings).getDatabase("collar-dev");
+    private static MongoClientSettings.Builder getSettingsBuilder(MongoClientSettings.Builder builder) {
+        return builder
+                .readConcern(ReadConcern.MAJORITY)
+                .writeConcern(WriteConcern.MAJORITY)
+                .uuidRepresentation(UuidRepresentation.STANDARD);
     }
 
     public static MongoDatabase getTestingDatabase() {
@@ -49,10 +49,12 @@ public final class Mongo {
     }
 
     private static MongoClientSettings defaultSettings() {
-        return MongoClientSettings.builder()
-                .readConcern(ReadConcern.MAJORITY)
-                .writeConcern(WriteConcern.MAJORITY)
-                .uuidRepresentation(UuidRepresentation.STANDARD).build();
+        return getSettingsBuilder(MongoClientSettings.builder()).build();
+    }
+
+    private static MongoDatabase getDevelopmentDatabase() {
+        MongoClientSettings settings = defaultSettings();
+        return MongoClients.create(settings).getDatabase("collar-dev");
     }
 
     private Mongo() {}

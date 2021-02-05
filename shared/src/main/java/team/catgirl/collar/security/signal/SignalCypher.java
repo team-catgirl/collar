@@ -1,6 +1,8 @@
 package team.catgirl.collar.security.signal;
 
-import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.PreKeySignalMessage;
@@ -15,7 +17,10 @@ import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class SignalCypher implements Cypher {
 
@@ -44,10 +49,11 @@ public class SignalCypher implements Cypher {
                     objectStream.write(message.serialize());
                 }
                 return outputStream.toByteArray();
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
+            } catch (Throwable e) {
+                throw new IllegalStateException("Message crypting failed. Recipient " + recipient, e);
             }
         } catch (UntrustedIdentityException e) {
+            // TODO: if we get here, then we need to signal back to client with IsUntrusted
             throw new IllegalStateException(e);
         }
     }

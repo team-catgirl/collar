@@ -15,16 +15,16 @@ public final class CollarClientRule implements TestRule {
 
     private final CollarConfiguration.Builder builder;
     private final Thread thread = new Thread(() -> {
+        collar.connect();
         do {
             try {
-                collar.connect();
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 collar.disconnect();
                 throw new IllegalStateException();
             }
         } while (collar.getState() != Collar.State.DISCONNECTED);
-    });
+    }, "Collar Client Test Loop");
 
     public CollarClientRule(CollarConfiguration.Builder builder) {
         this.builder = builder.withCollarServer("http://localhost:3001")

@@ -2,7 +2,7 @@ package team.catgirl.collar.server.services.groups;
 
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
-import team.catgirl.collar.api.location.Position;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
@@ -47,7 +47,7 @@ public final class GroupService {
     public BatchProtocolResponse createGroup(CreateGroupRequest req) {
         List<MinecraftPlayer> players = sessions.findPlayers(req.identity, req.players);
         MinecraftPlayer player = sessions.findPlayer(req.identity);
-        Group group = Group.newGroup(UUID.randomUUID(), player, Position.UNKNOWN, players);
+        Group group = Group.newGroup(UUID.randomUUID(), player, Location.UNKNOWN, players);
         synchronized (group.id) {
             return refreshGroupState(group, req.identity, new CreateGroupResponse(serverIdentity, group));
         }
@@ -174,7 +174,7 @@ public final class GroupService {
         BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
         for (Group group : groups) {
             synchronized (group.id) {
-                group = group.updateMemberPosition(owner, req.position);
+                group = group.updateMemberPosition(owner, req.location);
                 responses = responses.concat(refreshGroupState(group, req.identity, null));
                 responses = responses.concat(sendUpdatesToMembers(owner, group, (identity, group1, member) -> new GroupChangedResponse(serverIdentity, groups)));
             }
@@ -264,7 +264,7 @@ public final class GroupService {
         if (group.members.values().stream().noneMatch(member -> member.player.inServerWith(player))) {
             return new CreateWaypointFailedResponse(serverIdentity, req.groupId, req.waypointName);
         }
-        Waypoint waypoint = new Waypoint(UUID.randomUUID(), req.waypointName, req.position);
+        Waypoint waypoint = new Waypoint(UUID.randomUUID(), req.waypointName, req.location);
         BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             group = group.addWaypoint(waypoint);

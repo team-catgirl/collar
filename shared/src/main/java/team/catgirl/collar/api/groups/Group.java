@@ -2,7 +2,7 @@ package team.catgirl.collar.api.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import team.catgirl.collar.api.location.Position;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
@@ -28,10 +28,10 @@ public final class Group {
         this.waypoints = waypoints;
     }
 
-    public static Group newGroup(UUID id, MinecraftPlayer owner, Position ownerPosition, List<MinecraftPlayer> members) {
+    public static Group newGroup(UUID id, MinecraftPlayer owner, Location ownerLocation, List<MinecraftPlayer> members) {
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder()
-                .put(owner, new Member(owner, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerPosition));
-        members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, Position.UNKNOWN)));
+                .put(owner, new Member(owner, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerLocation));
+        members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, Location.UNKNOWN)));
         return new Group(id, owner.server, state.build(), new HashMap<>());
     }
 
@@ -54,12 +54,12 @@ public final class Group {
         return new Group(id, server, state.build(), waypoints);
     }
 
-    public Group updateMemberPosition(MinecraftPlayer player, Position position) {
+    public Group updateMemberPosition(MinecraftPlayer player, Location location) {
         Member member = this.members.get(player);
         if (member == null) {
             return this;
         }
-        member = member.updatePosition(position);
+        member = member.updatePosition(location);
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder().putAll(members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList()));
         state.put(member.player, member);
         return new Group(id, server, state.build(), waypoints);
@@ -71,7 +71,7 @@ public final class Group {
         List<Member> newMembers = new ArrayList<>();
         players.forEach(player -> {
             if (!this.members.containsKey(player)) {
-                Member newMember = new Member(player, role, membershipState, Position.UNKNOWN);
+                Member newMember = new Member(player, role, membershipState, Location.UNKNOWN);
                 state.put(player, newMember);
                 newMembers.add(newMember);
             }
@@ -112,25 +112,25 @@ public final class Group {
         @JsonProperty("state")
         public final MembershipState membershipState;
         @JsonProperty("position")
-        public final Position position;
+        public final Location location;
 
         public Member(
                 @JsonProperty("player") MinecraftPlayer player,
                 @JsonProperty("role") MembershipRole membershipRole,
                 @JsonProperty("state") MembershipState membershipState,
-                @JsonProperty("position") Position position) {
+                @JsonProperty("position") Location location) {
             this.player = player;
             this.membershipRole = membershipRole;
             this.membershipState = membershipState;
-            this.position = position;
+            this.location = location;
         }
 
         public Member updateMembershipState(MembershipState membershipState) {
-            return new Member(player, membershipRole, membershipState, position);
+            return new Member(player, membershipRole, membershipState, location);
         }
 
-        public Member updatePosition(Position position) {
-            return new Member(player, membershipRole, membershipState, position);
+        public Member updatePosition(Location location) {
+            return new Member(player, membershipRole, membershipState, location);
         }
     }
 }

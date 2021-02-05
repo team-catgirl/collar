@@ -2,7 +2,7 @@ package team.catgirl.collar.client.api.groups;
 
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
-import team.catgirl.collar.api.location.Position;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.features.AbstractApi;
@@ -33,10 +33,10 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     private final ConcurrentMap<UUID, Group> groups = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, GroupInvitation> invitations = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, CoordinateSharingState> sharingState = new ConcurrentHashMap<>();
-    private final Supplier<Position> positionSupplier;
+    private final Supplier<Location> positionSupplier;
     private PositionUpdater positionUpdater;
 
-    public GroupsApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, Supplier<Position> positionSupplier) {
+    public GroupsApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, Supplier<Location> positionSupplier) {
         super(collar, identityStoreSupplier, sender);
         this.positionSupplier = positionSupplier;
     }
@@ -128,10 +128,10 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * Add a shared {@link team.catgirl.collar.api.waypoints.Waypoint} to the group
      * @param group to add waypoint to
      * @param name of the waypoint
-     * @param position of the waypoint
+     * @param location of the waypoint
      */
-    public void addWaypoint(Group group, String name, Position position) {
-        sender.accept(new CreateWaypointRequest(identity(), group.id, name, position));
+    public void addWaypoint(Group group, String name, Location location) {
+        sender.accept(new CreateWaypointRequest(identity(), group.id, name, location));
     }
 
     /**
@@ -327,10 +327,10 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     static class PositionUpdater {
         private final ClientIdentity identity;
         private final GroupsApi groupsApi;
-        private final Supplier<Position> position;
+        private final Supplier<Location> position;
         private ScheduledExecutorService scheduler;
 
-        public PositionUpdater(ClientIdentity identity, GroupsApi groupsApi, Supplier<Position> position) {
+        public PositionUpdater(ClientIdentity identity, GroupsApi groupsApi, Supplier<Location> position) {
             this.identity = identity;
             this.groupsApi = groupsApi;
             this.position = position;
@@ -351,7 +351,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         }
 
         public void stop() {
-            groupsApi.updatePosition(new UpdateGroupMemberPositionRequest(identity, Position.UNKNOWN));
+            groupsApi.updatePosition(new UpdateGroupMemberPositionRequest(identity, Location.UNKNOWN));
             if (this.scheduler != null) {
                 this.scheduler.shutdown();
             }

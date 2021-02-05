@@ -2,9 +2,9 @@ package team.catgirl.collar.api.location;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public final class Position {
+public final class Location {
 
-    public static final Position UNKNOWN = new Position(Double.MIN_VALUE, Double.MIN_VALUE , Double.MIN_VALUE, Dimension.UNKNOWN);
+    public static final Location UNKNOWN = new Location(Double.MIN_VALUE, Double.MIN_VALUE , Double.MIN_VALUE, Dimension.UNKNOWN);
 
     @JsonProperty("x")
     public final Double x;
@@ -15,14 +15,14 @@ public final class Position {
     @JsonProperty("dimension")
     public final Dimension dimension;
 
-    public Position(@JsonProperty("x") Double x, @JsonProperty("y") Double y, @JsonProperty("z") Double z, @JsonProperty("dimension") Dimension dimension) {
+    public Location(@JsonProperty("x") Double x, @JsonProperty("y") Double y, @JsonProperty("z") Double z, @JsonProperty("dimension") Dimension dimension) {
         this.x = x;
         this.y = y;
         this.z = z;
         this.dimension = dimension;
     }
 
-    public static String toString(Position location) {
+    public static String toString(Location location) {
         return location == null ? "" : location.toString();
     }
 

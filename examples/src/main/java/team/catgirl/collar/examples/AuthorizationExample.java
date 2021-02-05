@@ -1,7 +1,7 @@
 package team.catgirl.collar.examples;
 
 import team.catgirl.collar.api.location.Dimension;
-import team.catgirl.collar.api.location.Position;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.CollarListener;
@@ -34,7 +34,7 @@ public class AuthorizationExample {
                 .withCollarServer("http://localhost:3000/")
                 .withHomeDirectory(new File("target"))
                 .withMojangAuthentication(() -> MinecraftSession.noJang(UUID.randomUUID(), "smp.catgirl.team"))
-                .withPlayerPosition(() -> new Position(1d, 1d, 1d, Dimension.OVERWORLD))
+                .withPlayerPosition(() -> new Location(1d, 1d, 1d, Dimension.OVERWORLD))
                 .withListener(collarListener)
                 .build();
         Collar collar = Collar.create(configuration);

@@ -2,7 +2,7 @@ package team.catgirl.collar.examples;
 
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.location.Dimension;
-import team.catgirl.collar.api.location.Position;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.CollarListener;
@@ -39,7 +39,7 @@ public class GroupsExample {
             @Override
             public void onGroupUpdated(Collar collar, GroupsApi feature, Group group) {
                 group.members.forEach((minecraftPlayer, member) -> {
-                    System.out.println("Member " + member.player.id + " at position " + member.position);
+                    System.out.println("Member " + member.player.id + " at position " + member.location);
                 });
             }
 
@@ -90,7 +90,7 @@ public class GroupsExample {
                 .withMojangAuthentication(() -> MinecraftSession.noJang(UUID.randomUUID(), "smp.catgirl.team"))
                 .withPlayerPosition(() -> {
                     Random random = new Random();
-                    return new Position(random.nextDouble(), random.nextDouble(), random.nextDouble(), Dimension.OVERWORLD);
+                    return new Location(random.nextDouble(), random.nextDouble(), random.nextDouble(), Dimension.OVERWORLD);
                 })
                 .withListener(collarListener)
                 .build();

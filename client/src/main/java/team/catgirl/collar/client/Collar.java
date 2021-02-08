@@ -130,9 +130,9 @@ public final class Collar {
                 disconnect();
             }
             if (previousState == null) {
-                LOGGER.log(Level.INFO, "Client in state " + state);
+                LOGGER.log(Level.INFO, "client in state " + state);
             } else {
-                LOGGER.log(Level.INFO, "State changed from " + previousState + " to " + state);
+                LOGGER.log(Level.INFO, identityStore.currentIdentity() +  " state changed from " + previousState + " to " + state);
             }
             if (previousState != null) {
                 this.configuration.listener.onStateChanged(this, state);

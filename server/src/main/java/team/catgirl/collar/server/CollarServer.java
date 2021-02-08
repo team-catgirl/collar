@@ -30,7 +30,6 @@ import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -139,30 +138,31 @@ public class CollarServer {
     public ProtocolRequest read(@Nonnull Session session, @Nonnull InputStream message) {
         PacketIO packetIO = new PacketIO(services.packetMapper, services.identityStore.createCypher());
         try {
-            return packetIO.decode(services.sessions.getIdentity(session), message, ProtocolRequest.class);
+            ClientIdentity identity = services.sessions.getIdentity(session).orElse(null);
+            return packetIO.decode(identity, message, ProtocolRequest.class);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public void send(@Nullable Session session, @Nonnull ProtocolResponse resp) {
+    public void send(Session session, ProtocolResponse resp) {
         if (session != null && !session.isOpen()) {
             return;
         }
         if (resp instanceof BatchProtocolResponse) {
             BatchProtocolResponse batchResponse = (BatchProtocolResponse)resp;
             batchResponse.responses.forEach((response, identity) -> {
-                Session anotherSession = services.sessions.getSession(identity);
-                if (anotherSession != null) {
+                services.sessions.getSession(identity).ifPresent(anotherSession -> {
                     send(anotherSession, response);
-                }
+                });
             });
         } else {
             PacketIO packetIO = new PacketIO(services.packetMapper, services.identityStore.createCypher());
             byte[] bytes;
             if (services.sessions.isIdentified(session)) {
                 try {
-                    bytes = packetIO.encodeEncrypted(services.sessions.getIdentity(session), resp);
+                    ClientIdentity identity = services.sessions.getIdentity(session).orElseThrow(() -> new IllegalStateException("Could not find identity"));
+                    bytes = packetIO.encodeEncrypted(identity, resp);
                 } catch (IOException e) {
                     throw new IllegalStateException(e);
                 }

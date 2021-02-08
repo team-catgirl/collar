@@ -51,5 +51,8 @@ public class GroupsTest extends CollarTest {
 
         waitForCondition("Eve invite received", () -> eveInvitation.get() != null);
         waitForCondition("Bob invite received", () -> bobInvitation.get() != null);
+
+        bobPlayer.collar.groups().accept(bobInvitation.get());
+        evePlayer.collar.groups().accept(eveInvitation.get());
     }
 }

@@ -18,10 +18,11 @@ import team.catgirl.collar.server.security.ServerIdentityStore;
 import team.catgirl.collar.server.services.devices.DeviceService.CreateDeviceResponse;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,17 +31,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-/**
- * Maps players UUIDs to sessions
- */
 public final class SessionManager {
 
     private static final Logger LOGGER = Logger.getLogger(SessionManager.class.getName());
 
-    private final ConcurrentMap<MinecraftPlayer, ClientIdentity> playerToClient = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Session, MinecraftPlayer> sessionToPlayer = new ConcurrentHashMap<>();
-    private final ConcurrentMap<ClientIdentity, Session> clientIdentityToSession = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Session, ClientIdentity> sessionToClientIdentity = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Session, SessionState> sessions = new ConcurrentHashMap<>();
 
     // TODO: move all this to device service records
     private final ConcurrentMap<String, Session> devicesWaitingToRegister = new ConcurrentHashMap<>();
@@ -54,10 +49,8 @@ public final class SessionManager {
     }
 
     public void identify(Session session, ClientIdentity identity, MinecraftPlayer player) {
-        playerToClient.put(player, identity);
-        clientIdentityToSession.put(identity, session);
-        sessionToClientIdentity.put(session, identity);
-        sessionToPlayer.put(session, player);
+        SessionState state = new SessionState(session, identity, player);
+        sessions.put(session, state);
     }
 
     public String createDeviceRegistrationToken(@Nonnull Session session) {
@@ -81,43 +74,36 @@ public final class SessionManager {
         }
     }
 
-    public boolean isIdentified(@Nullable Session session) {
-        return clientIdentityToSession.containsValue(session);
+    public boolean isIdentified(Session session) {
+        return getIdentity(session).isPresent();
     }
 
-    public void stopSession(@Nonnull Session session,
-                            @Nonnull String reason,
-                            @Nullable IOException e,
-                            @Nullable BiConsumer<ClientIdentity, MinecraftPlayer> callback) {
+    public void stopSession(Session session,
+                            String reason,
+                            IOException e,
+                            BiConsumer<ClientIdentity, MinecraftPlayer> callback) {
         // Run callback
-        ClientIdentity clientIdentity = sessionToClientIdentity.get(session);
-        MinecraftPlayer minecraftPlayer = sessionToPlayer.get(session);
-        if (clientIdentity != null && callback != null) {
-            callback.accept(clientIdentity, minecraftPlayer);
+        SessionState state = sessions.get(session);
+        if (state != null && callback != null) {
+            callback.accept(state.identity, state.player);
         }
         // Start removing state
         LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
-        ClientIdentity playerIdentity = sessionToClientIdentity.remove(session);
-        if (playerIdentity != null) {
-            try {
-                if (session.isOpen()) {
-                    try {
-                        send(session, playerIdentity, new SessionErrorResponse(store.getIdentity()));
-                    } catch (IOException ioException) {
-                        throw new IllegalStateException("Couldn't send SessionErrorResponse", e);
-                    }
+        SessionState sessionState = sessions.remove(session);
+        if (sessionState != null) {
+            if (session.isOpen()) {
+                try {
+                    send(session, sessionState.identity, new SessionErrorResponse(store.getIdentity()));
+                } catch (IOException ioException) {
+                    throw new IllegalStateException("Couldn't send SessionErrorResponse", e);
                 }
-            } finally {
-                session = clientIdentityToSession.remove(playerIdentity);
-                MinecraftPlayer player = sessionToPlayer.remove(session);
-                playerToClient.remove(player);
             }
         } else {
             session.close(1000, "Session stopped");
         }
     }
 
-    public void send(@Nonnull Session session, @Nullable ClientIdentity recipient, @Nonnull ProtocolResponse resp) throws IOException {
+    public void send(Session session, ClientIdentity recipient, ProtocolResponse resp) throws IOException {
         PacketIO packetIO = new PacketIO(messagePack, store.createCypher());
         ByteBuffer buffer;
         if (isIdentified(session)) {
@@ -128,39 +114,64 @@ public final class SessionManager {
         session.getRemote().sendBytes(buffer);
     }
 
-    public Session getSession(MinecraftPlayer player) {
-        ClientIdentity clientIdentity = playerToClient.get(player);
-        return clientIdentity == null ? null : clientIdentityToSession.get(clientIdentity);
+    public Optional<ClientIdentity> getIdentity(Session session) {
+        if (session == null) {
+            return Optional.empty();
+        }
+        SessionState sessionState = sessions.get(session);
+        return sessionState == null ? Optional.empty() : Optional.of(sessionState.identity);
     }
 
-    @Nullable
-    public ClientIdentity getIdentity(@Nonnull Session session) {
-        return sessionToClientIdentity.get(session);
+    public Optional<ClientIdentity> getIdentity(MinecraftPlayer player) {
+        if (player == null) {
+            return Optional.empty();
+        }
+        return sessions.values().stream().filter(sessionState -> sessionState.player.equals(player))
+                .findFirst()
+                .map(sessionState -> sessionState.identity);
     }
 
-    @Nullable
-    public ClientIdentity getIdentity(@Nonnull MinecraftPlayer player) {
-        return playerToClient.get(player);
-    }
-
-    @Nonnull
-    public List<MinecraftPlayer> findPlayers(@Nonnull ClientIdentity identity, @Nonnull List<UUID> players) {
-        Session callerSession = clientIdentityToSession.get(identity);
-        MinecraftPlayer callerPlayer = sessionToPlayer.get(callerSession);
-        return sessionToPlayer.values().stream()
-                .filter(callerPlayer::inServerWith)
-                .filter(player -> players.contains(player.id))
+    public List<MinecraftPlayer> findPlayers(ClientIdentity identity, @Nonnull List<UUID> players) {
+        if (identity == null) {
+            return new ArrayList<>();
+        }
+        MinecraftPlayer player = findPlayer(identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + identity));
+        return sessions.values().stream()
+                .filter(sessionState -> sessionState.player.inServerWith(player))
+                .filter(sessionState -> players.contains(sessionState.player.id))
+                .map(sessionState -> sessionState.player)
                 .collect(Collectors.toList());
     }
 
-    @Nullable
-    public MinecraftPlayer findPlayer(@Nonnull ClientIdentity identity) {
-        Session session = clientIdentityToSession.get(identity);
-        return sessionToPlayer.get(session);
+    public Optional<MinecraftPlayer> findPlayer(ClientIdentity identity) {
+        if (identity == null) {
+            return Optional.empty();
+        }
+        return sessions.values().stream()
+                .filter(sessionState -> sessionState.identity.equals(identity))
+                .findFirst()
+                .map(sessionState -> sessionState.player);
     }
 
-    @Nullable
-    public Session getSession(@Nonnull ClientIdentity identity) {
-        return clientIdentityToSession.get(identity);
+    public Optional<Session> getSession(ClientIdentity identity) {
+        if (identity == null) {
+            return Optional.empty();
+        }
+        return sessions.values().stream()
+                .filter(sessionState -> sessionState.identity.equals(identity))
+                .findFirst()
+                .map(sessionState -> sessionState.session);
+    }
+
+    public static final class SessionState {
+        public final Session session;
+        public final ClientIdentity identity;
+        public final MinecraftPlayer player;
+
+        public SessionState(Session session, ClientIdentity identity, MinecraftPlayer player) {
+            this.session = session;
+            this.identity = identity;
+            this.player = player;
+        }
     }
 }

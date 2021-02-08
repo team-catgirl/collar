@@ -7,8 +7,8 @@ import java.util.function.Supplier;
 
 public final class CollarAssert {
 
-    public static void waitForCondition(String name, Supplier<Boolean> condition) throws InterruptedException {
-        long future = TimeUnit.MINUTES.toMillis(1) + System.currentTimeMillis();
+    public static void waitForCondition(String name, Supplier<Boolean> condition, long waitFor, TimeUnit timeUnit) throws InterruptedException {
+        long future = timeUnit.toMillis(waitFor) + System.currentTimeMillis();
         while (System.currentTimeMillis() < future) {
             if (condition.get()) {
                 return;
@@ -16,6 +16,10 @@ public final class CollarAssert {
             Thread.sleep(200);
         }
         Assert.fail("waitForCondition '" + name + "' failed");
+    }
+
+    public static void waitForCondition(String name, Supplier<Boolean> condition) throws InterruptedException {
+        waitForCondition(name, condition, 1, TimeUnit.MINUTES);
     }
 
     public CollarAssert() {}

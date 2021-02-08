@@ -74,7 +74,7 @@ public class CollarServer {
     @OnWebSocketMessage
     public void message(Session session, InputStream is) throws IOException {
         ProtocolRequest req = read(session, is);
-        LOGGER.log(Level.INFO, "Message from " + req.identity);
+        LOGGER.log(Level.INFO, req.getClass().getSimpleName() + " from " + req.identity);
         ServerIdentity serverIdentity = services.identityStore.getIdentity();
         if (req instanceof KeepAliveRequest) {
             LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
@@ -105,11 +105,11 @@ public class CollarServer {
             SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
             sendPlain(session, response);
         } else if (req instanceof StartSessionRequest) {
-            LOGGER.log(Level.INFO, "Starting session");
+            LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;
             if (services.minecraftSessionVerifier.verify(request.session)) {
-                sendPlain(session, new StartSessionResponse(serverIdentity));
                 services.sessions.identify(session, req.identity, request.session.toPlayer());
+                sendPlain(session, new StartSessionResponse(serverIdentity));
             } else {
                 sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
                 services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
@@ -117,14 +117,14 @@ public class CollarServer {
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
             if (services.identityStore.isTrustedIdentity(req.identity)) {
-                LOGGER.log(Level.INFO, "Identity is trusted. Signaling client to start encryption.");
+                LOGGER.log(Level.INFO, req.identity + " is trusted. Signaling client to start encryption.");
                 CheckTrustRelationshipResponse response = new IsTrustedRelationshipResponse(serverIdentity);
                 sendPlain(session, response);
             } else {
-                LOGGER.log(Level.INFO, "Identity is NOT trusted. Signaling client to restart registration.");
+                LOGGER.log(Level.INFO, req.identity + " is NOT trusted. Signaling client to restart registration.");
                 CheckTrustRelationshipResponse response = new IsUntrustedRelationshipResponse(serverIdentity);
                 sendPlain(session, response);
-                services.sessions.stopSession(session, "Identity not trusted", null, null);
+                services.sessions.stopSession(session, req.identity + " identity is not trusted", null, null);
             }
         } else {
             protocolHandlers.stream()

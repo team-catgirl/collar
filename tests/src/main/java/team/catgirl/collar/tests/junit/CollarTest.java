@@ -73,7 +73,7 @@ public abstract class CollarTest {
     }
 
     /** Approves the device on initial startup of client **/
-    static class ApprovingListener implements CollarListener {
+    public static class ApprovingListener implements CollarListener {
         private final AtomicReference<Profile> profile;
         private final AtomicReference<Services> services;
         private final AtomicInteger devicesConfirmed;

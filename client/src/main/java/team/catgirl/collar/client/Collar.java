@@ -101,7 +101,7 @@ public final class Collar {
     public void disconnect() {
         if (this.webSocket != null) {
             LOGGER.log(Level.INFO, "Disconnected");
-            this.webSocket.close(1000, "Client was disconnected");
+            this.webSocket.cancel();
             this.webSocket = null;
             changeState(State.DISCONNECTED);
         }
@@ -132,11 +132,17 @@ public final class Collar {
             if (previousState == null) {
                 LOGGER.log(Level.INFO, "client in state " + state);
             } else {
-                LOGGER.log(Level.INFO, identityStore.currentIdentity() +  " state changed from " + previousState + " to " + state);
+                if (identityStore != null) {
+                    LOGGER.log(Level.INFO, identityStore.currentIdentity() + " state changed from " + previousState + " to " + state);
+                } else {
+                    LOGGER.log(Level.INFO, "state changed from " + previousState + " to " + state);
+                }
             }
             if (previousState != null) {
                 this.configuration.listener.onStateChanged(this, state);
             }
+        } else {
+            throw new IllegalStateException("Cannot change state " + state + " to the same state");
         }
     }
 
@@ -226,14 +232,11 @@ public final class Collar {
             }
             UUID finalOwner = owner;
             return new ResettableClientIdentityStore(() -> SignalClientIdentityStore.from(finalOwner, configuration.homeDirectory, signalProtocolStore -> {
-                LOGGER.log(Level.INFO, "New installation. Registering device with server...");
+                LOGGER.log(Level.INFO, "New installation. Registering device with server");
                 IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
                 new ProfileState(finalOwner).write(configuration.homeDirectory);
-                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()), null);
-                IdentifyRequest request = new IdentifyRequest(clientIdentity);
-                sendRequest(webSocket, request);
             }, (store) -> {
-                LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server");
+                LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server " + serverIdentity);
                 IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
                 ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()), null);
                 IdentifyRequest request = new IdentifyRequest(clientIdentity);
@@ -258,18 +261,15 @@ public final class Collar {
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString message) {
             ProtocolResponse resp = readResponse(message.toByteArray());
-            LOGGER.log(Level.INFO, "Message from " + resp.identity);
+            LOGGER.log(Level.INFO, resp.getClass().getSimpleName() + " from " + resp.identity);
             ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
             if (resp instanceof IdentifyResponse) {
                 IdentifyResponse response = (IdentifyResponse) resp;
                 if (identityStore == null) {
                     identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
-                    StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
-                    sendRequest(webSocket, request);
-                } else {
-                    StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
-                    sendRequest(webSocket, request);
                 }
+                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
+                sendRequest(webSocket, request);
                 keepAlive.stop();
                 keepAlive.start(identity);
             } else if (resp instanceof KeepAliveResponse) {
@@ -292,7 +292,8 @@ public final class Collar {
                 }
                 identityStore.trustIdentity(response);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
-                sendRequest(webSocket, new StartSessionRequest(identity, configuration.sessionSupplier.get()));
+                sendRequest(webSocket, new IdentifyRequest(identity));
+//                sendRequest(webSocket, new StartSessionRequest(identity, configuration.sessionSupplier.get()));
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
@@ -322,7 +323,7 @@ public final class Collar {
                         .findFirst()
                         .orElse(false);
                 if (!wasHandled) {
-                    throw new IllegalStateException("Did not understand received protocol response " + message);
+                    throw new IllegalStateException("Did not understand received protocol response " + resp.getClass());
                 }
             }
         }

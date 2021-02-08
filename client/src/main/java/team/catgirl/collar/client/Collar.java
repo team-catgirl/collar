@@ -213,6 +213,9 @@ public final class Collar {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             // Create the sender delegate
             sender = request -> {
+                if (state != State.CONNECTED) {
+                    throw new IllegalStateException("Client is not in CONNECTED state");
+                }
                 sendRequest(webSocket, request);
             };
             LOGGER.log(Level.INFO, "Connection established");

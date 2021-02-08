@@ -21,7 +21,7 @@ public final class Group {
     @JsonProperty("waypoints")
     public final Map<UUID, Waypoint> waypoints;
 
-    public Group(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("members") Map<MinecraftPlayer, Member> members, Map<UUID, Waypoint> waypoints) {
+    public Group(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("members") Map<MinecraftPlayer, Member> members, @JsonProperty("waypoints") Map<UUID, Waypoint> waypoints) {
         this.id = id;
         this.server = server;
         this.members = members;

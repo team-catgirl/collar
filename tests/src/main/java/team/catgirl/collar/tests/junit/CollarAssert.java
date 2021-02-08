@@ -10,7 +10,8 @@ public final class CollarAssert {
     public static void waitForCondition(String name, Supplier<Boolean> condition, long waitFor, TimeUnit timeUnit) throws InterruptedException {
         long future = timeUnit.toMillis(waitFor) + System.currentTimeMillis();
         while (System.currentTimeMillis() < future) {
-            if (condition.get()) {
+            Boolean aBoolean = condition.get();
+            if (aBoolean != null && aBoolean) {
                 return;
             }
             Thread.sleep(200);

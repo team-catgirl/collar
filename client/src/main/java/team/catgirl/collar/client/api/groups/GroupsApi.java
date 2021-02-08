@@ -44,7 +44,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     /**
      * @return groups the client is a member of
      */
-    public List<Group> groups() {
+    public List<Group> all() {
         return new ArrayList<>(groups.values());
     }
 
@@ -98,7 +98,8 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     }
 
     /**
-     * Remove the member from the group
+     * Remove the member from the group.
+     * Only {@link team.catgirl.collar.api.groups.Group.MembershipRole#OWNER} can perform this action.
      * @param group to remove player from
      * @param member the member to remove
      */
@@ -175,7 +176,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             GroupInviteResponse response = (GroupInviteResponse)resp;
             Group group = groups.get(response.groupId);
             if (group == null) {
-                return false;
+                return true;
             }
             fireListener("onGroupMemberInvitationsSent", groupsListener -> {
                 groupsListener.onGroupMemberInvitationsSent(collar, this, group);
@@ -186,7 +187,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             LeaveGroupResponse response = (LeaveGroupResponse)resp;
             Group group = groups.remove(response.groupId);
             if (group == null) {
-                return false;
+                return true;
             }
             fireListener("onGroupLeft", groupsListener -> {
                 groupsListener.onGroupLeft(collar, this, group);
@@ -215,7 +216,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             RemoveGroupMemberResponse response = (RemoveGroupMemberResponse)resp;
             Group group = groups.get(response.groupId);
             if (group == null) {
-                return false;
+                return true;
             }
             MinecraftPlayer minecraftPlayer = group.members.keySet().stream()
                     .filter(player -> response.player.equals(player.id))
@@ -224,15 +225,16 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             fireListener("GroupMembershipRequest", groupListener -> {
                 groupListener.onGroupMemberRemoved(collar, group, minecraftPlayer);
             });
+            return true;
         } else if (resp instanceof CreateWaypointResponse) {
             Group group = groups.get(((CreateWaypointResponse) resp).groupId);
             if (group == null) {
-                return false;
+                return true;
             }
             if (resp instanceof CreateWaypointSuccessResponse) {
                 CreateWaypointSuccessResponse response = (CreateWaypointSuccessResponse)resp;
                 if (!updateGroup(group, () -> group.addWaypoint(response.waypoint))) {
-                    return false;
+                    return true;
                 }
                 fireListener("CreateWaypointSuccessResponse", groupListener -> {
                     groupListener.onWaypointCreatedSuccess(collar, this, group, response.waypoint);
@@ -243,37 +245,40 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 fireListener("CreateWaypointFailedResponse", groupListener -> {
                     groupListener.onWaypointCreatedFailed(collar, this, group, response.waypointName);
                 });
+                return true;
             }
         } else if (resp instanceof RemoveWaypointResponse) {
             Group group = groups.get(((RemoveWaypointResponse) resp).groupId);
             if (group == null) {
-                return false;
+                return true;
             }
             if (resp instanceof RemoveWaypointSuccessResponse) {
                 RemoveWaypointSuccessResponse response = (RemoveWaypointSuccessResponse) resp;
                 if (!updateGroup(group, () -> group.removeWaypoint(response.waypointId))) {
-                    return false;
+                    return true;
                 }
                 Waypoint waypoint = group.waypoints.get(response.waypointId);
                 if (waypoint == null) {
-                    return false;
+                    return true;
                 }
                 fireListener("RemoveWaypointSuccessResponse", groupListener -> {
                     groupListener.onWaypointRemovedSuccess(collar, this, group, waypoint);
                 });
+                return true;
             }
             if (resp instanceof RemoveWaypointFailedResponse) {
                 RemoveWaypointFailedResponse response = (RemoveWaypointFailedResponse) resp;
                 Waypoint waypoint = group.waypoints.get(response.waypointId);
                 if (waypoint == null) {
-                    return false;
+                    return true;
                 }
                 if (!updateGroup(group, () -> group.removeWaypoint(response.waypointId))) {
-                    return false;
+                    return true;
                 }
                 fireListener("RemoveWaypointFailedResponse", groupListener -> {
                     groupListener.onWaypointRemovedFailed(collar, this, group, waypoint);
                 });
+                return true;
             }
         }
         return false;
@@ -343,7 +348,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         public void start() {
             scheduler = Executors.newScheduledThreadPool(1);
             scheduler.scheduleAtFixedRate(() -> {
-                groupsApi.groups().stream()
+                groupsApi.all().stream()
                     .filter(groupsApi::isSharingCoordinatesWith)
                     .findFirst().ifPresent(group -> groupsApi.updatePosition(new UpdateGroupMemberPositionRequest(identity, position.get()))
                 );

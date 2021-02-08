@@ -2,7 +2,10 @@ package team.catgirl.collar.client.security.signal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.whispersystems.libsignal.*;
-import org.whispersystems.libsignal.state.*;
+import org.whispersystems.libsignal.state.PreKeyBundle;
+import org.whispersystems.libsignal.state.PreKeyRecord;
+import org.whispersystems.libsignal.state.SignalProtocolStore;
+import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
@@ -58,6 +61,9 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public void trustIdentity(SendPreKeysResponse resp) {
+        if (isTrustedIdentity(resp.identity)) {
+            throw new IllegalStateException(resp.identity + " is already trusted");
+        }
         PreKeyBundle bundle;
         try {
             bundle = PreKeys.preKeyBundleFromBytes(resp.preKeyBundle);
@@ -72,7 +78,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         } catch (InvalidKeyException | UntrustedIdentityException e) {
             throw new IllegalStateException(e);
         }
-        LOGGER.log(Level.INFO, "Trusted identity and started signal session for " + address);
+        LOGGER.log(Level.INFO, "Trust established with " + address);
     }
 
     @Override

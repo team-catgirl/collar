@@ -46,6 +46,9 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
 
     @Override
     public void trustIdentity(SendPreKeysRequest req) {
+        if (isTrustedIdentity(req.identity)) {
+            throw new IllegalStateException(req.identity + " is already trusted");
+        }
         PreKeyBundle bundle;
         try {
             bundle = PreKeys.preKeyBundleFromBytes(req.preKeyBundle);
@@ -62,7 +65,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         }
         SessionRecord sessionRecord = store.loadSession(address);
         sessionRecord.getSessionState().clearUnacknowledgedPreKeyMessage();
-        LOGGER.log(Level.INFO, "Trusted identity and started signal session for " + address);
+        LOGGER.log(Level.INFO, "Trust established with " + address);
     }
 
     public boolean isTrustedIdentity(ClientIdentity clientIdentity) {

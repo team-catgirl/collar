@@ -114,8 +114,18 @@ public final class Collar {
         return groupsApi;
     }
 
+    /**
+     * @return client state
+     */
     public State getState() {
         return state;
+    }
+
+    /**
+     * @return the current clients identity
+     */
+    public ClientIdentity identity() {
+        return identityStore != null ? identityStore.currentIdentity() : null;
     }
 
     /**
@@ -252,13 +262,17 @@ public final class Collar {
             super.onClosed(webSocket, code, reason);
             LOGGER.log(Level.SEVERE, "Closed socket: " + reason);
             this.keepAlive.stop();
-            collar.changeState(State.DISCONNECTED);
+            if (state != State.DISCONNECTED) {
+                collar.changeState(State.DISCONNECTED);
+            }
         }
 
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
             LOGGER.log(Level.SEVERE, "Socket failure", t);
-            collar.changeState(State.DISCONNECTED);
+            if (state != State.DISCONNECTED) {
+                collar.changeState(State.DISCONNECTED);
+            }
         }
 
         @Override

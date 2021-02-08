@@ -21,6 +21,7 @@ public interface CollarListener {
 
     /**
      * Fired when the server or client cannot negotiate trust with the client
+     * When this occurs, reset the store using {@link ClientIdentityStore#reset()} and reconnect.
      * @param collar client
      * @param store identity store to be reset
      */

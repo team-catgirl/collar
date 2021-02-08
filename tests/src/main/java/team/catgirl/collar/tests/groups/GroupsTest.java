@@ -77,10 +77,23 @@ public class GroupsTest extends CollarTest {
         Group theGroup = alicePlayer.collar.groups().all().get(0);
         Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.id.equals(evePlayerId)).findFirst().orElseThrow();
 
+        waitForCondition("eve is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+
+        waitForCondition("alice is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
+        waitForCondition("alice is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
+        waitForCondition("alice is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
+
+        waitForCondition("bob is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsMember(bobPlayerId));
+        waitForCondition("bob is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsMember(bobPlayerId));
+        waitForCondition("bob is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsMember(bobPlayerId));
+
+        System.out.println(alicePlayer.collar.identity());
         alicePlayer.collar.groups().removeMember(theGroup, eveMember);
 
-        waitForCondition("eve is no longer in alice's group state", () -> alicePlayer.collar.groups().all().get(0).members.values().stream().noneMatch(member -> member.player.id.equals(evePlayerId)));
         waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().size() == 0);
-        waitForCondition("eve is no longer in bob's group state", () -> bobPlayer.collar.groups().all().get(0).members.values().stream().noneMatch(member -> member.player.id.equals(evePlayerId)));
+        waitForCondition("eve is no longer in alice's group state", () -> alicePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is no longer in bob's group state", () -> bobPlayer.collar.groups().all().get(0).containsMember(evePlayerId));
     }
 }

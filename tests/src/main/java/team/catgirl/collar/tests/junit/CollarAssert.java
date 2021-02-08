@@ -20,7 +20,7 @@ public final class CollarAssert {
     }
 
     public static void waitForCondition(String name, Supplier<Boolean> condition) throws InterruptedException {
-        waitForCondition(name, condition, 1, TimeUnit.MINUTES);
+        waitForCondition(name, condition, 30, TimeUnit.SECONDS);
     }
 
     public CollarAssert() {}

@@ -28,15 +28,15 @@ final class KeepAlive {
 
     public void start(ClientIdentity identity) {
         scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                KeepAliveRequest keepAliveRequest = new KeepAliveRequest(identity);
-                collarWebSocket.sendRequest(webSocket, keepAliveRequest);
-            } catch (ConnectionException e) {
-                LOGGER.log(Level.SEVERE, "Couldn't send KeepAliveRequest", e);
-                webSocket.close(1000, "Keep alive failed");
-            }
-        }, 0, 10, TimeUnit.SECONDS);
+//        scheduler.scheduleAtFixedRate(() -> {
+//            try {
+//                KeepAliveRequest keepAliveRequest = new KeepAliveRequest(identity);
+//                collarWebSocket.sendRequest(webSocket, keepAliveRequest);
+//            } catch (ConnectionException e) {
+//                LOGGER.log(Level.SEVERE, "Couldn't send KeepAliveRequest", e);
+//                webSocket.close(1000, "Keep alive failed");
+//            }
+//        }, 0, 10, TimeUnit.SECONDS);
     }
 
     public void stop() {

@@ -35,7 +35,11 @@ public final class Group {
         return new Group(id, owner.server, state.build(), new HashMap<>());
     }
 
-    public Group updateMemberState(MinecraftPlayer player, MembershipState newMembershipState) {
+    public boolean containsMember(UUID playerId) {
+        return members.values().stream().anyMatch(member -> member.player.id.equals(playerId));
+    }
+
+    public Group updateMembershipState(MinecraftPlayer player, MembershipState newMembershipState) {
         Member member = members.get(player);
         if (member == null) {
             return this;
@@ -51,17 +55,6 @@ public final class Group {
     public Group removeMember(MinecraftPlayer player) {
         List<Map.Entry<MinecraftPlayer, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList());
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder().putAll(members);
-        return new Group(id, server, state.build(), waypoints);
-    }
-
-    public Group updateMemberPosition(MinecraftPlayer player, Location location) {
-        Member member = this.members.get(player);
-        if (member == null) {
-            return this;
-        }
-        member = member.updatePosition(location);
-        ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder().putAll(members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList()));
-        state.put(member.player, member);
         return new Group(id, server, state.build(), waypoints);
     }
 
@@ -91,6 +84,17 @@ public final class Group {
         Map<UUID, Waypoint> waypoints = new HashMap<>(this.waypoints);
         Waypoint removed = waypoints.remove(waypointId);
         return removed != null ? new Group(id, server, members, waypoints) : null;
+    }
+
+    public Group updateMemberPosition(MinecraftPlayer player, Location location) {
+        Member member = this.members.get(player);
+        if (member == null) {
+            return this;
+        }
+        member = member.updatePosition(location);
+        ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder().putAll(members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList()));
+        state.put(member.player, member);
+        return new Group(id, server, state.build(), waypoints);
     }
 
     public enum MembershipRole {

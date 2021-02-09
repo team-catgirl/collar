@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -130,7 +131,10 @@ public class CollarServer {
             protocolHandlers.stream()
                     .map(protocolHandler -> protocolHandler.handleRequest(this, req, response -> send(session, response)))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("message received was not understood"));
+                    .or(() -> {
+                        LOGGER.log(Level.SEVERE, "message received was not understood");
+                        return Optional.empty();
+                    });
         }
     }
 

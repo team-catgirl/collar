@@ -17,11 +17,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public final class CollarServerRule implements TestRule {
 
+    private final AtomicBoolean started = new AtomicBoolean(false);
     private final Consumer<Services> setupState;
+    private Thread serverThread;
     public WebServer webServer;
 
     public CollarServerRule(Consumer<Services> setupState) {
@@ -32,13 +35,28 @@ public final class CollarServerRule implements TestRule {
     public Statement apply(Statement base, Description description) {
         Mongo.getTestingDatabase().drop();
         MongoDatabase db = Mongo.getTestingDatabase();
-        webServer = new WebServer(Configuration.testConfiguration(db));
         return new Statement() {
             @Override public void evaluate() throws Throwable {
-                webServer.start(setupState);
+                serverThread = new Thread(() -> {
+                    webServer = new WebServer(Configuration.testConfiguration(db));
+                    webServer.start(services -> {
+                        setupState.accept(services);
+                        started.set(true);
+                    });
+                    while (true) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException ignored) {}
+                    }
+                });
+                serverThread.start();
+                while (!started.get()) {
+                    Thread.sleep(500);
+                }
                 try {
                     base.evaluate();
                 } finally {
+                    serverThread.interrupt();
                     Spark.stop();
                     db.drop();
                 }

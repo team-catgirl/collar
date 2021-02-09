@@ -79,7 +79,7 @@ public final class GroupService {
             group = group.updateMembershipState(player, state);
             updateState(group);
             BatchProtocolResponse response = BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, group, player));
-            response = response.concat(sendUpdatesToMembers(player, group, Group.MembershipState.ACCEPTED, ((identity, updatedGroup, updatedMember) -> new JoinGroupResponse(serverIdentity, updatedGroup, player))));
+            response = response.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, ((identity, updatedGroup, updatedMember) -> new JoinGroupResponse(serverIdentity, updatedGroup, player))));
             return response;
         }
     }
@@ -98,9 +98,9 @@ public final class GroupService {
         }
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
+            response = response.concat(sendUpdatesToMembers(group, null, (identity, group1, member) -> new LeaveGroupResponse(serverIdentity, group1.id, sender)));
             group = group.removeMember(sender);
             updateState(group);
-            response = response.concat(sendUpdatesToMembers(sender, group, Group.MembershipState.ACCEPTED, (identity, group1, member) -> new LeaveGroupResponse(serverIdentity, group1.id, sender)));
         }
         LOGGER.log(Level.INFO, "Group count " + groupsById.size());
         return response;
@@ -117,7 +117,7 @@ public final class GroupService {
             synchronized (group.id) {
                 group = group.updateMembershipState(player, Group.MembershipState.DECLINED);
                 updateState(group);
-                response = response.concat(sendUpdatesToMembers(player, group, null, (identity, updatedGroup, updatedMember) -> new LeaveGroupResponse(serverIdentity, updatedGroup.id, player)));
+                response = response.concat(sendUpdatesToMembers(group, null, (identity, updatedGroup, updatedMember) -> new LeaveGroupResponse(serverIdentity, updatedGroup.id, player)));
             }
         }
         LOGGER.log(Level.INFO, "Removed user " + player + " from all groups");
@@ -191,7 +191,7 @@ public final class GroupService {
         }
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
-            response = response.concat(sendUpdatesToMembers(sender, group, null, (identity, group1, member) -> new LeaveGroupResponse(serverIdentity, group1.id, memberToRemove.get().player)));
+            response = response.concat(sendUpdatesToMembers(group, null, (identity, group1, member) -> new LeaveGroupResponse(serverIdentity, group1.id, memberToRemove.get().player)));
             group = group.removeMember(memberToRemove.get().player);
             updateState(group);
         }
@@ -212,7 +212,7 @@ public final class GroupService {
         synchronized (group.id) {
             group = group.addWaypoint(waypoint);
             updateState(group);
-            responses = responses.concat(sendUpdatesToMembers(player, group, Group.MembershipState.ACCEPTED, (identity, group1, member) -> new CreateWaypointSuccessResponse(serverIdentity, group1.id, waypoint)));
+            responses = responses.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, (identity, updatedGroup, member) -> new CreateWaypointSuccessResponse(serverIdentity, updatedGroup.id, waypoint)));
         }
         return responses;
     }
@@ -235,7 +235,7 @@ public final class GroupService {
             group = group.removeWaypoint(req.waypointId);
             if (group != null) {
                 updateState(group);
-                responses = responses.concat(sendUpdatesToMembers(player, group, Group.MembershipState.ACCEPTED, (identity, group1, member) -> new RemoveWaypointResponse.RemoveWaypointSuccessResponse(serverIdentity, group1.id, waypoint.id)));
+                responses = responses.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, (identity, group1, member) -> new RemoveWaypointResponse.RemoveWaypointSuccessResponse(serverIdentity, group1.id, waypoint.id)));
             } else {
                 responses = responses.add(req.identity, new RemoveWaypointFailedResponse(serverIdentity, req.groupId, req.waypointId));
             }
@@ -275,39 +275,11 @@ public final class GroupService {
         }
     }
 
-//    private BatchProtocolResponse refreshGroupState(Group group, ClientIdentity identity, ProtocolResponse resp) {
-//        BatchProtocolResponse response = resp != null ? BatchProtocolResponse.one(identity, resp) : new BatchProtocolResponse(serverIdentity);
-//        synchronized (group.id) {
-//            if (group.members.isEmpty()) {
-//                LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
-//                groupsById.remove(group.id);
-//            } else {
-//                groupsById.put(group.id, group);
-////                for (Member member : group.members.values()) {
-////                    // Do not send to members who have not accepted
-////                    if (member.membershipState != Group.MembershipState.ACCEPTED) {
-////                        continue;
-////                    }
-////                    List<Group> groupsForPlayer = findGroupsForPlayer(member.player);
-////                    if (!groupsForPlayer.isEmpty()) {
-//////                        MinecraftPlayer player = sessions.findPlayer(identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + identity.id()));
-//////                        BatchProtocolResponse groupResponses = sendUpdatesToMembers(player, group, Group.MembershipState.ACCEPTED, (identity1, group1, member1) -> new GroupChangedResponse(serverIdentity, groupsForPlayer));
-//////                        response = response.concat(groupResponses);
-////                    }
-////                }
-//            }
-//        }
-//        return response;
-//    }
-
-    private BatchProtocolResponse sendUpdatesToMembers(MinecraftPlayer sender, Group group, Group.MembershipState withState, MessageCreator messageCreator) {
+    private BatchProtocolResponse sendUpdatesToMembers(Group group, Group.MembershipState withState, MessageCreator messageCreator) {
         synchronized (group.id) {
             final Map<ProtocolResponse, ClientIdentity> responses = new HashMap<>();
             for (Map.Entry<MinecraftPlayer, Member> memberEntry : group.members.entrySet()) {
                 MinecraftPlayer player = memberEntry.getKey();
-//                if (player.equals(sender)) {
-//                    continue;
-//                }
                 Member member = memberEntry.getValue();
                 if (withState != null && withState != member.membershipState) {
                     continue;

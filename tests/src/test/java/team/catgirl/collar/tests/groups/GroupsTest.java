@@ -87,6 +87,8 @@ public class GroupsTest extends CollarTest {
 
         bobPlayer.collar.groups().leave(theGroup);
         waitForCondition("bob is no longer a member", () -> bobPlayer.collar.groups().all().isEmpty());
+        waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().isEmpty());
+        waitForCondition("alice is no longer a member", () -> alicePlayer.collar.groups().all().isEmpty());
     }
 
     @Test
@@ -138,7 +140,7 @@ public class GroupsTest extends CollarTest {
 
         waitForCondition("alice does not have a waypoint", () -> alicePlayer.collar.groups().all().get(0).waypoints.isEmpty());
         waitForCondition("bob does not have a waypoint", () -> bobPlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("bob does not have a waypoint", () -> evePlayer.collar.groups().all().get(0).waypoints.isEmpty());
+        waitForCondition("eve does not have a waypoint", () -> evePlayer.collar.groups().all().get(0).waypoints.isEmpty());
     }
 
     private static class TestGroupsListener implements GroupsListener {

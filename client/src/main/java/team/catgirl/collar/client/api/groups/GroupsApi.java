@@ -176,6 +176,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 fireListener("onGroupCreated", groupsListener -> {
                     groupsListener.onGroupCreated(collar, this, response.group);
                 });
+                fireListener("onGroupJoined", groupsListener -> {
+                    groupsListener.onGroupJoined(collar, this, response.group, collar.player());
+                });
                 startOrStopSharingPosition();
             }
             return true;
@@ -186,6 +189,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 fireListener("onGroupJoined", groupsListener -> {
                     groupsListener.onGroupJoined(collar, this, response.group, response.player);
                 });
+                invitations.remove(response.group.id);
                 startOrStopSharingPosition();
             }
             return true;
@@ -201,6 +205,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                         });
                         startOrStopSharingPosition();
                     }
+                    invitations.remove(response.groupId);
                 } else {
                     // Remove another player from the group
                     Group group = groups.get(response.groupId);
@@ -262,6 +267,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                             group = group.removeWaypoint(response.waypointId);
                             if (group != null) {
                                 Group finalGroup = group;
+                                groups.put(group.id, group);
                                 fireListener("onWaypointRemovedSuccess", groupListener -> {
                                     groupListener.onWaypointRemovedSuccess(collar, this, finalGroup, waypoint);
                                 });
@@ -277,7 +283,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                         Waypoint waypoint = group.waypoints.get(response.waypointId);
                         if (waypoint != null) {
                             fireListener("RemoveWaypointFailedResponse", groupListener -> {
-                                groupListener.onWaypointRemovedSuccess(collar, this, group, waypoint);
+                                groupListener.onWaypointRemovedFailed(collar, this, group, waypoint);
                             });
                         }
                     }

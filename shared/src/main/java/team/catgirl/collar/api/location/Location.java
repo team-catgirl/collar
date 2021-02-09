@@ -2,6 +2,8 @@ package team.catgirl.collar.api.location;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public final class Location {
 
     public static final Location UNKNOWN = new Location(Double.MIN_VALUE, Double.MIN_VALUE , Double.MIN_VALUE, Dimension.UNKNOWN);
@@ -20,6 +22,19 @@ public final class Location {
         this.y = y;
         this.z = z;
         this.dimension = dimension;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Location location = (Location) o;
+        return x.equals(location.x) && y.equals(location.y) && z.equals(location.z) && dimension == location.dimension;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, y, z, dimension);
     }
 
     public static String toString(Location location) {

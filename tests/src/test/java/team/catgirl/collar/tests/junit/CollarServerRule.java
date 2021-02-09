@@ -1,6 +1,9 @@
 package team.catgirl.collar.tests.junit;
 
 import com.mongodb.client.MongoDatabase;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -11,17 +14,12 @@ import team.catgirl.collar.server.configuration.Configuration;
 import team.catgirl.collar.server.mongo.Mongo;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public final class CollarServerRule implements TestRule {
 
+    private static final OkHttpClient http = new OkHttpClient();
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final Consumer<Services> setupState;
     private Thread serverThread;
@@ -65,18 +63,13 @@ public final class CollarServerRule implements TestRule {
     }
 
     public boolean isServerStarted() {
-        HttpClient client = HttpClient.newBuilder().build();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:3001/api/discover"))
-                .timeout(Duration.ofSeconds(10))
-                .GET()
+        Request request = new Request.Builder()
+                .url("http://localhost:3001/api/discover")
                 .build();
-        HttpResponse<String> response = null;
-        try {
-            response = client.send(request, BodyHandlers.ofString());
-        } catch (IOException | InterruptedException e) {
+        try (Response response = http.newCall(request).execute()) {
+            return response.code() == 200;
+        } catch (IOException e) {
             return false;
         }
-        return response.statusCode() == 200;
     }
 }

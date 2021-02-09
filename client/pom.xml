@@ -45,6 +45,8 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>full</shadedClassifierName>
                     <filters>
                         <filter>
                             <artifact>*:*</artifact>

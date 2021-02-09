@@ -93,7 +93,7 @@ public class GroupsTest extends CollarTest {
         alicePlayer.collar.groups().removeMember(theGroup, eveMember);
 
         waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().size() == 0);
-        waitForCondition("eve is no longer in alice's group state", () -> alicePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
-        waitForCondition("eve is no longer in bob's group state", () -> bobPlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is no longer in alice's group state", () -> !alicePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is no longer in bob's group state", () -> !bobPlayer.collar.groups().all().get(0).containsMember(evePlayerId));
     }
 }

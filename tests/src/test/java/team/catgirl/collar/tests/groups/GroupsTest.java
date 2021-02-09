@@ -1,12 +1,14 @@
 package team.catgirl.collar.tests.groups;
 
 import org.junit.Test;
+import spark.Response;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.groups.GroupInvitation;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.groups.GroupsListener;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.List;
@@ -36,8 +38,10 @@ public class GroupsTest extends CollarTest {
             }
 
             @Override
-            public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group) {
-                bobJoinedGroup.set(true);
+            public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+                if (player.equals(collar.player())) {
+                    bobJoinedGroup.set(true);
+                }
             }
         };
 
@@ -51,8 +55,10 @@ public class GroupsTest extends CollarTest {
             }
 
             @Override
-            public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group) {
-                eveJoinedGroup.set(true);
+            public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+                if (player.equals(collar.player())) {
+                    eveJoinedGroup.set(true);
+                }
             }
         };
 

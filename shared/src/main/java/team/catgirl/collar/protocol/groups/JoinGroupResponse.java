@@ -5,14 +5,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
-public final class AcceptGroupMembershipResponse extends ProtocolResponse {
+public final class JoinGroupResponse extends ProtocolResponse {
     @JsonProperty("group")
     public final Group group;
+    @JsonProperty("player")
+    public final MinecraftPlayer player;
 
     @JsonCreator
-    public AcceptGroupMembershipResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("group") Group group) {
+    public JoinGroupResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("group") Group group, @JsonProperty("player") MinecraftPlayer player) {
         super(identity);
         this.group = group;
+        this.player = player;
     }
 }

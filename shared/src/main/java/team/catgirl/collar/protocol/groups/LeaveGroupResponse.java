@@ -8,6 +8,9 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.UUID;
 
+/**
+ * Sent to all group members whenever someone leaves the group
+ */
 public final class LeaveGroupResponse extends ProtocolResponse {
     @JsonProperty("groupId")
     public final UUID groupId;

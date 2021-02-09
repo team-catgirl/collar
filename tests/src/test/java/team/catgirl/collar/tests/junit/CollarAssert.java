@@ -14,13 +14,13 @@ public final class CollarAssert {
             if (aBoolean != null && aBoolean) {
                 return;
             }
-            Thread.sleep(200);
+            Thread.sleep(500);
         }
         Assert.fail("waitForCondition '" + name + "' failed");
     }
 
     public static void waitForCondition(String name, Supplier<Boolean> condition) throws InterruptedException {
-        waitForCondition(name, condition, 30, TimeUnit.SECONDS);
+        waitForCondition(name, condition, 15, TimeUnit.SECONDS);
     }
 
     public CollarAssert() {}

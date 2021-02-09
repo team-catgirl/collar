@@ -10,6 +10,8 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.protocol.location.ClearLocationRequest;
+import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointFailedResponse;
@@ -19,7 +21,6 @@ import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointFailedResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointSuccessResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -92,7 +93,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param invitation to accept
      */
     public void accept(GroupInvitation invitation) {
-        sender.accept(new AcceptGroupMembershipRequest(identity(), invitation.groupId, Group.MembershipState.ACCEPTED));
+        sender.accept(new JoinGroupRequest(identity(), invitation.groupId, Group.MembershipState.ACCEPTED));
     }
 
     /**
@@ -102,7 +103,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param member the member to remove
      */
     public void removeMember(Group group, Member member) {
-        sender.accept(new RemoveGroupMemberRequest(identity(), group.id, member.player.id));
+        sender.accept(new EjectGroupMemberRequest(identity(), group.id, member.player.id));
     }
 
     /**
@@ -121,6 +122,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     public void stopSharingCoordinates(Group group) {
         sharingState.put(group.id, CoordinateSharingState.NOT_SHARING);
         startOrStopSharingPosition();
+        sender.accept(new ClearLocationRequest(identity()));
     }
 
     /**
@@ -156,53 +158,46 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof CreateGroupResponse) {
             CreateGroupResponse response = (CreateGroupResponse)resp;
-            updateState(response.group.id,  group -> response.group).ifPresent(group -> {
-                fireListener("onGroupCreated", groupsListener -> {
-                    groupsListener.onGroupCreated(collar, this, response.group);
-                });
-                startOrStopSharingPosition();
+            groups.put(response.group.id, response.group);
+            fireListener("onGroupCreated", groupsListener -> {
+                groupsListener.onGroupCreated(collar, this, response.group);
             });
+            startOrStopSharingPosition();
             return true;
-        } else if (resp instanceof AcceptGroupMembershipResponse) {
-            AcceptGroupMembershipResponse response = (AcceptGroupMembershipResponse)resp;
-            updateState(response.group.id, group -> response.group).ifPresent(group -> {
-                fireListener("onGroupJoined", groupsListener -> {
-                    groupsListener.onGroupJoined(collar, this, response.group);
-                });
-                startOrStopSharingPosition();
+        } else if (resp instanceof JoinGroupResponse) {
+            JoinGroupResponse response = (JoinGroupResponse)resp;
+            groups.put(response.group.id, response.group);
+            fireListener("onGroupJoined", groupsListener -> {
+                groupsListener.onGroupJoined(collar, this, response.group, response.player);
             });
-            return true;
-        } else if (resp instanceof GroupInviteResponse) {
-            GroupInviteResponse response = (GroupInviteResponse)resp;
-            updateState(response.groupId, group -> group).ifPresent(group -> {
-                fireListener("onGroupMemberInvitationsSent", groupsListener -> {
-                    groupsListener.onGroupMemberInvitationsSent(collar, this, group);
-                });
-                startOrStopSharingPosition();
-            });
+            startOrStopSharingPosition();
             return true;
         } else if (resp instanceof LeaveGroupResponse) {
             LeaveGroupResponse response = (LeaveGroupResponse)resp;
-            updateState(response.groupId, group -> null).ifPresent(group -> {
-                fireListener("onGroupLeft", groupsListener -> {
-                    groupsListener.onGroupLeft(collar, this, group);
-                });
-                startOrStopSharingPosition();
-            });
-            return true;
-        } else if (resp instanceof GroupChangedResponse) {
-            GroupChangedResponse response = (GroupChangedResponse)resp;
-            response.groups.forEach(group -> {
-                updateState(group.id, oldGroup -> group).ifPresent(updatedGroup -> {
-                    fireListener("onGroupUpdated", groupsListener -> {
-                        groupsListener.onGroupUpdated(collar, this, updatedGroup);
+            if (response.player.equals(collar.player())) {
+                // Remove myself from the group
+                Group removed = groups.remove(response.groupId);
+                if (removed != null) {
+                    fireListener("onGroupLeft", groupsListener -> {
+                        groupsListener.onGroupLeft(collar, this, removed, response.player);
                     });
                     startOrStopSharingPosition();
-                });
-            });
+                }
+            } else {
+                // Remove another player from the group
+                Group group = groups.get(response.groupId);
+                if (group != null) {
+                    Group updatedGroup = group.removeMember(response.player);
+                    groups.put(updatedGroup.id, updatedGroup);
+                    fireListener("onGroupLeft", groupsListener -> {
+                        groupsListener.onGroupLeft(collar, this, updatedGroup, response.player);
+                    });
+                    startOrStopSharingPosition();
+                }
+            }
             return true;
-        } else if (resp instanceof GroupMembershipRequest) {
-            GroupMembershipRequest request = (GroupMembershipRequest)resp;
+        } else if (resp instanceof GroupInviteResponse) {
+            GroupInviteResponse request = (GroupInviteResponse)resp;
             GroupInvitation invitation = GroupInvitation.from(request);
             invitations.put(invitation.groupId, invitation);
             fireListener("onGroupInvited", groupsListener -> {
@@ -210,74 +205,66 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             });
             startOrStopSharingPosition();
             return true;
-        } else if (resp instanceof RemoveGroupMemberResponse) {
-            RemoveGroupMemberResponse response = (RemoveGroupMemberResponse)resp;
-            Group group = this.groups.get(response.groupId);
-            MinecraftPlayer minecraftPlayer = group.members.keySet().stream()
-                    .filter(player -> response.player.equals(player.id))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("Could not find player " + response.player));
-            updateState(response.groupId, groupState -> groupState.removeMember(minecraftPlayer)).ifPresent(newGroup -> {
-                fireListener("onGroupMemberRemoved", groupListener -> {
-                    groupListener.onGroupMemberRemoved(collar, newGroup, minecraftPlayer);
-                });
-            });
-            return true;
         } else if (resp instanceof CreateWaypointResponse) {
             if (resp instanceof CreateWaypointSuccessResponse) {
                 CreateWaypointSuccessResponse response = (CreateWaypointSuccessResponse)resp;
-                updateState(response.groupId, group -> group.addWaypoint(response.waypoint)).ifPresent(group1 -> {
+                Group group = groups.get(response.groupId);
+                if (group != null) {
+                    group = group.addWaypoint(response.waypoint);
+                    groups.put(group.id, group);
+                    Group finalGroup = group;
                     fireListener("onWaypointCreatedSuccess", groupListener -> {
-                        groupListener.onWaypointCreatedSuccess(collar, this, group1, response.waypoint);
+                        groupListener.onWaypointCreatedSuccess(collar, this, finalGroup, response.waypoint);
                     });
-                });
+                }
                 return true;
             } else if (resp instanceof CreateWaypointFailedResponse) {
                 CreateWaypointFailedResponse response = (CreateWaypointFailedResponse)resp;
-                updateState(response.groupId, group -> group.removeWaypoint(response.groupId)).ifPresent(group1 -> {
+                Group group = groups.get(response.groupId);
+                if (group != null) {
                     fireListener("onWaypointCreatedFailed", groupListener -> {
-                        groupListener.onWaypointCreatedFailed(collar, this, group1, response.waypointName);
+                        groupListener.onWaypointCreatedFailed(collar, this, group, response.waypointName);
                     });
-                });
+                }
                 return true;
             }
         } else if (resp instanceof RemoveWaypointResponse) {
             if (resp instanceof RemoveWaypointSuccessResponse) {
                 RemoveWaypointSuccessResponse response = (RemoveWaypointSuccessResponse) resp;
-                Waypoint waypoint = groups.get(response.groupId).waypoints.get(response.waypointId);
-                updateState(response.groupId, group -> group.removeWaypoint(response.waypointId)).ifPresent(group -> {
-                    fireListener("onWaypointRemovedSuccess", groupListener -> {
-                        groupListener.onWaypointRemovedSuccess(collar, this, group, waypoint);
-                    });
-                });
+                Group group = groups.get(response.groupId);
+                if (group != null) {
+                    Waypoint waypoint = group.waypoints.get(response.waypointId);
+                    if (waypoint != null) {
+                        group = group.removeWaypoint(response.waypointId);
+                        if (group != null) {
+                            Group finalGroup = group;
+                            fireListener("onWaypointRemovedSuccess", groupListener -> {
+                                groupListener.onWaypointRemovedSuccess(collar, this, finalGroup, waypoint);
+                            });
+                        }
+                    }
+                }
                 return true;
             }
             if (resp instanceof RemoveWaypointFailedResponse) {
                 RemoveWaypointFailedResponse response = (RemoveWaypointFailedResponse) resp;
-                updateState(response.groupId, group -> group.removeWaypoint(response.waypointId)).ifPresent(group -> {
-                    fireListener("onWaypointRemovedFailed", groupListener -> {
-                        groupListener.onWaypointRemovedFailed(collar, this, group, null);
-                    });
-                });
+                Group group = groups.get(response.groupId);
+                if (group != null) {
+                    Waypoint waypoint = group.waypoints.get(response.waypointId);
+                    if (waypoint != null) {
+                        fireListener("RemoveWaypointFailedResponse", groupListener -> {
+                            groupListener.onWaypointRemovedSuccess(collar, this, group, waypoint);
+                        });
+                    }
+                }
                 return true;
             }
         }
         return false;
     }
 
-    private void updatePosition(UpdateGroupMemberPositionRequest req) {
+    private void updatePosition(UpdateLocationRequest req) {
         sender.accept(req);
-    }
-
-    public Optional<Group> updateState(UUID groupId, Function<Group, Group> updater) {
-        synchronized (groupId) {
-            Group oldValue = groups.get(groupId);
-            Group newValue = updater.apply(oldValue);
-            if (newValue != null) {
-                groups.put(groupId, newValue);
-            }
-            return newValue == null ? Optional.of(oldValue) : Optional.of(newValue);
-        }
     }
 
     private void startOrStopSharingPosition() {
@@ -325,16 +312,20 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             scheduler.scheduleAtFixedRate(() -> {
                 groupsApi.all().stream()
                     .filter(groupsApi::isSharingCoordinatesWith)
-                    .findFirst().ifPresent(group -> groupsApi.updatePosition(new UpdateGroupMemberPositionRequest(identity, position.get()))
-                );
+                    .findFirst()
+                    .ifPresent(this::updateLocation);
             }, 0, 10, TimeUnit.SECONDS);
         }
 
         public void stop() {
-            groupsApi.updatePosition(new UpdateGroupMemberPositionRequest(identity, Location.UNKNOWN));
+            groupsApi.updatePosition(new UpdateLocationRequest(identity, groupsApi.collar.player(), Location.UNKNOWN));
             if (this.scheduler != null) {
                 this.scheduler.shutdown();
             }
+        }
+
+        private void updateLocation(Group group) {
+            groupsApi.updatePosition(new UpdateLocationRequest(identity, groupsApi.collar.player(), position.get()));
         }
     }
 }

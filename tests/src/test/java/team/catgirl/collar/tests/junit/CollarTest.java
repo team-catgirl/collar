@@ -71,9 +71,13 @@ public abstract class CollarTest {
         waitForCondition("client connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED);
         waitForCondition("client connected", () -> evePlayer.collar.getState() == Collar.State.CONNECTED);
 
-        System.out.println("Alice is " + alicePlayer.collar.identity());
-        System.out.println("Bob is " + bobPlayer.collar.identity());
-        System.out.println("Eve is " + evePlayer.collar.identity());
+        System.out.println("Alice is identity " + alicePlayer.collar.identity());
+        System.out.println("Bob is identity " + bobPlayer.collar.identity());
+        System.out.println("Eve is identity " + evePlayer.collar.identity());
+
+        System.out.println("Alice is player " + alicePlayer.collar.player());
+        System.out.println("Bob is player " + bobPlayer.collar.player());
+        System.out.println("Eve is player " + evePlayer.collar.player());
     }
 
     /** Approves the device on initial startup of client **/

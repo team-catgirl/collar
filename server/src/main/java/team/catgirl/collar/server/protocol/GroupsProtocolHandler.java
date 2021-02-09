@@ -3,6 +3,7 @@ package team.catgirl.collar.server.protocol;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.security.ClientIdentity;
@@ -30,9 +31,9 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
             LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity);
             CreateGroupRequest request = (CreateGroupRequest)req;
             resp = groups.createGroup(request);
-        } else if (req instanceof AcceptGroupMembershipRequest) {
+        } else if (req instanceof JoinGroupRequest) {
             LOGGER.log(Level.INFO, "AcceptGroupMembershipRequest received from " + req.identity);
-            AcceptGroupMembershipRequest request = (AcceptGroupMembershipRequest) req;
+            JoinGroupRequest request = (JoinGroupRequest) req;
             resp = groups.acceptMembership(request);
         } else if (req instanceof LeaveGroupRequest) {
             LOGGER.log(Level.INFO, "LeaveGroupRequest received from " + req.identity);
@@ -42,13 +43,13 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
             LOGGER.log(Level.INFO, "GroupInviteRequest received from " + req.identity);
             GroupInviteRequest request = (GroupInviteRequest)req;
             resp = groups.invite(request);
-        } else if (req instanceof UpdateGroupMemberPositionRequest) {
+        } else if (req instanceof UpdateLocationRequest) {
             LOGGER.log(Level.INFO, "UpdateGroupMemberPositionRequest received from " + req.identity);
-            UpdateGroupMemberPositionRequest request = (UpdateGroupMemberPositionRequest) req;
+            UpdateLocationRequest request = (UpdateLocationRequest) req;
             resp = groups.updatePosition(request);
-        } else if (req instanceof RemoveGroupMemberRequest) {
-            RemoveGroupMemberRequest request = (RemoveGroupMemberRequest) req;
-            resp = groups.removeMember(request);
+        } else if (req instanceof EjectGroupMemberRequest) {
+            EjectGroupMemberRequest request = (EjectGroupMemberRequest) req;
+            resp = groups.ejectMember(request);
         } else if (req instanceof CreateWaypointRequest) {
             CreateWaypointRequest request = (CreateWaypointRequest) req;
             resp = groups.createWaypoint(request);

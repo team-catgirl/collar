@@ -27,29 +27,6 @@ public class GroupsExample {
                 System.out.println("Group created!! " + group.id);
                 feature.startSharingCoordinates(group);
             }
-
-            @Override
-            public void onGroupJoined(Collar collar, GroupsApi feature, Group group) {
-            }
-
-            @Override
-            public void onGroupLeft(Collar collar, GroupsApi feature, Group group) {
-            }
-
-            @Override
-            public void onGroupUpdated(Collar collar, GroupsApi feature, Group group) {
-                group.members.forEach((minecraftPlayer, member) -> {
-                    System.out.println("Member " + member.player.id + " at position " + member.location);
-                });
-            }
-
-            @Override
-            public void onGroupMemberInvitationsSent(Collar collar, GroupsApi feature, Group group) {
-            }
-
-            @Override
-            public void onGroupInvited(Collar collar, GroupsApi feature, GroupInvitation invitation) {
-            }
         };
 
         CollarListener collarListener = new CollarListener() {

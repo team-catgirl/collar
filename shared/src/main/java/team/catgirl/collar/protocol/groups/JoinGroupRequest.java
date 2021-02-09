@@ -8,14 +8,17 @@ import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.UUID;
 
-public final class AcceptGroupMembershipRequest extends ProtocolRequest {
+/**
+ * Accept an invitation to the group
+ */
+public final class JoinGroupRequest extends ProtocolRequest {
     @JsonProperty("groupId")
     public final UUID groupId;
     @JsonProperty("state")
     public final MembershipState state;
 
     @JsonCreator
-    public AcceptGroupMembershipRequest(
+    public JoinGroupRequest(
             @JsonProperty("identity") ClientIdentity identity,
             @JsonProperty("groupId") UUID groupId,
             @JsonProperty("state") MembershipState state) {

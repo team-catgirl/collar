@@ -1,7 +1,7 @@
 package team.catgirl.collar.client.api.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.protocol.groups.GroupMembershipRequest;
+import team.catgirl.collar.protocol.groups.GroupInviteResponse;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.List;
@@ -21,7 +21,7 @@ public final class GroupInvitation {
         this.members = members;
     }
 
-    public static GroupInvitation from(GroupMembershipRequest req) {
+    public static GroupInvitation from(GroupInviteResponse req) {
         return new GroupInvitation(req.groupId, req.player, req.members);
     }
 }

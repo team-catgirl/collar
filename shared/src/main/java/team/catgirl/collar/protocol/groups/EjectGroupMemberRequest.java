@@ -7,7 +7,11 @@ import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.UUID;
 
-public final class RemoveGroupMemberRequest extends ProtocolRequest {
+/**
+ * Sent by the group owner to forcefully remove a player from the group
+ * Sender and all members recieve a {@link LeaveGroupResponse}
+ */
+public final class EjectGroupMemberRequest extends ProtocolRequest {
 
     @JsonProperty("groupId")
     public final UUID groupId;
@@ -15,7 +19,7 @@ public final class RemoveGroupMemberRequest extends ProtocolRequest {
     public final UUID player;
 
     @JsonCreator
-    public RemoveGroupMemberRequest(@JsonProperty("identity") ClientIdentity identity, @JsonProperty("groupId") UUID groupId, @JsonProperty("player") UUID player) {
+    public EjectGroupMemberRequest(@JsonProperty("identity") ClientIdentity identity, @JsonProperty("groupId") UUID groupId, @JsonProperty("player") UUID player) {
         super(identity);
         this.groupId = groupId;
         this.player = player;

@@ -8,6 +8,10 @@ import team.catgirl.collar.security.ClientIdentity;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Send an invitation to players to join an existing group
+ * Sent by the owner on behalf of all members of the group
+ */
 public final class GroupInviteRequest extends ProtocolRequest {
     @JsonProperty("groupId")
     public final UUID groupId;

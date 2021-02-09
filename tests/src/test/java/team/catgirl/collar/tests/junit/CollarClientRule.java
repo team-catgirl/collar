@@ -19,9 +19,8 @@ public final class CollarClientRule implements TestRule {
         do {
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
                 collar.disconnect();
-                throw new IllegalStateException();
             }
         } while (collar.getState() != Collar.State.DISCONNECTED);
     }, "Collar Client Test Loop");
@@ -42,7 +41,7 @@ public final class CollarClientRule implements TestRule {
                 try {
                     base.evaluate();
                 } finally {
-                    thread.stop();
+                    thread.interrupt();
                 }
             }
         };

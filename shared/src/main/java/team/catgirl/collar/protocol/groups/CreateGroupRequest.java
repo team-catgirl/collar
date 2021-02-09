@@ -8,6 +8,9 @@ import team.catgirl.collar.security.ClientIdentity;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Create a new group and send {@link GroupInviteRequest}'s for all players in `players`
+ */
 public final class CreateGroupRequest extends ProtocolRequest {
     @JsonProperty("players")
     public final List<UUID> players;

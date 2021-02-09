@@ -39,6 +39,7 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
 
@@ -209,6 +210,14 @@ public final class Collar {
         }
     }
 
+    /**
+     * The current player
+     * @return player
+     */
+    public MinecraftPlayer player() {
+        return configuration.sessionSupplier.get().toPlayer();
+    }
+
     class CollarWebSocket extends WebSocketListener {
         private final ObjectMapper mapper = Utils.messagePackMapper();
         private final Collar collar;
@@ -246,7 +255,6 @@ public final class Collar {
             UUID finalOwner = owner;
             return new ResettableClientIdentityStore(() -> SignalClientIdentityStore.from(finalOwner, configuration.homeDirectory, signalProtocolStore -> {
                 LOGGER.log(Level.INFO, "New installation. Registering device with server");
-                IdentityKey publicKey = signalProtocolStore.getIdentityKeyPair().getPublicKey();
                 new ProfileState(finalOwner).write(configuration.homeDirectory);
             }, (store) -> {
                 LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server " + serverIdentity);

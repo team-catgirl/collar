@@ -5,8 +5,8 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import spark.Spark;
-import team.catgirl.collar.server.Main;
 import team.catgirl.collar.server.Services;
+import team.catgirl.collar.server.WebServer;
 import team.catgirl.collar.server.configuration.Configuration;
 import team.catgirl.collar.server.mongo.Mongo;
 
@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 public final class CollarServerRule implements TestRule {
 
     private final Consumer<Services> setupState;
-    public Main.Server server;
+    public WebServer webServer;
 
     public CollarServerRule(Consumer<Services> setupState) {
         this.setupState = setupState;
@@ -32,10 +32,10 @@ public final class CollarServerRule implements TestRule {
     public Statement apply(Statement base, Description description) {
         Mongo.getTestingDatabase().drop();
         MongoDatabase db = Mongo.getTestingDatabase();
-        server = new Main.Server(Configuration.testConfiguration(db));
+        webServer = new WebServer(Configuration.testConfiguration(db));
         return new Statement() {
             @Override public void evaluate() throws Throwable {
-                server.start(setupState);
+                webServer.start(setupState);
                 try {
                     base.evaluate();
                 } finally {

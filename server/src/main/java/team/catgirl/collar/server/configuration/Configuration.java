@@ -80,10 +80,10 @@ public class Configuration {
                 httpPort());
     }
 
-    public static Configuration testConfiguration() {
-        LOGGER.log(Level.SEVERE, "Starting in insecure development mode. Do not use in production.");
+    public static Configuration testConfiguration(MongoDatabase db) {
+        LOGGER.log(Level.SEVERE, "Starting in insecure testing mode. Do not use in production.");
         return new Configuration(
-                Mongo.database("mongodb://localhost/collar-dev"),
+                db,
                 new DefaultAppUrlProvider("http://localhost:3001"),
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),

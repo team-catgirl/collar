@@ -25,10 +25,6 @@
             <groupId>team.catgirl.collar</groupId>
             <artifactId>server</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>team.catgirl.collar</groupId>-->
-<!--            <artifactId>shared</artifactId>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

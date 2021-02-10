@@ -3,7 +3,6 @@ package team.catgirl.collar.server;
 import spark.ModelAndView;
 import spark.Request;
 import team.catgirl.collar.api.http.*;
-import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.configuration.Configuration;
@@ -20,7 +19,9 @@ import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.textures.TextureService.GetTextureContentRequest;
 
+import javax.servlet.ServletOutputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -130,6 +131,17 @@ public class WebServer {
                         AuthenticationService.CreateAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), AuthenticationService.CreateAccountRequest.class);
                         return services.auth.createAccount(RequestContext.from(request), req);
                     });
+                });
+
+                get("/textures/:id/png", (request, response) -> {
+                    String idAsString = request.params("id");
+                    UUID uuid = UUID.fromString(idAsString);
+                    byte[] bytes = services.textures.getTextureContent(new GetTextureContentRequest(uuid)).content.bytes;
+                    response.header("Content-Type", "image/png");
+                    try (ServletOutputStream outputStream = response.raw().getOutputStream()) {
+                        outputStream.write(bytes);
+                    }
+                    return "";
                 });
             });
         });

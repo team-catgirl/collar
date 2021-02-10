@@ -38,6 +38,8 @@ public abstract class CollarTest {
         return services.get();
     }
 
+    protected void withServices(Services services) {}
+
     @Rule
     public CollarServerRule serverRule = new CollarServerRule(services -> {
         this.services.set(services);
@@ -56,6 +58,8 @@ public abstract class CollarTest {
                 "eve",
                 "Eve >_>"
         )).profile);
+
+        withServices(services);
     });
 
     // Generates a new location on every call

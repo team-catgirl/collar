@@ -37,7 +37,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
                 sessions.getIdentity(player).ifPresent(identity -> {
                     try {
                         Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(identity.owner, request.type)).texture;
-                        sender.accept(new GetTextureResponse(serverIdentity, texture.textureId, player, texture.url, texture.type));
+                        sender.accept(new GetTextureResponse(serverIdentity, texture.id, player, texture.url, texture.type));
                     } catch (NotFoundException ignored) {}
                 });
             });

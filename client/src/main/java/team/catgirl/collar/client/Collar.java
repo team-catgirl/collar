@@ -116,6 +116,7 @@ public final class Collar {
      * @return groups api
      */
     public GroupsApi groups() {
+        assertConnected();
         return groupsApi;
     }
 
@@ -123,6 +124,7 @@ public final class Collar {
      * @return location api
      */
     public LocationApi location() {
+        assertConnected();
         return locationApi;
     }
 
@@ -230,6 +232,12 @@ public final class Collar {
         return configuration.sessionSupplier.get().toPlayer();
     }
 
+    private void assertConnected() {
+        if (state != State.CONNECTED) {
+            throw new IllegalStateException("Cannot use the API until client is CONNECTED");
+        }
+    }
+
     class CollarWebSocket extends WebSocketListener {
         private final ObjectMapper mapper = Utils.messagePackMapper();
         private final Collar collar;
@@ -330,7 +338,6 @@ public final class Collar {
                 identityStore.trustIdentity(response);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
                 sendRequest(webSocket, new IdentifyRequest(identity));
-//                sendRequest(webSocket, new StartSessionRequest(identity, configuration.sessionSupplier.get()));
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));

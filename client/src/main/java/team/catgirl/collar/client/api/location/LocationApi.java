@@ -124,6 +124,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
         if (state == Collar.State.DISCONNECTED) {
             synchronized (this) {
                 playerLocations.clear();
+                groupsSharingWith.clear();
             }
         }
     }

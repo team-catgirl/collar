@@ -9,7 +9,9 @@ import org.bson.BsonObjectId;
 import org.bson.Document;
 import org.bson.types.Binary;
 import team.catgirl.collar.api.http.HttpException;
+import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ConflictException;
+import team.catgirl.collar.api.http.HttpException.ForbiddenException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.server.http.RequestContext;
@@ -37,8 +39,11 @@ public class TextureService {
         this.docs.createIndex(new Document(index));
     }
 
-    public CreateTextureResponse createTexture(RequestContext context, CreateTextureRequest request) {
+    public CreateTextureResponse createTexture(RequestContext context, CreateTextureRequest request) throws BadRequestException {
         context.assertNotAnonymous();
+        if (request.bytes.length > (1024*2)) {
+            throw new BadRequestException("bytes must be less than 2mb");
+        }
         if (docs.find(and(eq(FIELD_OWNER, request.owner), eq(FIELD_TYPE, request.type.name()))).iterator().hasNext()) {
             throw new ConflictException("owner already has texture of this type");
         }

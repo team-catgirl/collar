@@ -13,6 +13,7 @@ import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.location.PlayerLocationService;
 import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
 
@@ -30,6 +31,7 @@ public final class Services {
     public final MinecraftSessionVerifier minecraftSessionVerifier;
     public final GroupService groups;
     public final PlayerLocationService playerLocations;
+    public final TextureService textures;
 
     public Services(Configuration configuration) {
         this.jsonMapper = Utils.jsonMapper();
@@ -45,5 +47,6 @@ public final class Services {
         this.minecraftSessionVerifier = configuration.minecraftSessionVerifier;
         this.groups = new GroupService(identityStore.getIdentity(), sessions);
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
+        this.textures = new TextureService(configuration.database);
     }
 }

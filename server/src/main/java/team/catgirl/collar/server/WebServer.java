@@ -14,6 +14,7 @@ import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.GroupsProtocolHandler;
 import team.catgirl.collar.server.protocol.LocationProtocolHandler;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
+import team.catgirl.collar.server.protocol.TexturesProtocolHandler;
 import team.catgirl.collar.server.services.authentication.AuthenticationService;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
@@ -69,6 +70,7 @@ public class WebServer {
         List<ProtocolHandler> protocolHandlers = new ArrayList<>();
         protocolHandlers.add(new GroupsProtocolHandler(services.groups));
         protocolHandlers.add(new LocationProtocolHandler(services.playerLocations));
+        protocolHandlers.add(new TexturesProtocolHandler(services.identityStore.getIdentity(), services.sessions, services.textures));
         webSocket("/api/1/listen", new CollarServer(services, protocolHandlers));
 
         // API routes

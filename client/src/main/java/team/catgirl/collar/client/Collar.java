@@ -16,6 +16,7 @@ import team.catgirl.collar.client.api.features.AbstractApi;
 import team.catgirl.collar.client.api.features.ApiListener;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.location.LocationApi;
+import team.catgirl.collar.client.api.textures.TexturesApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
@@ -56,10 +57,10 @@ public final class Collar {
 
     private static final CollarVersion VERSION = new CollarVersion(0, 1);
 
-    private final CollarConfiguration configuration;
-    private final OkHttpClient http;
+    public final CollarConfiguration configuration;
     private final GroupsApi groupsApi;
     private final LocationApi locationApi;
+    private final TexturesApi texturesApi;
     private WebSocket webSocket;
     private State state;
     private final List<AbstractApi<? extends ApiListener>> apis;
@@ -67,16 +68,17 @@ public final class Collar {
     private ResettableClientIdentityStore identityStore;
     private final Supplier<ClientIdentityStore> identityStoreSupplier;
 
-    private Collar(OkHttpClient http, CollarConfiguration configuration) {
-        this.http = http;
+    private Collar(CollarConfiguration configuration) {
         this.configuration = configuration;
         changeState(State.DISCONNECTED);
         this.apis = new ArrayList<>();
         this.identityStoreSupplier = () -> identityStore;
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), groupsApi, configuration.playerLocation);
+        this.texturesApi = new TexturesApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.apis.add(groupsApi);
         this.apis.add(locationApi);
+        this.apis.add(texturesApi);
     }
 
     /**
@@ -84,18 +86,17 @@ public final class Collar {
      * @param configuration of the client
      */
     public static Collar create(CollarConfiguration configuration) {
-        OkHttpClient http = new OkHttpClient();
-        return new Collar(http, configuration);
+        return new Collar(configuration);
     }
 
     /**
      * Connect to server
      */
     public void connect() {
-        checkServerCompatibility(http, configuration);
+        checkServerCompatibility(configuration);
         String url = UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/1/listen").toString();
         LOGGER.log(Level.INFO, "Connecting to server " + url);
-        webSocket = http.newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
+        webSocket = Utils.http().newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
         webSocket.request();
         changeState(State.CONNECTING);
     }
@@ -126,6 +127,14 @@ public final class Collar {
     public LocationApi location() {
         assertConnected();
         return locationApi;
+    }
+
+    /**
+     * @return texture api
+     */
+    public TexturesApi textures() {
+        assertConnected();
+        return texturesApi;
     }
 
     /**
@@ -173,11 +182,10 @@ public final class Collar {
 
     /**
      * Test that the client version is supported by the server and that the client is configured correctly for its features
-     * @param http client
      * @param configuration of the client
      */
-    private static void checkServerCompatibility(OkHttpClient http, CollarConfiguration configuration) {
-        DiscoverResponse response = httpGet(http, UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover").toString(), DiscoverResponse.class);
+    private static void checkServerCompatibility(CollarConfiguration configuration) {
+        DiscoverResponse response = httpGet(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover").toString(), DiscoverResponse.class);
         StringJoiner versions = new StringJoiner(",");
         response.versions.stream()
                 .peek(collarVersion -> versions.add(collarVersion.major + "." + collarVersion.minor))
@@ -207,11 +215,11 @@ public final class Collar {
                 .findFirst();
     }
 
-    private static <T> T httpGet(OkHttpClient http, String url, Class<T> aClass) {
+    private static <T> T httpGet(String url, Class<T> aClass) {
         Request request = new Request.Builder()
                 .url(url)
                 .build();
-        try (Response response = http.newCall(request).execute()) {
+        try (Response response = Utils.http().newCall(request).execute()) {
             if (response.code() == 200) {
                 byte[] bytes = Objects.requireNonNull(response.body()).bytes();
                 return Utils.jsonMapper().readValue(bytes, aClass);

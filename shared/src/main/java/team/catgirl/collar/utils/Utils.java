@@ -3,6 +3,7 @@ package team.catgirl.collar.utils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import okhttp3.OkHttpClient;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 public final class Utils {
 
+    private static final OkHttpClient http = new OkHttpClient();
     private static final ObjectMapper JSON_MAPPER;
     private static final ObjectMapper MESSAGE_PACK_MAPPER;
 
@@ -67,6 +69,8 @@ public final class Utils {
     public static SecureRandom secureRandom() {
         return SECURERANDOM;
     }
+
+    public static OkHttpClient http() { return http; }
 
     private Utils() {}
 }

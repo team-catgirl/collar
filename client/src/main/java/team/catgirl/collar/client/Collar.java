@@ -15,6 +15,7 @@ import team.catgirl.collar.client.CollarException.UnsupportedServerVersionExcept
 import team.catgirl.collar.client.api.features.AbstractApi;
 import team.catgirl.collar.client.api.features.ApiListener;
 import team.catgirl.collar.client.api.groups.GroupsApi;
+import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
@@ -58,6 +59,7 @@ public final class Collar {
     private final CollarConfiguration configuration;
     private final OkHttpClient http;
     private final GroupsApi groupsApi;
+    private final LocationApi locationApi;
     private WebSocket webSocket;
     private State state;
     private final Map<Class<?>, AbstractApi<? extends ApiListener>> features;
@@ -71,8 +73,10 @@ public final class Collar {
         changeState(State.DISCONNECTED);
         this.features = new HashMap<>();
         this.identityStoreSupplier = () -> identityStore;
-        this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request), configuration.playerPosition);
+        this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
+        this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), groupsApi, configuration.playerLocation);
         this.features.put(GroupsApi.class, groupsApi);
+        this.features.put(LocationApi.class, locationApi);
     }
 
     /**
@@ -116,6 +120,13 @@ public final class Collar {
     }
 
     /**
+     * @return location api
+     */
+    public LocationApi location() {
+        return locationApi;
+    }
+
+    /**
      * @return client state
      */
     public State getState() {
@@ -151,6 +162,7 @@ public final class Collar {
             }
             if (previousState != null) {
                 this.configuration.listener.onStateChanged(this, state);
+                this.groupsApi.onStageChanged(state);
             }
         } else {
             throw new IllegalStateException("Cannot change state " + state + " to the same state");
@@ -183,7 +195,7 @@ public final class Collar {
                 throw new IllegalStateException("nojang verification scheme requested but was provided an invalid MinecraftSession");
             }
         });
-        findFeature(response, "groups:coordinates").orElseThrow(() -> new IllegalStateException("Server does not support groups:coordinates"));
+        findFeature(response, "groups:locations").orElseThrow(() -> new IllegalStateException("Server does not support groups:locations"));
         findFeature(response, "groups:waypoints").orElseThrow(() -> new IllegalStateException("Server does not support groups:waypoints"));
     }
 

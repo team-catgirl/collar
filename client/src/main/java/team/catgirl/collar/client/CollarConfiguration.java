@@ -18,14 +18,14 @@ public final class CollarConfiguration {
 
     private static final Logger LOGGER = Logger.getLogger(CollarConfiguration.class.getName());
 
-    public final Supplier<Location> playerPosition;
+    public final Supplier<Location> playerLocation;
     public final Supplier<MinecraftSession> sessionSupplier;
     public final HomeDirectory homeDirectory;
     public final URL collarServerURL;
     public final CollarListener listener;
 
-    private CollarConfiguration(Supplier<Location> playerPosition, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener) {
-        this.playerPosition = playerPosition;
+    private CollarConfiguration(Supplier<Location> playerLocation, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener) {
+        this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
         this.homeDirectory = homeDirectory;
         this.collarServerURL = collarServerURL;
@@ -34,7 +34,7 @@ public final class CollarConfiguration {
 
     public final static class Builder {
         private CollarListener listener;
-        private Supplier<Location> playerPosition;
+        private Supplier<Location> playerLocation;
         private Supplier<MinecraftSession> sessionSupplier;
         private File homeDirectory;
         private URL collarServerURL;
@@ -103,12 +103,12 @@ public final class CollarConfiguration {
         }
 
         /**
-         * Supply the players current position
-         * @param playerPosition supplier
+         * Supply the players current location
+         * @param playerLocation supplier
          * @return builder
          */
-        public Builder withPlayerPosition(Supplier<Location> playerPosition) {
-            this.playerPosition = playerPosition;
+        public Builder withPlayerLocation(Supplier<Location> playerLocation) {
+            this.playerLocation = playerLocation;
             return this;
         }
 
@@ -146,7 +146,7 @@ public final class CollarConfiguration {
             Objects.requireNonNull(homeDirectory, "Minecraft home directory must be set");
             Objects.requireNonNull(sessionSupplier, "Session supplier not set");
             HomeDirectory from = HomeDirectory.from(homeDirectory, collarServerURL.getHost());
-            Supplier<Location> playerPosition = MoreObjects.firstNonNull(this.playerPosition, () -> {
+            Supplier<Location> playerPosition = MoreObjects.firstNonNull(this.playerLocation, () -> {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });

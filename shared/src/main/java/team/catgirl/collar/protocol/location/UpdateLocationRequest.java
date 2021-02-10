@@ -14,15 +14,11 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 public final class UpdateLocationRequest extends ProtocolRequest {
     @JsonProperty("location")
     public final Location location;
-    @JsonProperty("player")
-    public final MinecraftPlayer player;
 
     @JsonCreator
     public UpdateLocationRequest(@JsonProperty("identity") ClientIdentity identity,
-                                 @JsonProperty("player") MinecraftPlayer player,
                                  @JsonProperty("location") Location location) {
         super(identity);
-        this.player = player;
         this.location = location;
     }
 }

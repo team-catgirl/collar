@@ -11,6 +11,7 @@ import team.catgirl.collar.server.services.authentication.AuthenticationService;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.groups.GroupService;
+import team.catgirl.collar.server.services.location.PlayerLocationService;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
@@ -28,19 +29,21 @@ public final class Services {
     public final AuthenticationService auth;
     public final MinecraftSessionVerifier minecraftSessionVerifier;
     public final GroupService groups;
+    public final PlayerLocationService playerLocations;
 
     public Services(Configuration configuration) {
-        jsonMapper = Utils.jsonMapper();
-        packetMapper = Utils.messagePackMapper();
-        urlProvider = configuration.appUrlProvider;
-        identityStore = new SignalServerIdentityStore(configuration.database);
-        sessions = new SessionManager(packetMapper, identityStore);
-        passwordHashing = configuration.passwordHashing;
-        profiles = new ProfileService(configuration.database, passwordHashing);
-        devices = new DeviceService(configuration.database);
-        tokenCrypter = configuration.tokenCrypter;
-        auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter);
-        minecraftSessionVerifier = configuration.minecraftSessionVerifier;
-        groups = new GroupService(identityStore.getIdentity(), sessions);
+        this.jsonMapper = Utils.jsonMapper();
+        this.packetMapper = Utils.messagePackMapper();
+        this.urlProvider = configuration.appUrlProvider;
+        this.identityStore = new SignalServerIdentityStore(configuration.database);
+        this.sessions = new SessionManager(packetMapper, identityStore);
+        this.passwordHashing = configuration.passwordHashing;
+        this.profiles = new ProfileService(configuration.database, passwordHashing);
+        this.devices = new DeviceService(configuration.database);
+        this.tokenCrypter = configuration.tokenCrypter;
+        this.auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter);
+        this.minecraftSessionVerifier = configuration.minecraftSessionVerifier;
+        this.groups = new GroupService(identityStore.getIdentity(), sessions);
+        this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
     }
 }

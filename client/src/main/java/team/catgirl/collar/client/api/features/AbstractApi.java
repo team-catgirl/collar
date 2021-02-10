@@ -55,5 +55,16 @@ public abstract class AbstractApi<T extends ApiListener> {
         });
     }
 
+    /**
+     * Listen to state changes from the client
+     * @param state state
+     */
+    public abstract void onStageChanged(Collar.State state);
+
+    /**
+     * Handle a protocol response
+     * @param resp to handle
+     * @return if the response was handled by this module or not
+     */
     public abstract boolean handleResponse(ProtocolResponse resp);
 }

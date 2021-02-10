@@ -10,7 +10,6 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
-import team.catgirl.collar.protocol.location.ClearLocationRequest;
 import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
@@ -20,7 +19,6 @@ import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointFailedResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointSuccessResponse;
-import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,13 +31,9 @@ import java.util.function.Supplier;
 public final class GroupsApi extends AbstractApi<GroupsListener> {
     private final ConcurrentMap<UUID, Group> groups = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, GroupInvitation> invitations = new ConcurrentHashMap<>();
-    private final ConcurrentMap<UUID, CoordinateSharingState> sharingState = new ConcurrentHashMap<>();
-    private final Supplier<Location> positionSupplier;
-    private PositionUpdater positionUpdater;
 
-    public GroupsApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, Supplier<Location> positionSupplier) {
+    public GroupsApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
         super(collar, identityStoreSupplier, sender);
-        this.positionSupplier = positionSupplier;
     }
 
     /**
@@ -114,29 +108,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     }
 
     /**
-     * Start sharing your coordinates with a group
-     * @param group to share with
-     */
-    public void startSharingCoordinates(Group group) {
-        synchronized (this) {
-            sharingState.put(group.id, CoordinateSharingState.SHARING);
-            startOrStopSharingPosition();
-        }
-    }
-
-    /**
-     * Start sharing your coordinates with a group
-     * @param group to stop sharing with
-     */
-    public void stopSharingCoordinates(Group group) {
-        synchronized (this) {
-            sharingState.put(group.id, CoordinateSharingState.NOT_SHARING);
-            startOrStopSharingPosition();
-            sender.accept(new ClearLocationRequest(identity()));
-        }
-    }
-
-    /**
      * Add a shared {@link team.catgirl.collar.api.waypoints.Waypoint} to the group
      * @param group to add waypoint to
      * @param name of the waypoint
@@ -155,15 +126,13 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         sender.accept(new RemoveWaypointRequest(identity(), group.id, waypoint.id));
     }
 
-    /**
-     * Tests if you are currently sharing with the group
-     * @param group to test
-     * @return sharing
-     */
-    public boolean isSharingCoordinatesWith(Group group) {
-        synchronized (this) {
-            CoordinateSharingState coordinateSharingState = sharingState.get(group.id);
-            return coordinateSharingState == CoordinateSharingState.SHARING;
+    @Override
+    public void onStageChanged(Collar.State state) {
+        if (state == Collar.State.DISCONNECTED) {
+            synchronized (this) {
+                groups.clear();
+                invitations.clear();
+            }
         }
     }
 
@@ -179,7 +148,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 fireListener("onGroupJoined", groupsListener -> {
                     groupsListener.onGroupJoined(collar, this, response.group, collar.player());
                 });
-                startOrStopSharingPosition();
             }
             return true;
         } else if (resp instanceof JoinGroupResponse) {
@@ -190,7 +158,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                     groupsListener.onGroupJoined(collar, this, response.group, response.player);
                 });
                 invitations.remove(response.group.id);
-                startOrStopSharingPosition();
             }
             return true;
         } else if (resp instanceof LeaveGroupResponse) {
@@ -203,7 +170,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                         fireListener("onGroupLeft", groupsListener -> {
                             groupsListener.onGroupLeft(collar, this, removed, response.player);
                         });
-                        startOrStopSharingPosition();
                     }
                     invitations.remove(response.groupId);
                 } else {
@@ -215,7 +181,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                         fireListener("onGroupLeft", groupsListener -> {
                             groupsListener.onGroupLeft(collar, this, updatedGroup, response.player);
                         });
-                        startOrStopSharingPosition();
                     }
                 }
             }
@@ -228,7 +193,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 fireListener("onGroupInvited", groupsListener -> {
                     groupsListener.onGroupInvited(collar, this, invitation);
                 });
-                startOrStopSharingPosition();
             }
             return true;
         } else if (resp instanceof CreateWaypointResponse) {
@@ -296,67 +260,5 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
 
     private void updatePosition(UpdateLocationRequest req) {
         sender.accept(req);
-    }
-
-    private void startOrStopSharingPosition() {
-        // Clean these out
-        if (groups.isEmpty()) {
-            sharingState.clear();
-        }
-        // Update the position
-        if (positionUpdater != null) {
-            if (groups.isEmpty() && positionUpdater.isRunning()) {
-                positionUpdater.stop();
-                positionUpdater = null;
-            } else if (!positionUpdater.isRunning()) {
-                positionUpdater.start();
-            }
-        } else if (!groups.isEmpty()) {
-            positionUpdater = new PositionUpdater(identity(), this, positionSupplier);
-            positionUpdater.start();
-        }
-    }
-
-    public enum CoordinateSharingState {
-        SHARING,
-        NOT_SHARING
-    }
-
-    static class PositionUpdater {
-        private final ClientIdentity identity;
-        private final GroupsApi groupsApi;
-        private final Supplier<Location> position;
-        private ScheduledExecutorService scheduler;
-
-        public PositionUpdater(ClientIdentity identity, GroupsApi groupsApi, Supplier<Location> position) {
-            this.identity = identity;
-            this.groupsApi = groupsApi;
-            this.position = position;
-        }
-
-        public boolean isRunning() {
-            return !scheduler.isShutdown();
-        }
-
-        public void start() {
-            scheduler = Executors.newScheduledThreadPool(1);
-            scheduler.scheduleAtFixedRate(() -> {
-                groupsApi.all().stream()
-                    .filter(groupsApi::isSharingCoordinatesWith)
-                    .findFirst()
-                    .ifPresent(this::updateLocation);
-            }, 0, 10, TimeUnit.SECONDS);
-        }
-
-        public void stop() {
-            groupsApi.updatePosition(new UpdateLocationRequest(identity, groupsApi.collar.player(), Location.UNKNOWN));
-            if (this.scheduler != null) {
-                this.scheduler.shutdown();
-            }
-        }
-
-        private void updateLocation(Group group) {
-            groupsApi.updatePosition(new UpdateLocationRequest(identity, groupsApi.collar.player(), position.get()));
-        }
     }
 }

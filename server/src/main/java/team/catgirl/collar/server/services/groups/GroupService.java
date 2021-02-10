@@ -6,7 +6,6 @@ import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
-import team.catgirl.collar.protocol.location.UpdateLocationResponse;
 import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointFailedResponse;
@@ -40,6 +39,16 @@ public final class GroupService {
     public GroupService(ServerIdentity serverIdentity, SessionManager sessions) {
         this.serverIdentity = serverIdentity;
         this.sessions = sessions;
+    }
+
+    /**
+     * @param groupIds to find
+     * @return the list of matching groups
+     */
+    public List<Group> findGroups(List<UUID> groupIds) {
+        return groupsById.entrySet().stream()
+                .filter(uuidGroupEntry -> groupIds.contains(uuidGroupEntry.getKey()))
+                .map(Map.Entry::getValue).collect(Collectors.toList());
     }
 
     /**

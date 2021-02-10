@@ -3,6 +3,7 @@ package team.catgirl.collar.server;
 import spark.ModelAndView;
 import spark.Request;
 import team.catgirl.collar.api.http.*;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.configuration.Configuration;
@@ -11,6 +12,7 @@ import team.catgirl.collar.server.http.Cookie;
 import team.catgirl.collar.server.http.HandlebarsTemplateEngine;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.GroupsProtocolHandler;
+import team.catgirl.collar.server.protocol.LocationProtocolHandler;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.services.authentication.AuthenticationService;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
@@ -66,6 +68,7 @@ public class WebServer {
         // WebSocket server
         List<ProtocolHandler> protocolHandlers = new ArrayList<>();
         protocolHandlers.add(new GroupsProtocolHandler(services.groups));
+        protocolHandlers.add(new LocationProtocolHandler(services.playerLocations));
         webSocket("/api/1/listen", new CollarServer(services, protocolHandlers));
 
         // API routes
@@ -138,7 +141,7 @@ public class WebServer {
             versions.add(new CollarVersion(0, 1));
             List<CollarFeature> features = new ArrayList<>();
             features.add(new CollarFeature("auth:verification_scheme", configuration.minecraftSessionVerifier.getName()));
-            features.add(new CollarFeature("groups:coordinates", true));
+            features.add(new CollarFeature("groups:locations", true));
             features.add(new CollarFeature("groups:waypoints", true));
             return new DiscoverResponse(versions, features);
         });

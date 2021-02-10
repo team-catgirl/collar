@@ -12,16 +12,16 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
  * For example, members of groups.
  * It is never sent to the sender
  */
-public final class UpdateLocationResponse extends ProtocolResponse {
+public final class LocationUpdatedResponse extends ProtocolResponse {
 
     public final ClientIdentity sender;
     public final MinecraftPlayer player;
     public final Location location;
 
-    public UpdateLocationResponse(@JsonProperty("identity") ServerIdentity identity,
-                                  @JsonProperty("sender") ClientIdentity sender,
-                                  @JsonProperty("player") MinecraftPlayer player,
-                                  @JsonProperty("location") Location location) {
+    public LocationUpdatedResponse(@JsonProperty("identity") ServerIdentity identity,
+                                   @JsonProperty("sender") ClientIdentity sender,
+                                   @JsonProperty("player") MinecraftPlayer player,
+                                   @JsonProperty("location") Location location) {
         super(identity);
         this.sender = sender;
         this.player = player;

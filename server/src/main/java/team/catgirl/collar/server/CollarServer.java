@@ -128,13 +128,11 @@ public class CollarServer {
                 services.sessions.stopSession(session, req.identity + " identity is not trusted", null, null);
             }
         } else {
-            protocolHandlers.stream()
-                    .map(protocolHandler -> protocolHandler.handleRequest(this, req, response -> send(session, response)))
-                    .findFirst()
-                    .or(() -> {
-                        LOGGER.log(Level.SEVERE, "message received was not understood");
-                        return Optional.empty();
-                    });
+            for (ProtocolHandler handler : protocolHandlers) {
+                if (handler.handleRequest(this, req, response -> send(session, response))) {
+                    break;
+                }
+            }
         }
     }
 

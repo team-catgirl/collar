@@ -2,6 +2,8 @@ package team.catgirl.collar.tests.junit;
 
 import org.junit.Before;
 import org.junit.Rule;
+import team.catgirl.collar.api.location.Dimension;
+import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.CollarListener;
@@ -11,10 +13,12 @@ import team.catgirl.collar.server.services.devices.Device;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.utils.Utils;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
 
@@ -54,14 +58,26 @@ public abstract class CollarTest {
         )).profile);
     });
 
-    @Rule
-    public CollarClientRule alicePlayer = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder().withListener(new ApprovingListener(aliceProfile, services, devicesConfirmed)));
+    // Generates a new location on every call
+    private final Supplier<Location> locationSupplier = () -> new Location(Utils.secureRandom().nextDouble(), Utils.secureRandom().nextDouble(), Utils.secureRandom().nextDouble(), Dimension.OVERWORLD);
 
     @Rule
-    public CollarClientRule bobPlayer = new CollarClientRule(bobPlayerId, new CollarConfiguration.Builder().withListener(new ApprovingListener(bobProfile, services, devicesConfirmed)));
+    public CollarClientRule alicePlayer = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder()
+            .withListener(new ApprovingListener(aliceProfile, services, devicesConfirmed))
+            .withPlayerLocation(locationSupplier)
+    );
 
     @Rule
-    public CollarClientRule evePlayer = new CollarClientRule(evePlayerId, new CollarConfiguration.Builder().withListener(new ApprovingListener(eveProfile, services, devicesConfirmed)));
+    public CollarClientRule bobPlayer = new CollarClientRule(bobPlayerId, new CollarConfiguration.Builder()
+            .withListener(new ApprovingListener(bobProfile, services, devicesConfirmed))
+            .withPlayerLocation(locationSupplier)
+    );
+
+    @Rule
+    public CollarClientRule evePlayer = new CollarClientRule(evePlayerId, new CollarConfiguration.Builder()
+            .withListener(new ApprovingListener(eveProfile, services, devicesConfirmed))
+            .withPlayerLocation(locationSupplier)
+    );
 
     @Before
     public void waitForClientsToConnect() throws InterruptedException {

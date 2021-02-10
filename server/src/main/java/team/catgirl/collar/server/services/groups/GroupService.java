@@ -47,7 +47,7 @@ public final class GroupService {
      */
     public List<Group> findGroups(List<UUID> groupIds) {
         return groupsById.entrySet().stream()
-                .filter(uuidGroupEntry -> groupIds.contains(uuidGroupEntry.getKey()))
+                .filter(entry -> groupIds.contains(entry.getKey()))
                 .map(Map.Entry::getValue).collect(Collectors.toList());
     }
 
@@ -163,25 +163,6 @@ public final class GroupService {
             }
             return response;
         }
-    }
-
-    /**
-     * Update the player state
-     * @param req to update player position
-     * @return response to send to client
-     */
-    public BatchProtocolResponse updatePosition(UpdateLocationRequest req) {
-        MinecraftPlayer owner = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
-        List<Group> groups = findGroupsForPlayer(owner);
-        BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
-//        for (Group group : groups) {
-//            synchronized (group.id) {
-//                group = group.updateMemberPosition(owner, req.location);
-//                updateState(group);
-//                responses = responses.concat(sendUpdatesToMembers(owner, group, Group.MembershipState.ACCEPTED, (identity, group1, member) -> new UpdateLocationResponse(serverIdentity, req.identity, owner, req.location)));
-//            }
-//        }
-        return responses;
     }
 
     public ProtocolResponse ejectMember(EjectGroupMemberRequest req) {

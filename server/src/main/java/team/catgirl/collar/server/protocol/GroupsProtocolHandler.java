@@ -43,10 +43,6 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
             LOGGER.log(Level.INFO, "GroupInviteRequest received from " + req.identity);
             GroupInviteRequest request = (GroupInviteRequest)req;
             resp = groups.invite(request);
-        } else if (req instanceof UpdateLocationRequest) {
-            LOGGER.log(Level.INFO, "UpdateGroupMemberPositionRequest received from " + req.identity);
-            UpdateLocationRequest request = (UpdateLocationRequest) req;
-            resp = groups.updatePosition(request);
         } else if (req instanceof EjectGroupMemberRequest) {
             EjectGroupMemberRequest request = (EjectGroupMemberRequest) req;
             resp = groups.ejectMember(request);

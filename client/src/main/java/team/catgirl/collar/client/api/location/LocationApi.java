@@ -49,7 +49,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * Start sharing your coordinates with a group
      * @param group to share with
      */
-    public void startSharingCoordinates(Group group) {
+    public void startSharingWith(Group group) {
         // Start sharing
         if (!this.updater.isRunning()) {
             this.updater.start();
@@ -67,7 +67,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * Start sharing your coordinates with a group
      * @param group to stop sharing with
      */
-    public void stopSharingCoordinates(Group group) {
+    public void stopSharingWith(Group group) {
         synchronized (this) {
             stopSharingForGroup(group);
             sender.accept(new StopSharingLocationRequest(identity(), group.id));
@@ -79,7 +79,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * @param group to test
      * @return sharing
      */
-    public boolean isSharingCoordinatesWith(Group group) {
+    public boolean isSharingWith(Group group) {
         synchronized (this) {
             return groupsSharingWith.contains(group.id);
         }

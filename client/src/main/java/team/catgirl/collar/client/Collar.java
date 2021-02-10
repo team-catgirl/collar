@@ -62,7 +62,7 @@ public final class Collar {
     private final LocationApi locationApi;
     private WebSocket webSocket;
     private State state;
-    private final Map<Class<?>, AbstractApi<? extends ApiListener>> features;
+    private final List<AbstractApi<? extends ApiListener>> apis;
     private Consumer<ProtocolRequest> sender;
     private ResettableClientIdentityStore identityStore;
     private final Supplier<ClientIdentityStore> identityStoreSupplier;
@@ -71,12 +71,12 @@ public final class Collar {
         this.http = http;
         this.configuration = configuration;
         changeState(State.DISCONNECTED);
-        this.features = new HashMap<>();
+        this.apis = new ArrayList<>();
         this.identityStoreSupplier = () -> identityStore;
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), groupsApi, configuration.playerLocation);
-        this.features.put(GroupsApi.class, groupsApi);
-        this.features.put(LocationApi.class, locationApi);
+        this.apis.add(groupsApi);
+        this.apis.add(locationApi);
     }
 
     /**
@@ -360,14 +360,10 @@ public final class Collar {
                 collar.changeState(State.DISCONNECTED);
                 configuration.listener.onClientUntrusted(collar, identityStore);
             } else {
-                // Find the first Feature that handles the request and return the result
-                boolean wasHandled = collar.features.values().stream()
-                        .map(feature -> feature.handleResponse(resp))
-                        .filter(handled -> handled)
-                        .findFirst()
-                        .orElse(false);
-                if (!wasHandled) {
-                    throw new IllegalStateException("Did not understand received protocol response " + resp.getClass());
+                for (AbstractApi<?> api : collar.apis) {
+                    if (api.handleResponse(resp)) {
+                        break;
+                    }
                 }
             }
         }

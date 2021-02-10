@@ -150,7 +150,7 @@ public final class Collar {
         State previousState = this.state;
         if (previousState != state) {
             this.state = state;
-            if (previousState != null && state == State.DISCONNECTED) {
+            if (previousState != null && previousState != State.DISCONNECTED && state == State.DISCONNECTED) {
                 disconnect();
             }
             if (previousState == null) {

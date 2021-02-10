@@ -79,6 +79,9 @@ public class LocationTest extends CollarTest {
 
         waitForCondition("Bob shouldn't have alice's location after she has stopped sharing", () -> !bobPlayer.collar.location().playerLocations().containsKey(alicePlayer.collar.player()), 20, TimeUnit.SECONDS);
         waitForCondition("Alice shouldn't have bob's location after he has stopped sharing", () -> !alicePlayer.collar.location().playerLocations().containsKey(bobPlayer.collar.player()), 20, TimeUnit.SECONDS);
+
+        Assert.assertEquals("last event should be unknown location", bobLocationListener.events.getLast().location, Location.UNKNOWN);
+        Assert.assertEquals("last event should be unknown location", aliceLocationListener.events.getLast().location, Location.UNKNOWN);
     }
 
     public static class Event {

@@ -40,6 +40,6 @@ public class TexturesTest extends CollarTest {
         AtomicReference<BufferedImage> imageRef = new AtomicReference<>();
         theTexture.get().loadImage(imageRef::set);
 
-        CollarAssert.waitForCondition("Loaded the texture", () -> theTexture.get() != null);
+        CollarAssert.waitForCondition("Loaded the texture", () -> imageRef.get() != null);
     }
 }

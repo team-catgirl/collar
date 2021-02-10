@@ -63,7 +63,7 @@ public class TextureService {
 
     private Texture map(Document doc) {
         UUID id = doc.get(FIELD_TEXTURE_ID, UUID.class);
-        String url = "/textures/" + id.toString() + "/png";
+        String url = "/api/1/textures/" + id.toString() + "/png";
         return new Texture(id, url, TextureType.valueOf(doc.getString(FIELD_TYPE)), doc.get(FIELD_OWNER, UUID.class));
     }
 

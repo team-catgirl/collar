@@ -42,7 +42,9 @@ public class PlayerLocationService {
 
     public void startSharing(StartSharingLocationRequest req) {
         sessions.findPlayer(req.identity).ifPresent(player -> {
-            playersSharing.put(req.groupId, player);
+            synchronized (playersSharing) {
+                playersSharing.put(req.groupId, player);
+            }
             LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + req.groupId);
         });
     }
@@ -80,7 +82,9 @@ public class PlayerLocationService {
         LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + groupId);
         LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, player, Location.UNKNOWN);
         BatchProtocolResponse responses = createLocationResponses(player, locationUpdatedResponse);
-        playersSharing.remove(groupId, player);
+        synchronized (playersSharing) {
+            playersSharing.remove(groupId, player);
+        }
         return responses;
     }
 

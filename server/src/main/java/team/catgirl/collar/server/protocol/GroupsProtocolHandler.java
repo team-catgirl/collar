@@ -11,6 +11,7 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.services.groups.GroupService;
 
+import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,7 +19,7 @@ import java.util.logging.Logger;
 public final class GroupsProtocolHandler extends ProtocolHandler {
     private static final Logger LOGGER = Logger.getLogger(GroupsProtocolHandler.class.getName());
 
-    private final GroupService groups;
+    public final GroupService groups;
 
     public GroupsProtocolHandler(GroupService groups) {
         this.groups = groups;
@@ -28,7 +29,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
         ProtocolResponse resp;
         if (req instanceof CreateGroupRequest) {
-            LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity);
+            LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity + "\ncontaining: "+ Arrays.toString(((CreateGroupRequest) req).players.toArray()));
             CreateGroupRequest request = (CreateGroupRequest)req;
             resp = groups.createGroup(request);
         } else if (req instanceof JoinGroupRequest) {

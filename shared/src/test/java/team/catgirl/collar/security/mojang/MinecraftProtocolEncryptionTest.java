@@ -1,6 +1,5 @@
 package team.catgirl.collar.security.mojang;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
@@ -47,7 +46,7 @@ public class MinecraftProtocolEncryptionTest {
 
     @Test
     public void _2_verification() throws Exception {
-        boolean ret = MinecraftProtocolEncryption.verifyClient("test");
+        boolean ret = MinecraftProtocolEncryption.verifyClient("test", sess.id);
         if (ret) {
             LOGGER.info("Verify passed!");
         } else {

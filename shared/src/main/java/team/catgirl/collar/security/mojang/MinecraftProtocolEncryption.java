@@ -6,6 +6,7 @@ import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,7 +52,7 @@ public class MinecraftProtocolEncryption {
         }
     }
 
-    public static boolean verifyClient(String username) {
+    public static boolean verifyClient(String username, UUID id) {
         try {
             HttpUrl.Builder urlBuilder = HttpUrl
                     .parse("https://sessionserver."+ROOT_DOMAIN+"/session/minecraft/hasJoined").newBuilder();
@@ -68,7 +69,7 @@ public class MinecraftProtocolEncryption {
                     LOGGER.log(Level.SEVERE, "Couldn't verify "+username.toUpperCase());
                     return false;
                 }
-                return response.code()==200;
+                return response.code()==200 && resp.get("id").asText().equals(id.toString().replace("-", ""));
             }
         } catch (IOException | NoSuchAlgorithmException e) {
             e.printStackTrace();

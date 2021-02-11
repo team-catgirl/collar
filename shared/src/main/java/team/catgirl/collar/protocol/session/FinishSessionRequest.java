@@ -5,14 +5,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 public class FinishSessionRequest extends ProtocolRequest {
-    @JsonProperty("username")
-    public String username;
+    @JsonProperty("player")
+    public MinecraftPlayer player;
 
     @JsonCreator
-    public FinishSessionRequest(@JsonProperty("identity") ClientIdentity identity, @JsonProperty("username") String username) {
+    public FinishSessionRequest(@JsonProperty("identity") ClientIdentity identity, @JsonProperty("player") MinecraftPlayer p) {
         super(identity);
-        this.username=username;
+        this.player=p;
     }
 }

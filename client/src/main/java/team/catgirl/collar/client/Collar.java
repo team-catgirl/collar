@@ -347,8 +347,13 @@ public final class Collar {
                 sendRequest(webSocket, new IdentifyRequest(identity));
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Starting session, I am "+configuration.username);
-                MinecraftProtocolEncryption.joinServer(configuration.sessionSupplier.get());
-                sendRequest(webSocket, new FinishSessionRequest(identity, configuration.username));
+                if (configuration.username==null || configuration.username.length()>16) {
+                    LOGGER.log(Level.INFO,"Using NoJang verification, I will not register.");
+                    sendRequest(webSocket, new FinishSessionRequest(identity, collar.player()));
+                } else {
+                    MinecraftProtocolEncryption.joinServer(configuration.sessionSupplier.get());
+                    sendRequest(webSocket, new FinishSessionRequest(identity, collar.player()));
+                }
             } else if (resp instanceof FinishSessionHandshakeResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));

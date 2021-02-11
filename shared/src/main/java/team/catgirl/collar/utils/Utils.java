@@ -34,7 +34,7 @@ public final class Utils {
         keys.addKeySerializer(MinecraftPlayer.class, new JsonSerializer<MinecraftPlayer>() {
             @Override
             public void serialize(MinecraftPlayer value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                gen.writeFieldName(value.id.toString() + ":" + value.server);
+                gen.writeFieldName(value.id.toString() + ":" + value.server + ":" + value.name);
             }
         });
 

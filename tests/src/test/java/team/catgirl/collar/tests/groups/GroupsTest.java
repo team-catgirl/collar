@@ -45,8 +45,8 @@ public class GroupsTest extends CollarTest {
         alicePlayer.collar.groups().create(List.of(bobPlayerId, evePlayerId));
 
         // Check that Eve and Bob received their invitations
-        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
         waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
 
         // Accept the invitation
         bobPlayer.collar.groups().accept(bobListener.invitation);

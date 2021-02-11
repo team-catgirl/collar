@@ -123,7 +123,8 @@ public final class CollarConfiguration {
          * @return builder
          */
         public Builder withNoJangAuthentication(UUID uuid, String server) {
-            this.sessionSupplier = () -> MinecraftSession.from(uuid, null,  null, server);
+            this.sessionSupplier = () -> MinecraftSession.from(uuid, uuid.toString(),  null, server);
+            this.username = uuid.toString();
             return this;
         }
 

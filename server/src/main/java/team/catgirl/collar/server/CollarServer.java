@@ -2,6 +2,7 @@ package team.catgirl.collar.server;
 
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
+import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.protocol.PacketIO;
@@ -29,8 +30,11 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.security.mojang.MinecraftProtocolEncryption;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
+import team.catgirl.collar.server.protocol.GroupsProtocolHandler;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
+import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
 
 import javax.annotation.Nonnull;
@@ -125,14 +129,14 @@ public class CollarServer {
             LOGGER.log(Level.INFO, "Finishing session handshake with " + req.identity);
             FinishSessionRequest request = (FinishSessionRequest) req;
             if (services.minecraftSessionVerifier.getName().contains("nojang")) {
-                services.sessions.identify(session, req.identity, new MinecraftPlayer(req.identity.id(),".", request.username));
+                services.sessions.identify(session, req.identity, new MinecraftPlayer(request.player.id, request.player.server, request.player.name));
                 sendPlain(session, new FinishSessionHandshakeResponse(serverIdentity));
             } else {
-                if (request.username != null && MinecraftProtocolEncryption.verifyClient(request.username)) {
-                    services.sessions.identify(session, req.identity, new MinecraftPlayer(req.identity.id(), ".", request.username));
+                if (request.player.name != null && MinecraftProtocolEncryption.verifyClient(request.player.name, request.player.id)) {
+                    services.sessions.identify(session, req.identity, new MinecraftPlayer(request.player.id, request.player.server, request.player.name));
                     sendPlain(session, new FinishSessionHandshakeResponse(serverIdentity));
                 } else {
-                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((FinishSessionRequest) req).username));
+                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((FinishSessionRequest) req).player.name));
                     services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
                 }
             }

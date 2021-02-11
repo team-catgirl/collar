@@ -32,7 +32,7 @@ public final class GroupService {
     private static final Logger LOGGER = Logger.getLogger(GroupService.class.getName());
 
     private final ServerIdentity serverIdentity;
-    private final SessionManager sessions;
+    public final SessionManager sessions;
 
     private final ConcurrentMap<UUID, Group> groupsById = new ConcurrentHashMap<>();
 
@@ -69,6 +69,7 @@ public final class GroupService {
             response = response.concat(createGroupMembershipRequests(req.identity, group, members));
             response = response.add(req.identity, new CreateGroupResponse(serverIdentity, group));
         }
+        LOGGER.info("responding to "+players+" and "+player);
         return response;
     }
 

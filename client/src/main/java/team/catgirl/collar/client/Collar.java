@@ -29,10 +29,8 @@ import team.catgirl.collar.protocol.devices.RegisterDeviceResponse;
 import team.catgirl.collar.protocol.identity.IdentifyRequest;
 import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
-import team.catgirl.collar.protocol.session.SessionFailedResponse;
+import team.catgirl.collar.protocol.session.*;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
-import team.catgirl.collar.protocol.session.StartSessionRequest;
-import team.catgirl.collar.protocol.session.StartSessionResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
@@ -42,6 +40,7 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.KeyPair.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.security.mojang.MinecraftProtocolEncryption;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.utils.Utils;
 
@@ -199,9 +198,9 @@ public final class Collar {
         verificationScheme.ifPresent(collarFeature -> {
             MinecraftSession minecraftSession = configuration.sessionSupplier.get();
             LOGGER.log(Level.INFO, "Server supports versions " + versions);
-            if ("mojang".equals(collarFeature.value) && minecraftSession.clientToken == null && minecraftSession.accessToken == null) {
+            if ("mojang".equals(collarFeature.value) && minecraftSession.accessToken == null) {
                 throw new IllegalStateException("mojang verification scheme requested but was provided an invalid MinecraftSession");
-            } else if ("nojang".equals(collarFeature.value) && minecraftSession.clientToken != null && minecraftSession.accessToken != null) {
+            } else if ("nojang".equals(collarFeature.value) &&  minecraftSession.accessToken != null) {
                 throw new IllegalStateException("nojang verification scheme requested but was provided an invalid MinecraftSession");
             }
         });
@@ -321,7 +320,7 @@ public final class Collar {
                 if (identityStore == null) {
                     identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
                 }
-                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
+                StartSessionRequest request = new StartSessionRequest(identity);
                 sendRequest(webSocket, request);
                 keepAlive.stop();
                 keepAlive.start(identity);
@@ -339,7 +338,7 @@ public final class Collar {
                 SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
                 sendRequest(webSocket, request);
             } else if (resp instanceof SendPreKeysResponse) {
-                SendPreKeysResponse response = (SendPreKeysResponse)resp;
+                SendPreKeysResponse response = (SendPreKeysResponse) resp;
                 if (identityStore == null) {
                     throw new IllegalStateException("identity has not been established");
                 }
@@ -347,6 +346,10 @@ public final class Collar {
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
                 sendRequest(webSocket, new IdentifyRequest(identity));
             } else if (resp instanceof StartSessionResponse) {
+                LOGGER.log(Level.INFO, "Starting session, I am "+configuration.username);
+                MinecraftProtocolEncryption.joinServer(configuration.sessionSupplier.get());
+                sendRequest(webSocket, new FinishSessionRequest(identity, configuration.username));
+            } else if (resp instanceof FinishSessionHandshakeResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
             } else if (resp instanceof SessionFailedResponse) {
@@ -354,7 +357,7 @@ public final class Collar {
                 if (resp instanceof MojangVerificationFailedResponse) {
                     MojangVerificationFailedResponse response = (MojangVerificationFailedResponse)resp;
                     LOGGER.log(Level.INFO, "SessionFailedResponse with mojang session verification failure");
-                    configuration.listener.onMinecraftAccountVerificationFailed(collar, response.minecraftSession);
+                    configuration.listener.onMinecraftAccountVerificationFailed(collar, response.username);
                 } else {
                     LOGGER.log(Level.INFO, "SessionFailedResponse with general server failure");
                 }

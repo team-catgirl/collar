@@ -30,7 +30,7 @@ public interface CollarListener {
     /**
      * Fired when the server could not validate the minecraft session
      * @param collar client
-     * @param session of minecraft client
+     * @param username of minecraft client
      */
-    default void onMinecraftAccountVerificationFailed(Collar collar, MinecraftSession session) {};
+    default void onMinecraftAccountVerificationFailed(Collar collar, String username) {};
 }

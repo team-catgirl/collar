@@ -11,7 +11,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public class ServerAuthentication {
     private final String CLIENT_JOIN_URL = "https://sessionserver.mojang.com/session/minecraft/join";
@@ -25,6 +24,12 @@ public class ServerAuthentication {
             this.accessToken = accessToken;
             this.selectedProfile = playerId.toString().replace("-", "");
             this.serverId = serverId;
+        }
+
+        public JoinRequest(String accessToken, UUID id) throws NoSuchAlgorithmException {
+            this.accessToken = accessToken;
+            this.selectedProfile = id.toString().replace("-", "");
+            this.serverId = genServerIDHash();
         }
     }
 
@@ -41,10 +46,10 @@ public class ServerAuthentication {
         return new BigInteger(digest).toString(16);
     }
 
-    public static String generateHashOf(JoinRequest req) throws NoSuchAlgorithmException {
+    public static String genServerIDHash() throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
-        md.update(req.serverId.getBytes(StandardCharsets.US_ASCII));
-        md.update(Util.getBytes(StandardCharsets.US_ASCII));
+        md.update(Utils.MINECRAFT_KEYPAIR.getPublic().getEncoded());
+        byte[] digest = md.digest();
         return new BigInteger(digest).toString(16);
     }
 

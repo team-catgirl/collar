@@ -6,15 +6,17 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
+import team.catgirl.collar.security.mojang.MinecraftSession;
 
+import java.net.ConnectException;
 import java.util.UUID;
 
 public final class CollarClientRule implements TestRule {
 
     public Collar collar;
 
-    private final CollarConfiguration.Builder builder;
-    private final Thread thread = new Thread(() -> {
+    public final CollarConfiguration.Builder builder;
+    public final Thread thread = new Thread(() -> {
         collar.connect();
         do {
             try {
@@ -29,6 +31,12 @@ public final class CollarClientRule implements TestRule {
         this.builder = builder.withCollarServer("http://localhost:3001")
                 .withHomeDirectory(Files.createTempDir())
                 .withNoJangAuthentication(playerId, "hypixel.net");
+    }
+
+    public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder, MinecraftSession sess) {
+        this.builder = builder.withCollarServer("http://localhost:3001")
+                .withHomeDirectory(Files.createTempDir())
+                .withMojangAuthentication(() -> sess);
     }
 
     @Override

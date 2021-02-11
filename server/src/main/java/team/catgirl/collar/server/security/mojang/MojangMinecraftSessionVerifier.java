@@ -12,6 +12,8 @@ import java.util.logging.Logger;
 /**
  * Verifies identifies against Mojang auth servers
  */
+@Deprecated
+//Kept just in case
 public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier {
 
     private static final Logger LOGGER = Logger.getLogger(MojangMinecraftSessionVerifier.class.getName());
@@ -22,6 +24,11 @@ public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier 
         return NAME;
     }
 
+    @Override
+    public boolean verify(MinecraftSession session) {
+        return false;
+    }
+/*
     @Override
     public boolean verify(MinecraftSession session) {
         if (session.accessToken == null || session.clientToken == null) {
@@ -35,4 +42,5 @@ public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier 
             return false;
         }
     }
+*/
 }

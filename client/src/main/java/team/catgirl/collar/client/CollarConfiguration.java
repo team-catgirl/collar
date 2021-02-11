@@ -23,13 +23,15 @@ public final class CollarConfiguration {
     public final HomeDirectory homeDirectory;
     public final URL collarServerURL;
     public final CollarListener listener;
+    public final String username;
 
-    private CollarConfiguration(Supplier<Location> playerLocation, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener) {
+    private CollarConfiguration(Supplier<Location> playerLocation, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener, String username) {
         this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
         this.homeDirectory = homeDirectory;
         this.collarServerURL = collarServerURL;
         this.listener = listener;
+        this.username = username;
     }
 
     public final static class Builder {
@@ -38,6 +40,7 @@ public final class CollarConfiguration {
         private Supplier<MinecraftSession> sessionSupplier;
         private File homeDirectory;
         private URL collarServerURL;
+        public String username;
 
         public Builder() {}
 
@@ -132,6 +135,7 @@ public final class CollarConfiguration {
          */
         public Builder withMojangAuthentication(Supplier<MinecraftSession> mojangAuthentication) {
             this.sessionSupplier = mojangAuthentication;
+            this.username = mojangAuthentication.get().username;
             return this;
         }
 
@@ -150,7 +154,7 @@ public final class CollarConfiguration {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });
-            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener);
+            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener, username);
         }
     }
 }

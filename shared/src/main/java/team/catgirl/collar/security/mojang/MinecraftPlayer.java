@@ -10,10 +10,13 @@ public final class MinecraftPlayer {
     public final UUID id;
     @JsonProperty("server")
     public final String server;
+    @JsonProperty("name")
+    public final String name;
 
-    public MinecraftPlayer(@JsonProperty("id") UUID id, @JsonProperty("server") String server) {
+    public MinecraftPlayer(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("name") String name) {
         this.id = id;
         this.server = server;
+        this.name = name;
     }
 
     /**

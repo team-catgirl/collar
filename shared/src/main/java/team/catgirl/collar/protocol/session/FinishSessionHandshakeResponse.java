@@ -5,13 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
 
-public final class StartSessionResponse extends ProtocolResponse {
-    @JsonProperty("publicKey")
-    byte[] publicKey;
-
+public class FinishSessionHandshakeResponse extends ProtocolResponse {
     @JsonCreator
-    public StartSessionResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("publicKey") byte[] publicKey) {
+    public FinishSessionHandshakeResponse(@JsonProperty("identity") ServerIdentity identity) {
         super(identity);
-        this.publicKey = publicKey;
     }
 }

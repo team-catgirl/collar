@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftSession;
 
 /**
  * Fired when the session fails in various conditions and force the client to disconnect
@@ -18,13 +17,13 @@ public abstract class SessionFailedResponse extends ProtocolResponse {
      * Fired when Mojang MinecraftSession could not be validated
      */
     public static final class MojangVerificationFailedResponse extends SessionFailedResponse {
-        @JsonProperty("minecraftSession")
-        public final MinecraftSession minecraftSession;
+        @JsonProperty("username")
+        public final String username;
 
         @JsonCreator
-        public MojangVerificationFailedResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("minecraftSession") MinecraftSession minecraftSession) {
+        public MojangVerificationFailedResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("username") String username) {
             super(identity);
-            this.minecraftSession = minecraftSession;
+            this.username = username;
         }
     }
 

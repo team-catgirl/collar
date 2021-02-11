@@ -93,6 +93,19 @@ public class Configuration {
                 3001);
     }
 
+    public static Configuration testVerifyConfiguration(MongoDatabase db) {
+        LOGGER.log(Level.SEVERE, "Starting in secure testing mode. Do not use in production.");
+        return new Configuration(
+                db,
+                new DefaultAppUrlProvider("http://localhost:3001"),
+                new TokenCrypter("insecureTokenCrypterPassword"),
+                new PasswordHashing("VSZL*bR8-=r]r5P_"),
+                new MojangMinecraftSessionVerifier(),
+                "*",
+                false,
+                3001);
+    }
+
     private static int httpPort() {
         String portValue = System.getenv("PORT");
         return portValue != null ? Integer.parseInt(portValue) : 3000;

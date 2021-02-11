@@ -29,6 +29,8 @@ public final class CollarServerRule implements TestRule {
         this.setupState = setupState;
     }
 
+    boolean secure = false;
+
     @Override
     public Statement apply(Statement base, Description description) {
         Mongo.getTestingDatabase().drop();
@@ -36,7 +38,7 @@ public final class CollarServerRule implements TestRule {
         return new Statement() {
             @Override public void evaluate() throws Throwable {
                 serverThread = new Thread(() -> {
-                    webServer = new WebServer(Configuration.testConfiguration(db));
+                    webServer = new WebServer(secure?Configuration.testVerifyConfiguration(db):Configuration.testConfiguration(db));
                     webServer.start(services -> {
                         setupState.accept(services);
                         started.set(true);
@@ -71,5 +73,10 @@ public final class CollarServerRule implements TestRule {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    public CollarServerRule useSecureConfiguration(boolean useSecure) {
+        secure = useSecure;
+        return this;
     }
 }

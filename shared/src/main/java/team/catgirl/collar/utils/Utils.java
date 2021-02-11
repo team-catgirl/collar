@@ -8,6 +8,8 @@ import org.msgpack.jackson.dataformat.MessagePackFactory;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.io.IOException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.UUID;
@@ -23,9 +25,10 @@ public final class Utils {
         keys.addKeyDeserializer(MinecraftPlayer.class, new KeyDeserializer() {
             @Override
             public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
-                String id = key.substring(0, key.lastIndexOf(":"));
-                String server = key.substring(key.lastIndexOf(":") + 1);
-                return new MinecraftPlayer(UUID.fromString(id), server);
+                String id = key.split(":")[0];
+                String server = key.split(":")[1];
+                String name = key.split(":")[2];
+                return new MinecraftPlayer(UUID.fromString(id), server, name);
             }
         });
         keys.addKeySerializer(MinecraftPlayer.class, new JsonSerializer<MinecraftPlayer>() {
@@ -56,6 +59,21 @@ public final class Utils {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public static final KeyPair MINECRAFT_KEYPAIR;
+
+    static {
+        KeyPair kp;
+        try {
+            KeyPairGenerator keyPairGene = KeyPairGenerator.getInstance("RSA");
+            keyPairGene.initialize(512);
+            kp = keyPairGene.genKeyPair();
+        } catch (Exception e) {
+            kp = null;
+            e.printStackTrace();
+        }
+        MINECRAFT_KEYPAIR=kp;
     }
 
     public static ObjectMapper jsonMapper() {

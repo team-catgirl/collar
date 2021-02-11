@@ -12,6 +12,8 @@ import team.catgirl.collar.protocol.identity.IdentifyRequest;
 import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveRequest;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
+import team.catgirl.collar.protocol.session.FinishSessionHandshakeResponse;
+import team.catgirl.collar.protocol.session.FinishSessionRequest;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
@@ -24,10 +26,12 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.security.mojang.MinecraftProtocolEncryption;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.utils.Utils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -107,13 +111,30 @@ public class CollarServer {
             sendPlain(session, response);
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
-            StartSessionRequest request = (StartSessionRequest)req;
-            if (services.minecraftSessionVerifier.verify(request.session)) {
-                services.sessions.identify(session, req.identity, request.session.toPlayer());
-                sendPlain(session, new StartSessionResponse(serverIdentity));
-            } else {
+            StartSessionRequest request = (StartSessionRequest) req;
+            /*if (services.minecraftSessionVerifier.verify(request.session)) {
+                services.sessions.identify(session, req.identity, request.session.toPlayer());*/
+            // Send response with keypair packet
+            sendPlain(session, new StartSessionResponse(serverIdentity, Utils.MINECRAFT_KEYPAIR.getPublic().getEncoded()));
+            //TODO: clean this up when its better
+            /*} else {
                 sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
                 services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
+            }*/
+        } else if (req instanceof FinishSessionRequest) {
+            LOGGER.log(Level.INFO, "Finishing session handshake with " + req.identity);
+            FinishSessionRequest request = (FinishSessionRequest) req;
+            if (services.minecraftSessionVerifier.getName().contains("nojang")) {
+                services.sessions.identify(session, req.identity, new MinecraftPlayer(req.identity.id(),".", request.username));
+                sendPlain(session, new FinishSessionHandshakeResponse(serverIdentity));
+            } else {
+                if (request.username != null && MinecraftProtocolEncryption.verifyClient(request.username)) {
+                    services.sessions.identify(session, req.identity, new MinecraftPlayer(req.identity.id(), ".", request.username));
+                    sendPlain(session, new FinishSessionHandshakeResponse(serverIdentity));
+                } else {
+                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((FinishSessionRequest) req).username));
+                    services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
+                }
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");

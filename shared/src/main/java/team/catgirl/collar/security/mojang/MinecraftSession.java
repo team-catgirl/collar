@@ -25,19 +25,19 @@ public final class MinecraftSession {
     public final UUID id;
     @JsonProperty("accessToken")
     public final String accessToken;
-    @JsonProperty("clientSession")
-    public final String clientToken;
+    @JsonProperty("username")
+    public final String username;
     @JsonProperty("server")
     public final String server;
 
     public MinecraftSession(
             @JsonProperty("id") UUID id,
+            @JsonProperty("username") String username,
             @JsonProperty("accessToken") String accessToken,
-            @JsonProperty("clientSession") String clientToken,
             @JsonProperty("server") String server) {
         this.id = id;
+        this.username = username;
         this.accessToken = accessToken;
-        this.clientToken = clientToken;
         this.server = server;
     }
 
@@ -46,18 +46,17 @@ public final class MinecraftSession {
      */
     @JsonIgnore
     public MinecraftPlayer toPlayer() {
-        return new MinecraftPlayer(id, server.trim());
+        return new MinecraftPlayer(id, server.trim(), username);
     }
 
     /**
      * @param id of the minecraft user
-     * @param accessToken of the minecraft client
-     * @param clientToken of the minecraft client
+     * @param user of the minecraft client
      * @param serverIP of the minecraft server the client is connected to
      * @return minecraft session info
      */
-    public static MinecraftSession from(UUID id, String accessToken, String clientToken, String serverIP) {
-        return new MinecraftSession(id, accessToken, clientToken, serverIP);
+    public static MinecraftSession from(UUID id, String user, String token, String serverIP) {
+        return new MinecraftSession(id, user, token, serverIP);
     }
 
     /**
@@ -66,16 +65,17 @@ public final class MinecraftSession {
      * @return minecraft session info
      */
     public static MinecraftSession noJang(UUID id, String serverIP) {
-        return new MinecraftSession(id, null, null, serverIP);
+        return new MinecraftSession(id, "_", null,  serverIP);
     }
 
-    /**
+    /*
+    /-**
      *
      * @param username of minecraft user
      * @param password of minecraft password
      * @param serverIP of the minecraft server the client is connected to
      * @return minecraft session or throws {@link HttpException} on error
-     */
+     *-/
     public static MinecraftSession from(String username, String password, String serverIP) {
         AuthenticationResponse resp;
         try {
@@ -93,5 +93,5 @@ public final class MinecraftSession {
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException("No minecraft profile found for " + username));
         return new MinecraftSession(profile.getUUID(), resp.getAccessToken(), resp.getClientToken(), serverIP);
-    }
+    }*/
 }

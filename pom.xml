@@ -11,6 +11,7 @@
         <module>client</module>
         <module>shared</module>
         <module>tests</module>
+        <module>api</module>
     </modules>
 
     <scm>

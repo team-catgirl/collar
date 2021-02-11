@@ -14,7 +14,6 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 public class ServerAuthentication {
-
     private final String CLIENT_JOIN_URL = "https://sessionserver.mojang.com/session/minecraft/join";
 
     public static final class JoinRequest {
@@ -35,14 +34,21 @@ public class ServerAuthentication {
      * @return hash
      * @throws NoSuchAlgorithmException
      */
-    private static String hash(String str) throws NoSuchAlgorithmException {
+    public static String hash(String str) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] strBytes = str.getBytes(StandardCharsets.UTF_8);
         byte[] digest = md.digest(strBytes);
         return new BigInteger(digest).toString(16);
     }
 
-    private static <T> T httpPost(String url, Class<T> aClass) throws IOException {
+    public static String generateHashOf(JoinRequest req) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        md.update(req.serverId.getBytes(StandardCharsets.US_ASCII));
+        md.update(Util.getBytes(StandardCharsets.US_ASCII));
+        return new BigInteger(digest).toString(16);
+    }
+
+    public static <T> T httpPost(String url, Class<T> aClass) throws IOException {
         Request request = new Request.Builder()
                 .url(url)
                 .build();

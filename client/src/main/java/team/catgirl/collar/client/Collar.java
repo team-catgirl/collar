@@ -362,7 +362,7 @@ public final class Collar {
                 if (resp instanceof MojangVerificationFailedResponse) {
                     MojangVerificationFailedResponse response = (MojangVerificationFailedResponse)resp;
                     LOGGER.log(Level.INFO, "SessionFailedResponse with mojang session verification failure");
-                    configuration.listener.onMinecraftAccountVerificationFailed(collar, response.username);
+                    configuration.listener.onMinecraftAccountVerificationFailed(collar, response.player);
                 } else {
                     LOGGER.log(Level.INFO, "SessionFailedResponse with general server failure");
                 }

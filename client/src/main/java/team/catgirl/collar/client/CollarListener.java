@@ -1,6 +1,7 @@
 package team.catgirl.collar.client;
 
 import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 
 public interface CollarListener {
@@ -30,7 +31,7 @@ public interface CollarListener {
     /**
      * Fired when the server could not validate the minecraft session
      * @param collar client
-     * @param username of minecraft client
+     * @param player of minecraft client
      */
-    default void onMinecraftAccountVerificationFailed(Collar collar, String username) {};
+    default void onMinecraftAccountVerificationFailed(Collar collar, MinecraftPlayer player) {};
 }

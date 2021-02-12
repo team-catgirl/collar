@@ -136,7 +136,7 @@ public class CollarServer {
                     services.sessions.identify(session, req.identity, new MinecraftPlayer(request.player.id, request.player.server, request.player.name));
                     sendPlain(session, new FinishSessionHandshakeResponse(serverIdentity));
                 } else {
-                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((FinishSessionRequest) req).player.name));
+                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((FinishSessionRequest) req).player));
                     services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
                 }
             }

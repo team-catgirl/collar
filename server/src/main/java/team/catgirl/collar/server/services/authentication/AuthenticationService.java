@@ -8,6 +8,7 @@ import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.http.AuthToken;
 import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.mail.Email;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
@@ -16,6 +17,7 @@ import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileReq
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -24,12 +26,14 @@ public class AuthenticationService {
     private final ProfileService profiles;
     private final PasswordHashing passwordHashing;
     private final TokenCrypter tokenCrypter;
+    private final Email email;
 
 
-    public AuthenticationService(ProfileService profiles, PasswordHashing passwordHashing, TokenCrypter tokenCrypter) {
+    public AuthenticationService(ProfileService profiles, PasswordHashing passwordHashing, TokenCrypter tokenCrypter, Email email) {
         this.profiles = profiles;
         this.passwordHashing = passwordHashing;
         this.tokenCrypter = tokenCrypter;
+        this.email = email;
     }
 
     public CreateAccountResponse createAccount(RequestContext context, CreateAccountRequest req) {
@@ -54,6 +58,7 @@ public class AuthenticationService {
             throw new HttpException.ConflictException("user already exists");
         } catch (HttpException.NotFoundException e) {
             Profile profile = profiles.createProfile(context, new CreateProfileRequest(req.email.toLowerCase(), req.password, req.name)).profile;
+            email.send(profile, "Verify your new Collar account", "verify-account", Map.of());
             return new CreateAccountResponse(profile.toPublic(), tokenFrom(profile));
         }
     }

@@ -16,19 +16,23 @@ public final class Profile {
     public final String name;
     @JsonIgnore
     public final String hashedPassword;
+    @JsonProperty("emailVerified")
+    public final Boolean emailVerified;
 
-    public Profile(UUID id, String email, String name, String hashedPassword) {
+    public Profile(UUID id, String email, String name, String hashedPassword, Boolean emailVerified) {
         this.id = id;
         this.email = email;
         this.name = name;
         this.hashedPassword = hashedPassword;
+        this.emailVerified = emailVerified;
     }
 
     @JsonCreator
-    public Profile(@JsonProperty("id") UUID id, @JsonProperty("email") String email, @JsonProperty("name") String name) {
+    public Profile(@JsonProperty("id") UUID id, @JsonProperty("email") String email, @JsonProperty("name") String name, @JsonProperty("name") Boolean emailVerified) {
         this.id = id;
         this.email = email;
         this.name = name;
+        this.emailVerified = emailVerified;
         this.hashedPassword = null;
     }
 

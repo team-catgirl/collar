@@ -27,6 +27,7 @@ public class ProfileService {
     private static final String FIELD_EMAIL = "email";
     private static final String FIELD_NAME = "name";
     private static final String FIELD_HASHED_PASSWORD = "hashedPassword";
+    private static final String FIELD_EMAIL_VERIFIED = "emailVerified";
 
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
@@ -51,6 +52,7 @@ public class ProfileService {
         state.put(FIELD_NAME, req.name);
         state.put(FIELD_EMAIL, req.email.toLowerCase());
         state.put(FIELD_HASHED_PASSWORD, hashedPassword);
+        state.put(FIELD_EMAIL_VERIFIED, false);
         InsertOneResult insertOneResult = docs.insertOne(new Document(state));
         if (insertOneResult.wasAcknowledged()) {
             BsonObjectId id = Objects.requireNonNull(insertOneResult.getInsertedId()).asObjectId();
@@ -133,6 +135,7 @@ public class ProfileService {
         String email = doc.getString(FIELD_EMAIL);
         String name = doc.getString(FIELD_NAME);
         String hashedPassword = doc.getString(FIELD_HASHED_PASSWORD);
-        return new Profile(profileId, email, name, hashedPassword);
+        boolean emailVerified = doc.getBoolean(FIELD_EMAIL_VERIFIED);
+        return new Profile(profileId, email, name, hashedPassword, emailVerified);
     }
 }

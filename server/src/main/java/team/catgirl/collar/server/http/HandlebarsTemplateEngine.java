@@ -22,7 +22,7 @@ public class HandlebarsTemplateEngine extends TemplateEngine {
     public HandlebarsTemplateEngine(String resourceRoot) {
         TemplateLoader templateLoader = new ClassPathTemplateLoader();
         templateLoader.setPrefix(resourceRoot);
-        templateLoader.setSuffix(".mustache");
+        templateLoader.setSuffix(".hbm");
 
         handlebars = new Handlebars(templateLoader);
     }

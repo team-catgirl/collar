@@ -35,10 +35,6 @@
             <artifactId>signal-protocol-java</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.chris54721</groupId>
-            <artifactId>openmcauthenticator</artifactId>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
         </dependency>

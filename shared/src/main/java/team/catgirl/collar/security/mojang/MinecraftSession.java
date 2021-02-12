@@ -67,31 +67,4 @@ public final class MinecraftSession {
     public static MinecraftSession noJang(UUID id, String serverIP) {
         return new MinecraftSession(id, "_", null,  serverIP);
     }
-
-    /*
-    /-**
-     *
-     * @param username of minecraft user
-     * @param password of minecraft password
-     * @param serverIP of the minecraft server the client is connected to
-     * @return minecraft session or throws {@link HttpException} on error
-     *-/
-    public static MinecraftSession from(String username, String password, String serverIP) {
-        AuthenticationResponse resp;
-        try {
-            resp = OpenMCAuthenticator.authenticate(username, password);
-        } catch (InvalidCredentialsException | AuthenticationUnavailableException e) {
-            throw new UnauthorisedException("Authenticating with Mojang failed");
-        } catch (RequestException e) {
-            throw new ServerErrorException("Could not communicate with Mojang", e);
-        }
-        Profile[] availableProfiles = resp.getAvailableProfiles();
-        if (availableProfiles == null || availableProfiles.length == 0) {
-            throw new NotFoundException("No profiles found for " + username);
-        }
-        Profile profile = Arrays.stream(availableProfiles)
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException("No minecraft profile found for " + username));
-        return new MinecraftSession(profile.getUUID(), resp.getAccessToken(), resp.getClientToken(), serverIP);
-    }*/
 }

@@ -4,20 +4,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class MojangAuthenticationRequest {
     @JsonProperty("username")
-    public String username;
+    public final String username;
 
     @JsonProperty("password")
-    public String password;
+    public final String password;
 
     @JsonProperty("agent")
-    public Agent agent_ = new Agent();
-
+    public final Agent agent = new Agent();
 
     public MojangAuthenticationRequest(String u, String p){username=u;password=p;}
 }
 
 class Agent {
-    public String name = "Minecraft";
-    public int version = 1;
+    public final String name = "Minecraft";
+    public final int version = 1;
     public Agent(){}
 }

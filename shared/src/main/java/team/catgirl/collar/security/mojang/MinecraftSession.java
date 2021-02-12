@@ -2,18 +2,7 @@ package team.catgirl.collar.security.mojang;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import net.chris54721.openmcauthenticator.OpenMCAuthenticator;
-import net.chris54721.openmcauthenticator.Profile;
-import net.chris54721.openmcauthenticator.exceptions.AuthenticationUnavailableException;
-import net.chris54721.openmcauthenticator.exceptions.InvalidCredentialsException;
-import net.chris54721.openmcauthenticator.exceptions.RequestException;
-import net.chris54721.openmcauthenticator.responses.AuthenticationResponse;
-import team.catgirl.collar.api.http.HttpException;
-import team.catgirl.collar.api.http.HttpException.NotFoundException;
-import team.catgirl.collar.api.http.HttpException.ServerErrorException;
-import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -57,14 +46,5 @@ public final class MinecraftSession {
      */
     public static MinecraftSession from(UUID id, String user, String token, String serverIP) {
         return new MinecraftSession(id, user, token, serverIP);
-    }
-
-    /**
-     * @param id of the minecraft user
-     * @param serverIP of the minecraft server the client is connected to
-     * @return minecraft session info
-     */
-    public static MinecraftSession noJang(UUID id, String serverIP) {
-        return new MinecraftSession(id, "_", null,  serverIP);
     }
 }

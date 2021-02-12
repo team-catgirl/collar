@@ -28,19 +28,4 @@ public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier 
     public boolean verify(MinecraftSession session) {
         return false;
     }
-/*
-    @Override
-    public boolean verify(MinecraftSession session) {
-        if (session.accessToken == null || session.clientToken == null) {
-            return false;
-        }
-        try {
-            RefreshResponse resp = OpenMCAuthenticator.refresh(session.accessToken, session.clientToken);
-            return resp.getSelectedProfile().getUUID().equals(session.id);
-        } catch (RequestException | AuthenticationUnavailableException e) {
-            LOGGER.log(Level.SEVERE, "Could not authenticate against Mojang", e);
-            return false;
-        }
-    }
-*/
 }

@@ -5,7 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
-import team.catgirl.collar.security.mojang.AuthenticationJSON;
+import team.catgirl.collar.security.mojang.MojangAuthenticationRequest;
 import team.catgirl.collar.security.mojang.MinecraftProtocolEncryption;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.server.Services;
@@ -100,7 +100,7 @@ public class ClientVerificationTest {
     private static MinecraftSession loginTest(String user, String pass) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
 
-        byte[] req = Utils.jsonMapper().writeValueAsBytes(new AuthenticationJSON("test","test"));
+        byte[] req = Utils.jsonMapper().writeValueAsBytes(new MojangAuthenticationRequest("test","test"));
 
         LOGGER.info("Logging in to testing session server as test:test");
 

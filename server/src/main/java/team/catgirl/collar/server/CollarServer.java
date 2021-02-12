@@ -116,15 +116,7 @@ public class CollarServer {
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest) req;
-            /*if (services.minecraftSessionVerifier.verify(request.session)) {
-                services.sessions.identify(session, req.identity, request.session.toPlayer());*/
-            // Send response with keypair packet
             sendPlain(session, new StartSessionResponse(serverIdentity, Utils.MINECRAFT_KEYPAIR.getPublic().getEncoded()));
-            //TODO: clean this up when its better
-            /*} else {
-                sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
-                services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
-            }*/
         } else if (req instanceof FinishSessionRequest) {
             LOGGER.log(Level.INFO, "Finishing session handshake with " + req.identity);
             FinishSessionRequest request = (FinishSessionRequest) req;

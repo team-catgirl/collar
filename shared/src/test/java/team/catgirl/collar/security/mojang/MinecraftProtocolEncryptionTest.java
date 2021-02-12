@@ -3,6 +3,7 @@ package team.catgirl.collar.security.mojang;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -13,22 +14,16 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * @author charlie353535
- */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MinecraftProtocolEncryptionTest {
     private static final Logger LOGGER = Logger.getLogger(MinecraftProtocolEncryptionTest.class.getName());
     private static final OkHttpClient client = new OkHttpClient();
     private static MinecraftSession sess;
 
-    static {
-        try {
-            sess = loginTest("test","test");
-            MinecraftProtocolEncryption.ROOT_DOMAIN = "mjolnir.testing.charlie35.xyz";
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Before
+    public void preLogin() throws Exception {
+        sess = loginTest("test","test");
+        MinecraftProtocolEncryption.ROOT_DOMAIN = "mjolnir.testing.charlie35.xyz";
     }
 
     public static final MediaType JSON
@@ -57,7 +52,7 @@ public class MinecraftProtocolEncryptionTest {
     private static MinecraftSession loginTest(String user, String pass) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
 
-        byte[] req = Utils.jsonMapper().writeValueAsBytes(new AuthenticationJSON("test","test"));
+        byte[] req = Utils.jsonMapper().writeValueAsBytes(new MojangAuthenticationRequest("test","test"));
 
         LOGGER.info("Logging in to testing session server as test:test");
 

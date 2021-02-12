@@ -2,7 +2,7 @@ package team.catgirl.collar.security.mojang;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class AuthenticationJSON {
+public class MojangAuthenticationRequest {
     @JsonProperty("username")
     public String username;
 
@@ -10,14 +10,14 @@ public class AuthenticationJSON {
     public String password;
 
     @JsonProperty("agent")
-    public agent agent_ = new agent();
+    public Agent agent_ = new Agent();
 
 
-    public AuthenticationJSON(String u, String p){username=u;password=p;}
+    public MojangAuthenticationRequest(String u, String p){username=u;password=p;}
 }
 
-class agent {
+class Agent {
     public String name = "Minecraft";
     public int version = 1;
-    public agent(){}
+    public Agent(){}
 }

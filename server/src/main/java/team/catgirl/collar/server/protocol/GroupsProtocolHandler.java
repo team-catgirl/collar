@@ -29,7 +29,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
         ProtocolResponse resp;
         if (req instanceof CreateGroupRequest) {
-            LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity + "\ncontaining: "+ Arrays.toString(((CreateGroupRequest) req).players.toArray()));
+            LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity);
             CreateGroupRequest request = (CreateGroupRequest)req;
             resp = groups.createGroup(request);
         } else if (req instanceof JoinGroupRequest) {

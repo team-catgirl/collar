@@ -133,11 +133,6 @@ public final class SessionManager {
             return new ArrayList<>();
         }
         MinecraftPlayer player = findPlayer(identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + identity));
-        LOGGER.info("Players: "+players+
-                "\nSessions: "+sessions.values()+
-                "\nFilter 1: "+ Arrays.toString(sessions.values().stream().filter(sessionState -> sessionState.player.inServerWith(player)).map(sessionState -> sessionState.player).toArray())+
-                "\nFilter 2: "+ Arrays.toString(sessions.values().stream().filter(sessionState -> sessionState.player.inServerWith(player)).filter(sessionState -> players.contains(sessionState.player.id)).toArray())
-        );
         return sessions.values().stream()
                 .filter(sessionState -> sessionState.player.inServerWith(player))
                 .filter(sessionState -> players.contains(sessionState.player.id))
@@ -149,10 +144,6 @@ public final class SessionManager {
         if (identity == null) {
             return Optional.empty();
         }
-        LOGGER.info("FindPlayer: "+identity.id()+" = "+sessions.values().stream()
-                .filter(sessionState -> sessionState.identity.equals(identity)).collect(Collectors.toList())
-                +"\nSessions: "+sessions.values().stream().map(s -> s.identity.id()).collect(Collectors.toList()));
-
         return sessions.values().stream()
                 .filter(sessionState -> sessionState.identity.equals(identity))
                 .findFirst()

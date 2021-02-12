@@ -10,14 +10,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * @author charlie353535
- */
-public class MinecraftProtocolEncryption {
-    private static final OkHttpClient client = new OkHttpClient();
-    public static final MediaType JSON
-            = MediaType.get("application/json; charset=utf-8");
-
+public final class MinecraftProtocolEncryption {
     public static String ROOT_DOMAIN = "mojang.com";
 
     private static final Logger LOGGER = Logger.getLogger(MinecraftProtocolEncryption.class.getName());
@@ -28,14 +21,13 @@ public class MinecraftProtocolEncryption {
 
             byte[] json = Utils.jsonMapper().writeValueAsBytes(joinReq);
 
-            RequestBody body = RequestBody.create(JSON, json);
+            RequestBody body = RequestBody.create(MediaType.get("application/json; charset=utf-8"), json);
             Request request = new Request.Builder()
                     .addHeader("Content-Type", "application/json")
                     .url("https://sessionserver."+ROOT_DOMAIN+"/session/minecraft/join")
                     .post(body)
                     .build();
-            LOGGER.info("Registering..");
-            try (Response response = client.newCall(request).execute()) {
+            try (Response response = Utils.http().newCall(request).execute()) {
                 if (response.code()!=204) {
                     LOGGER.log(Level.SEVERE, "Couldn't register!\n"+response.body().string());
                 }
@@ -61,9 +53,7 @@ public class MinecraftProtocolEncryption {
             Request request = new Request.Builder()
                     .url(urlBuilder.build())
                     .build();
-
-            LOGGER.info("Verifying "+username);
-            try (Response response = client.newCall(request).execute()) {
+            try (Response response = Utils.http().newCall(request).execute()) {
                 JsonNode resp = Utils.jsonMapper().readTree(response.body().string());
                 if (!resp.has("id")) {
                     LOGGER.log(Level.SEVERE, "Couldn't verify "+username.toUpperCase());

@@ -346,8 +346,8 @@ public final class Collar {
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
                 sendRequest(webSocket, new IdentifyRequest(identity));
             } else if (resp instanceof StartSessionResponse) {
-                LOGGER.log(Level.INFO, "Starting session, I am "+configuration.username);
-                if (configuration.username==null || configuration.username.length()>16) {
+                LOGGER.log(Level.INFO, "Starting session for user "+configuration.sessionSupplier.get().username);
+                if (configuration.sessionSupplier.get().username==null || configuration.sessionSupplier.get().username.length()>16) {
                     LOGGER.log(Level.INFO,"Using NoJang verification, I will not register.");
                     sendRequest(webSocket, new FinishSessionRequest(identity, collar.player()));
                 } else {

@@ -12,8 +12,8 @@ public class LocalEmail extends AbstractEmail {
     @Override
     public void send(Profile profile, String subject, String templateName, Map<String, Object> variables) {
         String path = "target/emails/" + profile.name + "/" + System.currentTimeMillis() + "-" + templateName;
-        write(new File(path + "txt"), renderText(templateName, variables));
-        write(new File(path + "html"), renderHtml(templateName, variables));
+        write(new File(path + ".txt"), renderText(templateName, variables));
+        write(new File(path + ".html"), renderHtml(templateName, variables));
     }
 
     private void write(File file, String value) {

@@ -7,7 +7,7 @@ import team.catgirl.collar.security.ServerIdentity;
 
 public final class StartSessionResponse extends ProtocolResponse {
     @JsonProperty("publicKey")
-    byte[] publicKey;
+    final byte[] publicKey;
 
     @JsonCreator
     public StartSessionResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("publicKey") byte[] publicKey) {

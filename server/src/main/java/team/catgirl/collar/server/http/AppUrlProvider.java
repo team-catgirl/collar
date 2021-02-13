@@ -23,4 +23,16 @@ public interface AppUrlProvider {
      * @return url
      */
     String deviceVerificationUrl(String token);
+
+    /**
+     * @param token for email verification
+     * @return url
+     */
+    String emailVerificationUrl(String token);
+
+    /**
+     * @param size pixels
+     * @return url
+     */
+    String logoUrl(int size);
 }

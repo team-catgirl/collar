@@ -18,6 +18,10 @@ public final class RequestContext {
         this.owner = owner;
     }
 
+    public static RequestContext from(UUID profileId) {
+        return new RequestContext(profileId);
+    }
+
     public void assertAnonymous() {
         if (!ANON.equals(this)) {
             throw new UnauthorisedException("caller must be anonymous");
@@ -27,6 +31,12 @@ public final class RequestContext {
     public void assertNotAnonymous() {
         if (ANON.equals(this)) {
             throw new UnauthorisedException("caller must not be anonymous");
+        }
+    }
+
+    public void assertCallerIs(UUID uuid) {
+        if (!this.owner.equals(uuid)) {
+            throw new UnauthorisedException("caller did not match profile id in request");
         }
     }
 

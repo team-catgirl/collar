@@ -3,13 +3,15 @@ package team.catgirl.collar.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import spark.ModelAndView;
 import spark.Request;
+import spark.Response;
 import team.catgirl.collar.api.http.*;
 import team.catgirl.collar.api.http.HttpException.ForbiddenException;
+import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.configuration.Configuration;
-import team.catgirl.collar.server.http.AuthToken;
+import team.catgirl.collar.server.http.ApiToken;
 import team.catgirl.collar.server.http.Cookie;
 import team.catgirl.collar.server.http.HandlebarsTemplateEngine;
 import team.catgirl.collar.server.http.RequestContext;
@@ -17,12 +19,15 @@ import team.catgirl.collar.server.protocol.GroupsProtocolHandler;
 import team.catgirl.collar.server.protocol.LocationProtocolHandler;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.protocol.TexturesProtocolHandler;
-import team.catgirl.collar.server.services.authentication.AuthenticationService;
+import team.catgirl.collar.server.services.authentication.AuthenticationService.CreateAccountRequest;
+import team.catgirl.collar.server.services.authentication.AuthenticationService.LoginRequest;
+import team.catgirl.collar.server.services.authentication.AuthenticationService.VerifyAccountRequest;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
+import team.catgirl.collar.server.services.authentication.VerificationToken;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.devices.DeviceService.TrustDeviceResponse;
 import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.services.textures.TextureService.GetTextureContentRequest;
 import team.catgirl.collar.utils.Utils;
 
@@ -86,6 +91,14 @@ public class WebServer {
         protocolHandlers.add(new LocationProtocolHandler(services.playerLocations));
         protocolHandlers.add(new TexturesProtocolHandler(services.identityStore.getIdentity(), services.sessions, services.textures));
 
+        // TODO: all routes should go into their own class/package
+        // Setup WebSockets
+        webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
+        webSocket("/api/1/listen", new CollarServer(services, protocolHandlers));
+
+        staticFiles.location("/public");
+
+        // Setup CORS
         options("/*", (request, response) -> {
 
             String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
@@ -127,13 +140,13 @@ public class WebServer {
                     // Get your own profile
                     get("/me", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
-                        return services.profiles.getProfile(context, ProfileService.GetProfileRequest.byId(context.owner)).profile;
+                        return services.profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile;
                     });
                     // Get someone elses profile
                     get("/:id", (request, response) -> {
                         String id = request.params("id");
                         UUID uuid = UUID.fromString(id);
-                        return services.profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(uuid)).profile.toPublic();
+                        return services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(uuid)).profile.toPublic();
                     });
                     get("/devices", (request, response) -> {
                         return services.devices.findDevices(RequestContext.from(request), services.jsonMapper.readValue(request.bodyAsBytes(), DeviceService.FindDevicesRequest.class));
@@ -143,7 +156,7 @@ public class WebServer {
                         context.assertNotAnonymous();
                         DeviceService.TrustDeviceRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), DeviceService.TrustDeviceRequest.class);
                         DeviceService.CreateDeviceResponse device = services.devices.createDevice(context, new DeviceService.CreateDeviceRequest(context.owner, req.deviceName));
-                        PublicProfile profile = services.profiles.getProfile(context, ProfileService.GetProfileRequest.byId(context.owner)).profile.toPublic();
+                        PublicProfile profile = services.profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile.toPublic();
                         services.sessions.onDeviceRegistered(services.identityStore.getIdentity(), profile, req.token, device);
                         return new TrustDeviceResponse();
                     });
@@ -160,13 +173,17 @@ public class WebServer {
                     });
                     // Login
                     get("/login", (request, response) -> {
-                        AuthenticationService.LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), AuthenticationService.LoginRequest.class);
+                        LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), LoginRequest.class);
                         return services.auth.login(RequestContext.from(request), req);
                     });
                     // Create an account
                     post("/create", (request, response) -> {
-                        AuthenticationService.CreateAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), AuthenticationService.CreateAccountRequest.class);
+                        CreateAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), CreateAccountRequest.class);
                         return services.auth.createAccount(RequestContext.from(request), req);
+                    });
+                    post("/verify", (request, response) -> {
+                        VerifyAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), VerifyAccountRequest.class);
+                        return services.auth.verify(RequestContext.from(request), req);
                     });
                 });
 
@@ -220,9 +237,11 @@ public class WebServer {
                 post("/login", (request, response) -> {
                     String email = request.queryParamsSafe("email");
                     String password = request.queryParamsSafe("password");
-                    Profile profile = services.auth.login(RequestContext.ANON, new AuthenticationService.LoginRequest(email, password)).profile;
-                    Cookie cookie = new Cookie(profile.id, new Date().getTime() + TimeUnit.DAYS.toMillis(1));
-                    cookie.set(services.tokenCrypter, response);
+                    Profile profile = services.auth.login(RequestContext.ANON, new LoginRequest(email, password)).profile;
+                    if (!profile.emailVerified) {
+                        throw new UnauthorisedException("email not verified");
+                    }
+                    setLoginCookie(services, response, profile);
                     response.redirect("/app");
                     return "";
                 }, Object::toString);
@@ -231,15 +250,13 @@ public class WebServer {
                     response.redirect("/app/login");
                     return "";
                 }, Object::toString);
-                get("/signup", (request, response) -> {
-                    return render("signup");
-                }, Object::toString);
+                get("/signup", (request, response) -> render("signup"), Object::toString);
                 post("/signup", (request, response) -> {
                     String name = request.queryParamsSafe("name");
                     String email = request.queryParamsSafe("email");
                     String password = request.queryParamsSafe("password");
                     String confirmPassword = request.queryParamsSafe("confirmPassword");
-                    PublicProfile profile = services.auth.createAccount(RequestContext.ANON, new AuthenticationService.CreateAccountRequest(email, name, password, confirmPassword)).profile;
+                    PublicProfile profile = services.auth.createAccount(RequestContext.ANON, new CreateAccountRequest(email, name, password, confirmPassword)).profile;
                     Cookie cookie = new Cookie(profile.id, new Date().getTime() * TimeUnit.DAYS.toMillis(1));
                     cookie.set(services.tokenCrypter, response);
                     response.redirect("/app");
@@ -251,12 +268,27 @@ public class WebServer {
                         response.redirect("/app/login");
                         return "";
                     } else {
-                        Profile profile = services.profiles.getProfile(new RequestContext(cookie.profileId), ProfileService.GetProfileRequest.byId(cookie.profileId)).profile;
+                        Profile profile = services.profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
                         Map<String, Object> ctx = new HashMap<>();
                         ctx.put("name", profile.name);
                         return render(ctx, "home");
                     }
                 }, Object::toString);
+
+                get("/verify/", (request, response) -> {
+                    String token = request.queryParams("token");
+                    VerificationToken.from(configuration.tokenCrypter, token).ifPresent(aToken -> {
+                        String redirect = services.auth.verify(RequestContext.ANON, new VerifyAccountRequest(token)).redirectUrl;
+                        Profile profile = services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(aToken.profileId)).profile;
+                        try {
+                            setLoginCookie(services, response, profile);
+                        } catch (IOException e) {
+                            throw new ServerErrorException("server error", e);
+                        }
+                        response.redirect(redirect);
+                    });
+                    return "";
+                }, Objects::toString);
 
                 path("/devices", () -> {
                     get("/trust/:token", (request, response) -> {
@@ -280,7 +312,7 @@ public class WebServer {
                             String name = request.queryParams("name");
                             RequestContext context = new RequestContext(cookie.profileId);
                             DeviceService.CreateDeviceResponse device = services.devices.createDevice(context, new DeviceService.CreateDeviceRequest(context.owner, name));
-                            PublicProfile profile = services.profiles.getProfile(context, ProfileService.GetProfileRequest.byId(context.owner)).profile.toPublic();
+                            PublicProfile profile = services.profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile.toPublic();
                             services.sessions.onDeviceRegistered(services.identityStore.getIdentity(), profile, token, device);
                             response.redirect("/app");
                             return "";
@@ -292,6 +324,19 @@ public class WebServer {
         callback.accept(services);
         LOGGER.info("Collar server started.");
         LOGGER.info(services.urlProvider.homeUrl());
+    }
+
+    private void setLoginCookie(Services services, Response response, Profile profile) throws IOException {
+        Cookie cookie = new Cookie(profile.id, new Date().getTime() + TimeUnit.DAYS.toMillis(1));
+        cookie.set(services.tokenCrypter, response);
+    }
+
+    private void setErrorResponse(Exception e, Response response) {
+        try {
+            response.body(Utils.jsonMapper().writeValueAsString(new ErrorResponse(e.getMessage())));
+        } catch (JsonProcessingException jsonProcessingException) {
+            LOGGER.log(Level.SEVERE, "Could not create error response ", e);
+        }
     }
 
     private static String render(Map<String, Object> context, String templatePath) {
@@ -313,7 +358,7 @@ public class WebServer {
             context = RequestContext.ANON;
         } else if (authorization.startsWith("Bearer ")) {
             String tokenString = authorization.substring(authorization.lastIndexOf(" "));
-            AuthToken token = AuthToken.deserialize(crypter, tokenString);
+            ApiToken token = ApiToken.deserialize(crypter, tokenString);
             if (new Date().after(new Date(token.expiresAt))) {
                 throw new UnauthorisedException("old token");
             }

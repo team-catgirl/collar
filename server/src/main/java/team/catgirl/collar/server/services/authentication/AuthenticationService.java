@@ -3,10 +3,12 @@ package team.catgirl.collar.server.services.authentication;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
+import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.api.profiles.PublicProfile;
-import team.catgirl.collar.server.http.AuthToken;
+import team.catgirl.collar.server.http.AppUrlProvider;
+import team.catgirl.collar.server.http.ApiToken;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.mail.Email;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
@@ -20,20 +22,26 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AuthenticationService {
+
+    private final static Logger LOGGER = Logger.getLogger(AuthenticationService.class.getName());
 
     private final ProfileService profiles;
     private final PasswordHashing passwordHashing;
     private final TokenCrypter tokenCrypter;
     private final Email email;
+    private final AppUrlProvider urlProvider;
 
 
-    public AuthenticationService(ProfileService profiles, PasswordHashing passwordHashing, TokenCrypter tokenCrypter, Email email) {
+    public AuthenticationService(ProfileService profiles, PasswordHashing passwordHashing, TokenCrypter tokenCrypter, Email email, AppUrlProvider urlProvider) {
         this.profiles = profiles;
         this.passwordHashing = passwordHashing;
         this.tokenCrypter = tokenCrypter;
         this.email = email;
+        this.urlProvider = urlProvider;
     }
 
     public CreateAccountResponse createAccount(RequestContext context, CreateAccountRequest req) {
@@ -56,9 +64,16 @@ public class AuthenticationService {
         try {
             profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail(req.email));
             throw new HttpException.ConflictException("user already exists");
-        } catch (HttpException.NotFoundException e) {
+        } catch (NotFoundException e) {
             Profile profile = profiles.createProfile(context, new CreateProfileRequest(req.email.toLowerCase(), req.password, req.name)).profile;
-            email.send(profile, "Verify your new Collar account", "verify-account", Map.of());
+            VerificationToken apiToken = new VerificationToken(profile.id, new Date().getTime() + TimeUnit.HOURS.toMillis(24));
+            String url;
+            try {
+                url = urlProvider.emailVerificationUrl(apiToken.serialize(tokenCrypter));
+            } catch (IOException ioException) {
+                throw new ServerErrorException("token could not be serialized", e);
+            }
+            email.send(profile, "Verify your new Collar account", "verify-account", Map.of("verificationUrl", url));
             return new CreateAccountResponse(profile.toPublic(), tokenFrom(profile));
         }
     }
@@ -74,7 +89,7 @@ public class AuthenticationService {
         Profile profile;
         try {
             profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail(req.email)).profile;
-        } catch (HttpException.NotFoundException e) {
+        } catch (NotFoundException e) {
             // Do not leak existence of account by letting NotFoundException propagate
             throw new UnauthorisedException("login failed");
         }
@@ -85,11 +100,23 @@ public class AuthenticationService {
         }
     }
 
+    public VerifyAccountResponse verify(RequestContext context, VerifyAccountRequest req) {
+        context.assertAnonymous();
+        return VerificationToken.from(tokenCrypter, req.token).map(verificationToken -> {
+            Profile profile = profiles.updateProfile(RequestContext.from(verificationToken.profileId), ProfileService.UpdateProfileRequest.emailVerified(verificationToken.profileId)).profile;
+            if (!profile.emailVerified) {
+                throw new UnauthorisedException("Verify your email address first before logging in");
+            }
+            LOGGER.log(Level.INFO, "Verified account for " + profile.id);
+            return new VerifyAccountResponse(urlProvider.homeUrl());
+        }).orElseThrow(() -> new UnauthorisedException("bad or missing token"));
+    }
+
     private String tokenFrom(Profile profile) {
-        AuthToken authToken = new AuthToken(profile.id, new Date().getTime() * TimeUnit.HOURS.toMillis(24));
+        ApiToken apiToken = new ApiToken(profile.id, new Date().getTime() * TimeUnit.HOURS.toMillis(24));
         String token;
         try {
-            token = authToken.serialize(tokenCrypter);
+            token = apiToken.serialize(tokenCrypter);
         } catch (IOException e) {
             throw new ServerErrorException("token generation error", e);
         }
@@ -151,6 +178,24 @@ public class AuthenticationService {
         public LoginResponse(@JsonProperty("profile") Profile profile, @JsonProperty("token") String token) {
             this.profile = profile;
             this.token = token;
+        }
+    }
+
+    public static class VerifyAccountRequest {
+        @JsonProperty("token")
+        public final String token;
+
+        public VerifyAccountRequest(@JsonProperty("token") String token) {
+            this.token = token;
+        }
+    }
+
+    public static class VerifyAccountResponse {
+        @JsonProperty("redirectUrl")
+        public final String redirectUrl;
+
+        public VerifyAccountResponse(@JsonProperty("redirectUrl") String redirectUrl) {
+            this.redirectUrl = redirectUrl;
         }
     }
 }

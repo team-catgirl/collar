@@ -6,14 +6,17 @@ import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import java.io.*;
 import java.util.UUID;
 
-public class AuthToken {
+/**
+ * Used for authorizing API calls
+ */
+public class ApiToken {
 
     private static final int VERSION = 1;
 
     public final UUID profileId;
     public final long expiresAt;
 
-    public AuthToken(UUID profileId, long expiresAt) {
+    public ApiToken(UUID profileId, long expiresAt) {
         this.profileId = profileId;
         this.expiresAt = expiresAt;
     }
@@ -25,12 +28,12 @@ public class AuthToken {
                 oos.writeUTF(profileId.toString());
                 oos.writeLong(expiresAt);
             }
-            return BaseEncoding.base64().encode(crypter.crypt(boos.toByteArray()));
+            return BaseEncoding.base64Url().encode(crypter.crypt(boos.toByteArray()));
         }
     }
 
-    public static AuthToken deserialize(TokenCrypter crypter, String token) throws IOException {
-        byte[] bytes = BaseEncoding.base64().decode(token);
+    public static ApiToken deserialize(TokenCrypter crypter, String token) throws IOException {
+        byte[] bytes = BaseEncoding.base64Url().decode(token);
         try (ByteArrayInputStream bbis = new ByteArrayInputStream(crypter.decrypt(bytes))) {
             try (ObjectInputStream bis = new ObjectInputStream(bbis)) {
                 int version = bis.read();
@@ -44,7 +47,7 @@ public class AuthToken {
                     default:
                         throw new IllegalStateException("unknown version " + version);
                 }
-                return new AuthToken(UUID.fromString(uuidAsString), expiresAt);
+                return new ApiToken(UUID.fromString(uuidAsString), expiresAt);
             }
         }
     }

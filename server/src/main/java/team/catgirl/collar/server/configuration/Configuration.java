@@ -70,45 +70,48 @@ public class Configuration {
         if (mailgunApiKey == null) {
             throw new IllegalStateException("MAILGUN_API_KEY not set");
         }
+        DefaultAppUrlProvider appUrlProvider = new DefaultAppUrlProvider(baseUrl);
         return new Configuration(
                 Mongo.database(),
-                new DefaultAppUrlProvider(baseUrl),
+                appUrlProvider,
                 new TokenCrypter(crypterPassword),
                 new PasswordHashing(passwordSalt),
                 useMojang ? new MojangMinecraftSessionVerifier() : new NojangMinecraftSessionVerifier(),
                 corsOrigin,
                 enableWeb,
                 httpPort(),
-                new MailGunEmail(new Mailgun.Builder(mailgunDomain, mailgunApiKey).build())
+                new MailGunEmail(appUrlProvider, new Mailgun.Builder(mailgunDomain, mailgunApiKey).build())
                 );
     }
 
     public static Configuration defaultConfiguration() {
         LOGGER.log(Level.SEVERE, "Starting in insecure development mode. Do not use in production.");
+        DefaultAppUrlProvider appUrlProvider = new DefaultAppUrlProvider("http://localhost:3000");
         return new Configuration(
                 Mongo.database("mongodb://localhost/collar-dev"),
-                new DefaultAppUrlProvider("http://localhost:3000"),
+                appUrlProvider,
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
                 new NojangMinecraftSessionVerifier(),
                 "*",
                 true,
                 httpPort(),
-                new LocalEmail());
+                new LocalEmail(appUrlProvider));
     }
 
     public static Configuration testConfiguration(MongoDatabase db) {
         LOGGER.log(Level.SEVERE, "Starting in insecure testing mode. Do not use in production.");
+        DefaultAppUrlProvider appUrlProvider = new DefaultAppUrlProvider("http://localhost:3001");
         return new Configuration(
                 db,
-                new DefaultAppUrlProvider("http://localhost:3001"),
+                appUrlProvider,
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
                 new NojangMinecraftSessionVerifier(),
                 "*",
                 false,
                 3001,
-                new LocalEmail());
+                new LocalEmail(appUrlProvider));
     }
 
     private static int httpPort() {

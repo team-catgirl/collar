@@ -1,9 +1,11 @@
 package team.catgirl.collar.server.services.profiles;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
+import com.mongodb.client.result.UpdateResult;
 import org.bson.BsonObjectId;
 import org.bson.Document;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
@@ -84,6 +86,25 @@ public class ProfileService {
         return new GetProfileResponse(map(doc));
     }
 
+    public UpdateProfileResponse updateProfile(RequestContext context, UpdateProfileRequest req) {
+        context.assertNotAnonymous();
+        context.assertCallerIs(req.profile);
+        if (req.emailVerified != null) {
+            UpdateResult result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_EMAIL_VERIFIED, req.emailVerified)));
+            if (result.wasAcknowledged()) {
+                Document first = docs.find(eq(FIELD_PROFILE_ID, req.profile)).first();
+                if (first == null) {
+                    throw new NotFoundException("could not find profile");
+                }
+                return new UpdateProfileResponse(map(first));
+            } else {
+                throw new ServerErrorException("could not update profile");
+            }
+        } else {
+            throw new BadRequestException("bad request");
+        }
+    }
+
     public static class CreateProfileRequest {
         public final String email;
         public final String password;
@@ -137,5 +158,30 @@ public class ProfileService {
         String hashedPassword = doc.getString(FIELD_HASHED_PASSWORD);
         boolean emailVerified = doc.getBoolean(FIELD_EMAIL_VERIFIED);
         return new Profile(profileId, email, name, hashedPassword, emailVerified);
+    }
+
+    public static final class UpdateProfileRequest {
+        @JsonProperty("profile")
+        public final UUID profile;
+        @JsonProperty("emailVerified")
+        public final Boolean emailVerified;
+
+        public UpdateProfileRequest(@JsonProperty("profile") UUID profile, @JsonProperty("emailVerified") Boolean emailVerified) {
+            this.profile = profile;
+            this.emailVerified = emailVerified;
+        }
+
+        public static UpdateProfileRequest emailVerified(UUID profile) {
+            return new UpdateProfileRequest(profile, true);
+        }
+    }
+
+    public static final class UpdateProfileResponse {
+        @JsonProperty("profile")
+        public final Profile profile;
+
+        public UpdateProfileResponse(@JsonProperty("profile") Profile profile) {
+            this.profile = profile;
+        }
     }
 }

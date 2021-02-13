@@ -28,4 +28,14 @@ public class DefaultAppUrlProvider implements AppUrlProvider {
     public String deviceVerificationUrl(String token) {
         return this.baseUrl.withPath("/app/devices/trust/" + token).toString();
     }
+
+    @Override
+    public String emailVerificationUrl(String token) {
+        return this.baseUrl.withPath("/app/verify/").addParameter("token", token).toString();
+    }
+
+    @Override
+    public String logoUrl(int size) {
+        return this.baseUrl.withPath("/app/static/logo.png").toString();
+    }
 }

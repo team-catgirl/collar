@@ -43,7 +43,7 @@ public final class Services {
         this.profiles = new ProfileService(configuration.database, passwordHashing);
         this.devices = new DeviceService(configuration.database);
         this.tokenCrypter = configuration.tokenCrypter;
-        this.auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter, configuration.email);
+        this.auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter, configuration.email, urlProvider);
         this.minecraftSessionVerifier = configuration.minecraftSessionVerifier;
         this.groups = new GroupService(identityStore.getIdentity(), sessions);
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());

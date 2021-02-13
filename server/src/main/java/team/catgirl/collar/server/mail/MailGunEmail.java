@@ -3,19 +3,17 @@ package team.catgirl.collar.server.mail;
 import com.commit451.mailgun.Contact;
 import com.commit451.mailgun.Mailgun;
 import com.commit451.mailgun.SendMessageRequest;
-import org.jetbrains.annotations.NotNull;
-import spark.ModelAndView;
-import team.catgirl.collar.server.http.HandlebarsTemplateEngine;
+import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.services.profiles.Profile;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class MailGunEmail extends AbstractEmail {
     private final Mailgun mailgun;
 
-    public MailGunEmail(Mailgun mailgun) {
+    public MailGunEmail(AppUrlProvider urlProvider, Mailgun mailgun) {
+        super(urlProvider);
         this.mailgun = mailgun;
     }
 

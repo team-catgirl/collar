@@ -59,7 +59,7 @@ public class Cookie {
 
     public void set(TokenCrypter crypter, Response response) throws IOException {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-            try (ObjectOutputStream objectStream = new ObjectOutputStream(byteStream)) {
+            try (DataOutputStream objectStream = new DataOutputStream(byteStream)) {
                 objectStream.writeInt(VERSION);
                 objectStream.writeUTF(profileId.toString());
                 objectStream.writeLong(expiresAt);

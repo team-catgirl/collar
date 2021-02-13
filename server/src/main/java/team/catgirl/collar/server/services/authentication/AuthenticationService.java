@@ -110,7 +110,7 @@ public class AuthenticationService {
         }).orElseThrow(() -> new UnauthorisedException("bad or missing token"));
     }
 
-    public RequestResetPasswordResponse requestPasswordReset(RequestContext context, RequestPasswordRequest req) {
+    public RequestPasswordResponse requestPasswordReset(RequestContext context, RequestPasswordResetRequest req) {
         context.assertAnonymous();
         Profile profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail(req.email)).profile;
         VerificationToken apiToken = new VerificationToken(profile.id, new Date().getTime() + TimeUnit.HOURS.toMillis(24));
@@ -121,7 +121,7 @@ public class AuthenticationService {
             throw new ServerErrorException("token could not be serialized", e);
         }
         email.send(profile, "Verify your new Collar account", "verify-account", Map.of("resetPasswordUrl", url));
-        return new RequestResetPasswordResponse();
+        return new RequestPasswordResponse();
     }
 
     public ResetPasswordResponse resetPassword(RequestContext context, ResetPasswordRequest req) {
@@ -224,15 +224,15 @@ public class AuthenticationService {
         }
     }
 
-    public static class RequestPasswordRequest {
+    public static class RequestPasswordResetRequest {
         public final String email;
 
-        public RequestPasswordRequest(String email) {
+        public RequestPasswordResetRequest(String email) {
             this.email = email;
         }
     }
 
-    public static class RequestResetPasswordResponse {}
+    public static class RequestPasswordResponse {}
 
     public static class ResetPasswordRequest {
         public final String token;

@@ -38,7 +38,7 @@ public class Cookie {
             }
         }
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes)) {
-            try (ObjectInputStream objectStream = new ObjectInputStream(byteStream)) {
+            try (DataInputStream objectStream = new DataInputStream(byteStream)) {
                 String profileId;
                 long expiresAt;
                 int version = objectStream.readInt();

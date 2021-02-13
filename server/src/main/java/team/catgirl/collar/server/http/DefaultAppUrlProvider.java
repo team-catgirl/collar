@@ -38,4 +38,9 @@ public class DefaultAppUrlProvider implements AppUrlProvider {
     public String logoUrl(int size) {
         return this.baseUrl.withPath("/app/static/logo.png").toString();
     }
+
+    @Override
+    public String resetPassword(String token) {
+        return this.baseUrl.withPath("/app/reset").toString();
+    }
 }

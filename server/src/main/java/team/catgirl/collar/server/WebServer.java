@@ -19,9 +19,8 @@ import team.catgirl.collar.server.protocol.GroupsProtocolHandler;
 import team.catgirl.collar.server.protocol.LocationProtocolHandler;
 import team.catgirl.collar.server.protocol.ProtocolHandler;
 import team.catgirl.collar.server.protocol.TexturesProtocolHandler;
-import team.catgirl.collar.server.services.authentication.AuthenticationService.CreateAccountRequest;
-import team.catgirl.collar.server.services.authentication.AuthenticationService.LoginRequest;
-import team.catgirl.collar.server.services.authentication.AuthenticationService.VerifyAccountRequest;
+import team.catgirl.collar.server.services.authentication.AuthenticationService;
+import team.catgirl.collar.server.services.authentication.AuthenticationService.*;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.authentication.VerificationToken;
 import team.catgirl.collar.server.services.devices.DeviceService;
@@ -184,6 +183,14 @@ public class WebServer {
                     post("/verify", (request, response) -> {
                         VerifyAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), VerifyAccountRequest.class);
                         return services.auth.verify(RequestContext.from(request), req);
+                    });
+                    post("/reset/request", (request, response) -> {
+                        RequestPasswordRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), RequestPasswordRequest.class);
+                        return services.auth.requestPasswordReset(RequestContext.from(request), req);
+                    });
+                    post("/reset/perform", (request, response) -> {
+                        ResetPasswordRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), ResetPasswordRequest.class);
+                        return services.auth.resetPassword(RequestContext.from(request), req);
                     });
                 });
 

@@ -88,20 +88,22 @@ public class ProfileService {
 
     public UpdateProfileResponse updateProfile(RequestContext context, UpdateProfileRequest req) {
         context.assertNotAnonymous();
-        context.assertCallerIs(req.profile);
+        UpdateResult result;
         if (req.emailVerified != null) {
-            UpdateResult result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_EMAIL_VERIFIED, req.emailVerified)));
-            if (result.wasAcknowledged()) {
-                Document first = docs.find(eq(FIELD_PROFILE_ID, req.profile)).first();
-                if (first == null) {
-                    throw new NotFoundException("could not find profile");
-                }
-                return new UpdateProfileResponse(map(first));
-            } else {
-                throw new ServerErrorException("could not update profile");
-            }
+            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_EMAIL_VERIFIED, req.emailVerified)));
+        } else if (req.hashedPassword != null) {
+            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_HASHED_PASSWORD, req.hashedPassword)));
         } else {
             throw new BadRequestException("bad request");
+        }
+        if (result.wasAcknowledged()) {
+            Document first = docs.find(eq(FIELD_PROFILE_ID, req.profile)).first();
+            if (first == null) {
+                throw new NotFoundException("could not find profile");
+            }
+            return new UpdateProfileResponse(map(first));
+        } else {
+            throw new ServerErrorException("could not update profile");
         }
     }
 
@@ -165,14 +167,23 @@ public class ProfileService {
         public final UUID profile;
         @JsonProperty("emailVerified")
         public final Boolean emailVerified;
+        @JsonProperty("hashedPassword")
+        public final String hashedPassword;
 
-        public UpdateProfileRequest(@JsonProperty("profile") UUID profile, @JsonProperty("emailVerified") Boolean emailVerified) {
+        public UpdateProfileRequest(@JsonProperty("profile") UUID profile,
+                                    @JsonProperty("emailVerified") Boolean emailVerified,
+                                    @JsonProperty("hashedPassword") String hashedPassword) {
             this.profile = profile;
             this.emailVerified = emailVerified;
+            this.hashedPassword = hashedPassword;
         }
 
         public static UpdateProfileRequest emailVerified(UUID profile) {
-            return new UpdateProfileRequest(profile, true);
+            return new UpdateProfileRequest(profile, true, null);
+        }
+
+        public static UpdateProfileRequest hashedPassword(UUID profile, String newPassword) {
+            return new UpdateProfileRequest(profile, null, newPassword);
         }
     }
 

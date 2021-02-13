@@ -3,6 +3,12 @@ package team.catgirl.collar.server.http;
 public interface AppUrlProvider {
 
     /**
+     * @param size pixels
+     * @return url
+     */
+    String logoUrl(int size);
+
+    /**
      * @return homepage of the collar web app
      */
     String homeUrl();
@@ -30,9 +36,5 @@ public interface AppUrlProvider {
      */
     String emailVerificationUrl(String token);
 
-    /**
-     * @param size pixels
-     * @return url
-     */
-    String logoUrl(int size);
+    String resetPassword(String token);
 }

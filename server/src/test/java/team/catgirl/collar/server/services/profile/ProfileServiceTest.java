@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.server.http.RequestContext;
@@ -42,6 +43,21 @@ public class ProfileServiceTest {
             profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bob@example.com", "password", "Bob UwU"));
             fail("should not be able to create a duplicate profile");
         } catch (ConflictException ignored) {}
+    }
+
+    @Test
+    public void createProfileWithBadEmail() throws Exception {
+        try {
+            profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail("bob@example.com"));
+            fail("Should not exist");
+        } catch (NotFoundException ignored) {}
+
+        try {
+            profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bob@example.com", "password", "Bob UwU"));
+            fail();
+        } catch (HttpException.BadRequestException e) {
+            Assert.assertEquals("email address is invalid", e.getMessage());
+        }
     }
 
     @Test

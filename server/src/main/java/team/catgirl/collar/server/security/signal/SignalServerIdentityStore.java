@@ -81,7 +81,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     public SendPreKeysResponse createSendPreKeysResponse() {
         PreKeyBundle bundle = PreKeys.generate(getIdentity(), store);
         try {
-            return new SendPreKeysResponse(getIdentity(), PreKeys.preKeyBundleToBytes(bundle));
+            return new SendPreKeysResponse(getIdentity(), PreKeys.preKeyBundleToBytes(bundle), null);
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }

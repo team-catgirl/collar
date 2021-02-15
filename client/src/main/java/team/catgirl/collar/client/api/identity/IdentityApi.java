@@ -8,6 +8,9 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.identity.GetIdentityRequest;
 import team.catgirl.collar.protocol.identity.GetIdentityResponse;
+import team.catgirl.collar.protocol.signal.ExchangePreKeysResponse;
+import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
+import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.UUID;
@@ -52,6 +55,10 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
             SettableFuture<ClientIdentity> future = futures.get(response.id);
             future.set(response.found);
             return true;
+        } else if (resp instanceof ExchangePreKeysResponse) {
+            ExchangePreKeysResponse response = (ExchangePreKeysResponse) resp;
+            identityStore().trustIdentity(response.owner, response.preKeyBundle);
+            sender.accept(identityStore().createSendPreKeysRequest(response.owner));
         }
         return false;
     }

@@ -15,6 +15,7 @@ import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
+import team.catgirl.collar.protocol.signal.ExchangePreKeysResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
@@ -99,9 +100,17 @@ public class CollarServer {
             }
         } else if (req instanceof SendPreKeysRequest) {
             SendPreKeysRequest request = (SendPreKeysRequest) req;
-            services.identityStore.trustIdentity(request);
-            SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
-            sendPlain(session, response);
+            if (request.recipient == null) {
+                services.identityStore.trustIdentity(request);
+                SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
+                sendPlain(session, response);
+            } else {
+                services.sessions.getSession(request.recipient).ifPresentOrElse(recipientSession -> {
+                    send(session, new ExchangePreKeysResponse(serverIdentity, request.preKeyBundle, request.recipient));
+                }, () -> {
+                    send(session, new SendPreKeysResponse(serverIdentity, null, request.recipient));
+                });
+            }
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;

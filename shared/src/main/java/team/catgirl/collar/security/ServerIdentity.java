@@ -31,6 +31,11 @@ public final class ServerIdentity implements Identity {
     }
 
     @Override
+    public PublicKey publicKey() {
+        return publicKey;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

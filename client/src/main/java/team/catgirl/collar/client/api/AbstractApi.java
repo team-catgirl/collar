@@ -36,6 +36,10 @@ public abstract class AbstractApi<T extends ApiListener> {
         return identityStoreSupplier.get().currentIdentity();
     }
 
+    protected ClientIdentityStore identityStore() {
+        return identityStoreSupplier.get();
+    }
+
     public void subscribe(T listener) {
         listeners.add(listener);
     }

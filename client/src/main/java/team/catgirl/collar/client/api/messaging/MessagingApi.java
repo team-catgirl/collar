@@ -1,6 +1,5 @@
 package team.catgirl.collar.client.api.messaging;
 
-import org.jetbrains.annotations.NotNull;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.api.identity.IdentityApi;
@@ -9,10 +8,10 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
 
-import java.util.Optional;
-import java.util.Queue;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -42,6 +41,9 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
 
     public void sendMessage(UUID recipientPlayerId, String message) {
         // Find the player client identity by its ID
+
+        Future<ClientIdentity> identityFuture = collar.identities().identify(recipientPlayerId);
+
 
 //        ClientIdentity identity = collar.identities().identify(recipientPlayerId).get();
 //        if (identity == null) {

@@ -25,6 +25,11 @@ public final class ClientIdentity implements Identity {
     }
 
     @Override
+    public PublicKey publicKey() {
+        return publicKey;
+    }
+
+    @Override
     public UUID id() {
         return owner;
     }

@@ -26,14 +26,14 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.protocol.BatchProtocolResponse;
-import team.catgirl.collar.server.protocol.ProtocolHandler;
+import team.catgirl.collar.server.protocol.*;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
@@ -47,10 +47,16 @@ public class CollarServer {
     private final BiConsumer<ClientIdentity, MinecraftPlayer> sessionStopped;
     private final Services services;
 
-    public CollarServer(Services services, List<ProtocolHandler> protocolHandlers) {
+    public CollarServer(Services services) {
         this.services = services;
-        this.protocolHandlers = protocolHandlers;
+        this.protocolHandlers = new ArrayList<>();
         this.sessionStopped = (identity, player) -> protocolHandlers.forEach(protocolHandler -> protocolHandler.onSessionStopping(identity, player, this::send));
+
+        protocolHandlers.add(new GroupsProtocolHandler(services.groups));
+        protocolHandlers.add(new LocationProtocolHandler(services.playerLocations));
+        protocolHandlers.add(new TexturesProtocolHandler(services.identityStore.getIdentity(), services.sessions, services.textures));
+        protocolHandlers.add(new IdentityProtocolHandler(services.sessions, services.identityStore.getIdentity()));
+        protocolHandlers.add(new MessagingProtocolHandler(services.sessions, services.identityStore.getIdentity()));
     }
 
     @OnWebSocketConnect

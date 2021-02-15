@@ -80,19 +80,10 @@ public class WebServer {
         // Setup WebSockets
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
 
-        // WebSocket server
-        List<ProtocolHandler> protocolHandlers = new ArrayList<>();
-        protocolHandlers.add(new GroupsProtocolHandler(services.groups));
-        protocolHandlers.add(new LocationProtocolHandler(services.playerLocations));
-        protocolHandlers.add(new TexturesProtocolHandler(services.identityStore.getIdentity(), services.sessions, services.textures));
-        protocolHandlers.add(new IdentityProtocolHandler(services.sessions, services.identityStore.getIdentity()));
-        protocolHandlers.add(new FriendsProtocolHandler(services.identityStore.getIdentity(), services.friends, services.sessions));
-
-
         // TODO: all routes should go into their own class/package
         // Setup WebSockets
         webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
-        webSocket("/api/1/listen", new CollarServer(services, protocolHandlers));
+        webSocket("/api/1/listen", new CollarServer(services));
 
         staticFiles.location("/public");
 

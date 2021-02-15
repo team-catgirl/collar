@@ -28,6 +28,7 @@ public class MessagingProtocolHandler extends ProtocolHandler {
             sessions.findPlayer(request.identity).ifPresent(player -> {
                 sender.accept(new SendMessageResponse(this.serverIdentity, req.identity, player, request.message));
             });
+            return true;
         }
         return false;
     }

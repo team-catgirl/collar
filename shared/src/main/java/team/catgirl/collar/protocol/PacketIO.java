@@ -35,12 +35,14 @@ public final class PacketIO {
                 packetType = objectStream.readInt();
                 byte[] remainingBytes = toByteArray(objectStream);
                 if (packetType == MODE_PLAIN) {
+                    checkPacketSize(remainingBytes);
                     return mapper.readValue(remainingBytes, type);
                 } else if (packetType == MODE_ENCRYPTED) {
                     if (sender == null) {
                         throw new IllegalStateException("Cannot read encrypted packets with no sender");
                     }
                     remainingBytes = cypher.decrypt(sender, remainingBytes);
+                    checkPacketSize(remainingBytes);
                     return mapper.readValue(remainingBytes, type);
                 } else {
                     throw new IllegalStateException("unknown packet type " + packetType);
@@ -56,7 +58,9 @@ public final class PacketIO {
                 objectStream.writeInt(MODE_PLAIN);
                 objectStream.write(rawBytes);
             }
-            return outputStream.toByteArray();
+            byte[] bytes = outputStream.toByteArray();
+            checkPacketSize(bytes);
+            return bytes;
         }
     }
 
@@ -70,7 +74,9 @@ public final class PacketIO {
                 }
                 objectStream.write(cypher.crypt(recipient, rawBytes));
             }
-            return outputStream.toByteArray();
+            byte[] bytes = outputStream.toByteArray();
+            checkPacketSize(bytes);
+            return bytes;
         }
     }
 
@@ -81,5 +87,11 @@ public final class PacketIO {
             os.write(buf, 0, n);
         }
         return os.toByteArray();
+    }
+
+    private void checkPacketSize(byte[] bytes) {
+        if (bytes.length > 32767) {
+            throw new IllegalStateException("Packet is too large");
+        }
     }
 }

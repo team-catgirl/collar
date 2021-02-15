@@ -34,7 +34,5 @@ public class MessagingProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopped(ClientIdentity identity, MinecraftPlayer player, Consumer<ProtocolResponse> sender) {
-
-    }
+    public void onSessionStopped(ClientIdentity identity, MinecraftPlayer player, Consumer<ProtocolResponse> sender) {}
 }

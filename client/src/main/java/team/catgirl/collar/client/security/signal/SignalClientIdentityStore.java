@@ -12,7 +12,6 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
-import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.*;
 import team.catgirl.collar.security.signal.PreKeys;
 import team.catgirl.collar.security.signal.SignalCypher;
@@ -125,17 +124,17 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         }
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(response.profile.id.toString(), deviceId), store);
         try {
-            return new SendPreKeysRequest(currentIdentity(), PreKeys.preKeyBundleToBytes(bundle), null);
+            return new SendPreKeysRequest(currentIdentity(), null, PreKeys.preKeyBundleToBytes(bundle), null);
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }
     }
 
     @Override
-    public SendPreKeysRequest createSendPreKeysRequest(ClientIdentity identity) {
+    public SendPreKeysRequest createSendPreKeysRequest(ClientIdentity identity, long id) {
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(identity.owner.toString(), identity.deviceId), store);
         try {
-            return new SendPreKeysRequest(currentIdentity(), PreKeys.preKeyBundleToBytes(bundle), identity);
+            return new SendPreKeysRequest(currentIdentity(), id, PreKeys.preKeyBundleToBytes(bundle), identity);
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }

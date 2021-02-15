@@ -6,14 +6,20 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.security.ClientIdentity;
 
 public final class SendPreKeysRequest extends ProtocolRequest {
+    @JsonProperty("id")
+    public final Long id;
     @JsonProperty("preKeyBundle")
     public final byte[] preKeyBundle;
     @JsonProperty("client")
     public final ClientIdentity recipient;
 
     @JsonCreator
-    public SendPreKeysRequest(@JsonProperty("identity") ClientIdentity identity, @JsonProperty("preKeyBundle") byte[] preKeyBundle, @JsonProperty("recipient") ClientIdentity recipient) {
+    public SendPreKeysRequest(@JsonProperty("identity") ClientIdentity identity,
+                              @JsonProperty("id") Long id,
+                              @JsonProperty("preKeyBundle") byte[] preKeyBundle,
+                              @JsonProperty("recipient") ClientIdentity recipient) {
         super(identity);
+        this.id = id;
         this.preKeyBundle = preKeyBundle;
         this.recipient = recipient;
     }

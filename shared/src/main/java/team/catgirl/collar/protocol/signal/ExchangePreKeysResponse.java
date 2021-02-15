@@ -15,6 +15,7 @@ import team.catgirl.collar.security.ServerIdentity;
  * The two parties can now crypt messages to each other
  */
 public final class ExchangePreKeysResponse extends ProtocolResponse {
+    public final Long id;
     @JsonProperty("preKeyBundle")
     public final byte[] preKeyBundle;
     @JsonProperty("owner")
@@ -22,9 +23,11 @@ public final class ExchangePreKeysResponse extends ProtocolResponse {
 
     @JsonCreator
     public ExchangePreKeysResponse(@JsonProperty("identity") ServerIdentity identity,
-                               @JsonProperty("preKeyBundle") byte[] preKeyBundle,
-                               @JsonProperty("owner") ClientIdentity owner) {
+                                   @JsonProperty("identity") Long id,
+                                   @JsonProperty("preKeyBundle") byte[] preKeyBundle,
+                                   @JsonProperty("owner") ClientIdentity owner) {
         super(identity);
+        this.id = id;
         this.preKeyBundle = preKeyBundle;
         this.owner = owner;
     }

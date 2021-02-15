@@ -7,6 +7,8 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 
 public final class SendPreKeysResponse extends ProtocolResponse {
+    @JsonProperty("id")
+    public final Long id;
     @JsonProperty("preKeyBundle")
     public final byte[] preKeyBundle;
     @JsonProperty("owner")
@@ -14,9 +16,11 @@ public final class SendPreKeysResponse extends ProtocolResponse {
 
     @JsonCreator
     public SendPreKeysResponse(@JsonProperty("identity") ServerIdentity identity,
+                               @JsonProperty("id") Long id,
                                @JsonProperty("preKeyBundle") byte[] preKeyBundle,
                                @JsonProperty("owner") ClientIdentity owner) {
         super(identity);
+        this.id = id;
         this.preKeyBundle = preKeyBundle;
         this.owner = owner;
     }

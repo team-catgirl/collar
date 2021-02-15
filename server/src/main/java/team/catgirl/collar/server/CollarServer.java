@@ -108,9 +108,9 @@ public class CollarServer {
             } else {
                 // Client exchanging keys with another client
                 services.sessions.getSession(request.recipient).ifPresentOrElse(recipientSession -> {
-                    send(session, new ExchangePreKeysResponse(serverIdentity, request.preKeyBundle, request.recipient));
+                    send(session, new ExchangePreKeysResponse(serverIdentity, request.id, request.preKeyBundle, request.recipient));
                 }, () -> {
-                    send(session, new SendPreKeysResponse(serverIdentity, null, request.recipient));
+                    send(session, new SendPreKeysResponse(serverIdentity, request.id, null, request.recipient));
                 });
             }
         } else if (req instanceof StartSessionRequest) {

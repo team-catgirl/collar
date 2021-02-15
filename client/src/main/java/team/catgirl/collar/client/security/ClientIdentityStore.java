@@ -2,7 +2,6 @@ package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
-import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
@@ -49,9 +48,10 @@ public interface ClientIdentityStore {
 
     /**
      * @param identity client identity to exchange keys with
+     * @param id unique for this request
      * @return SendPreKeyRequest to send to the provided client identity
      */
-    SendPreKeysRequest createSendPreKeysRequest(ClientIdentity identity);
+    SendPreKeysRequest createSendPreKeysRequest(ClientIdentity identity, long id);
 
     /**
      * Resets the identity store and recreates it

@@ -17,6 +17,7 @@ import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,6 +26,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
 
     private static final Logger LOGGER = Logger.getLogger(SignalServerIdentityStore.class.getName());
 
+    private final AtomicLong preKeyMessageIds = new AtomicLong(0L);
     private final ServerSignalProtocolStore store;
     private final Supplier<ServerIdentity> serverIdentitySupplier;
 
@@ -81,7 +83,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     public SendPreKeysResponse createSendPreKeysResponse() {
         PreKeyBundle bundle = PreKeys.generate(getIdentity(), store);
         try {
-            return new SendPreKeysResponse(getIdentity(), PreKeys.preKeyBundleToBytes(bundle), null);
+            return new SendPreKeysResponse(getIdentity(), preKeyMessageIds.getAndIncrement(), PreKeys.preKeyBundleToBytes(bundle), null);
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }

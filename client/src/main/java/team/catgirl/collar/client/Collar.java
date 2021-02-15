@@ -17,6 +17,7 @@ import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.api.ApiListener;
 import team.catgirl.collar.client.api.friends.FriendsApi;
 import team.catgirl.collar.client.api.groups.GroupsApi;
+import team.catgirl.collar.client.api.identity.IdentityApi;
 import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.api.textures.TexturesApi;
 import team.catgirl.collar.client.minecraft.Ticks;
@@ -65,6 +66,7 @@ public final class Collar {
     private final LocationApi locationApi;
     private final TexturesApi texturesApi;
     private final FriendsApi friendsApi;
+    private final IdentityApi identityApi;
     private WebSocket webSocket;
     private volatile State state;
     private final List<AbstractApi<? extends ApiListener>> apis;
@@ -82,11 +84,13 @@ public final class Collar {
         this.apis = new ArrayList<>();
         this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), this.ticks, groupsApi, configuration.playerLocation);
         this.texturesApi = new TexturesApi(this, identityStoreSupplier, request -> sender.accept(request));
+        this.identityApi = new IdentityApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.friendsApi = new FriendsApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.apis.add(groupsApi);
         this.apis.add(locationApi);
         this.apis.add(texturesApi);
         this.apis.add(friendsApi);
+        this.apis.add(identityApi);
     }
 
     /**
@@ -143,6 +147,14 @@ public final class Collar {
     public TexturesApi textures() {
         assertConnected();
         return texturesApi;
+    }
+
+    /**
+     * @return identity api
+     */
+    public IdentityApi identities() {
+        assertConnected();
+        return identityApi;
     }
 
     /**

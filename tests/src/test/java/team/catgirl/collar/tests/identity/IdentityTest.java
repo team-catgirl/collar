@@ -15,22 +15,22 @@ import java.util.UUID;
 public class IdentityTest extends CollarTest {
     @Test
     public void canGetClientIdentity() throws Exception {
-        IdentityListenerImpl aliceListener = new IdentityListenerImpl();
-        alicePlayer.collar.identities().subscribe(aliceListener);
+//        IdentityListenerImpl aliceListener = new IdentityListenerImpl();
+//        alicePlayer.collar.identities().subscribe(aliceListener);
 
         ClientIdentity clientIdentity = alicePlayer.collar.identities().identify(bobPlayerId).get();
         Assert.assertEquals(clientIdentity, bobPlayer.collar.identity());
     }
 
-    private static class IdentityListenerImpl implements IdentityListener {
-
-        public ClientIdentity identity;
-        public UUID player;
-
-        @Override
-        public void onPlayerIdentified(Collar collar, IdentityApi identityApi, ClientIdentityStore identityStore, UUID playerId, ClientIdentity identity) {
-            this.identity = identity;
-            this.player = playerId;
-        }
-    }
+//    private static class IdentityListenerImpl implements IdentityListener {
+//
+//        public ClientIdentity identity;
+//        public UUID player;
+//
+//        @Override
+//        public void onPlayerIdentified(Collar collar, IdentityApi identityApi, ClientIdentityStore identityStore, UUID playerId, ClientIdentity identity) {
+//            this.identity = identity;
+//            this.player = playerId;
+//        }
+//    }
 }

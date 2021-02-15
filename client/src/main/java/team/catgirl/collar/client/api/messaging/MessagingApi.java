@@ -1,7 +1,6 @@
 package team.catgirl.collar.client.api.messaging;
 
 import org.jetbrains.annotations.NotNull;
-import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.api.identity.IdentityApi;
@@ -19,7 +18,7 @@ import java.util.function.Supplier;
 
 public class MessagingApi extends AbstractApi<MessagingListener> {
 
-    private final Queue<Message> messages = new LinkedBlockingDeque<>();
+//    private final Queue<Message> messages = new LinkedBlockingDeque<>();
 
     private final Executor executor = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r);

@@ -19,6 +19,7 @@ import team.catgirl.collar.client.api.friends.FriendsApi;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.identity.IdentityApi;
 import team.catgirl.collar.client.api.location.LocationApi;
+import team.catgirl.collar.client.api.messaging.MessagingApi;
 import team.catgirl.collar.client.api.textures.TexturesApi;
 import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.security.ClientIdentityStore;
@@ -67,6 +68,7 @@ public final class Collar {
     private final TexturesApi texturesApi;
     private final FriendsApi friendsApi;
     private final IdentityApi identityApi;
+    private final MessagingApi messagingApi;
     private WebSocket webSocket;
     private volatile State state;
     private final List<AbstractApi<? extends ApiListener>> apis;
@@ -79,18 +81,21 @@ public final class Collar {
         this.configuration = configuration;
         changeState(State.DISCONNECTED);
         this.identityStoreSupplier = () -> identityStore;
-        this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
+        Consumer<ProtocolRequest> sender = request -> this.sender.accept(request);
+        this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender);
         this.ticks = configuration.ticks;
         this.apis = new ArrayList<>();
-        this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), this.ticks, groupsApi, configuration.playerLocation);
-        this.texturesApi = new TexturesApi(this, identityStoreSupplier, request -> sender.accept(request));
-        this.identityApi = new IdentityApi(this, identityStoreSupplier, request -> sender.accept(request));
+        this.locationApi = new LocationApi(this, identityStoreSupplier, sender, this.ticks, groupsApi, configuration.playerLocation);
+        this.texturesApi = new TexturesApi(this, identityStoreSupplier, sender);
+        this.identityApi = new IdentityApi(this, identityStoreSupplier, sender);
+        this.messagingApi = new MessagingApi(this, identityStoreSupplier, sender);
         this.friendsApi = new FriendsApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.apis.add(groupsApi);
         this.apis.add(locationApi);
         this.apis.add(texturesApi);
         this.apis.add(friendsApi);
         this.apis.add(identityApi);
+        this.apis.add(messagingApi);
     }
 
     /**
@@ -163,6 +168,14 @@ public final class Collar {
     public FriendsApi friends() {
         assertConnected();
         return friendsApi;
+    }
+
+    /**
+     * @return messaging api
+     */
+    public MessagingApi messaging() {
+        assertConnected();
+        return messagingApi;
     }
 
     /**

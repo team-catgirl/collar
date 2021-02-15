@@ -101,10 +101,12 @@ public class CollarServer {
         } else if (req instanceof SendPreKeysRequest) {
             SendPreKeysRequest request = (SendPreKeysRequest) req;
             if (request.recipient == null) {
+                // Server and client exchanging keys
                 services.identityStore.trustIdentity(request);
                 SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
                 sendPlain(session, response);
             } else {
+                // Client exchanging keys with another client
                 services.sessions.getSession(request.recipient).ifPresentOrElse(recipientSession -> {
                     send(session, new ExchangePreKeysResponse(serverIdentity, request.preKeyBundle, request.recipient));
                 }, () -> {

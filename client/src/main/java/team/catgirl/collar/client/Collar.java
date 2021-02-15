@@ -380,7 +380,7 @@ public final class Collar {
                 LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);
                 SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
                 sendRequest(webSocket, request);
-            } else if (resp instanceof SendPreKeysResponse) {
+            } else if (resp instanceof SendPreKeysResponse && ((SendPreKeysResponse) resp).owner == null) {
                 SendPreKeysResponse response = (SendPreKeysResponse)resp;
                 if (identityStore == null) {
                     throw new IllegalStateException("identity has not been established");

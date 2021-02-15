@@ -144,11 +144,11 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         store.delete();
     }
 
-    private SignalProtocolAddress signalProtocolAddressFrom(Identity serverIdentity) {
+    private SignalProtocolAddress signalProtocolAddressFrom(Identity identity) {
         ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
         try {
             readLock.lockInterruptibly();
-            return new SignalProtocolAddress(serverIdentity.id().toString(), serverIdentity.deviceId());
+            return new SignalProtocolAddress(identity.id().toString(), identity.deviceId());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {

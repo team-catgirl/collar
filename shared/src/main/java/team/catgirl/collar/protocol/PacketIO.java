@@ -90,7 +90,7 @@ public final class PacketIO {
     }
 
     private void checkPacketSize(byte[] bytes) {
-        if (bytes.length > 32767) {
+        if (bytes.length > Short.MAX_VALUE) {
             throw new IllegalStateException("Packet is too large. Size " + bytes.length + " bytes");
         }
     }

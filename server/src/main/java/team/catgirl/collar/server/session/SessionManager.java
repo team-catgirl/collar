@@ -182,6 +182,12 @@ public final class SessionManager {
                 .findFirst();
     }
 
+    public Optional<ClientIdentity> getIdentity(UUID playerId) {
+        return sessions.values().stream().filter(sessionState -> sessionState.player.id.equals(playerId))
+                .findAny()
+                .map(sessionState -> sessionState.identity);
+    }
+
     public static final class SessionState {
         public final Session session;
         public final ClientIdentity identity;

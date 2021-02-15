@@ -14,16 +14,17 @@ public final class GetIdentityRequest extends ProtocolRequest {
      * Request identifier
      */
     public final Long id;
+
     /**
      * Player id to map to an identity
      */
-    public final UUID playerId;
+    public final UUID player;
 
     public GetIdentityRequest(@JsonProperty("identity") ClientIdentity identity,
                               @JsonProperty("id") Long id,
-                              @JsonProperty("playerId") UUID playerId) {
+                              @JsonProperty("player") UUID player) {
         super(identity);
         this.id = id;
-        this.playerId = playerId;
+        this.player = player;
     }
 }

@@ -9,18 +9,17 @@ import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.identity.GetIdentityRequest;
 import team.catgirl.collar.protocol.identity.GetIdentityResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.TokenGenerator;
 
-import java.nio.ByteBuffer;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class IdentityApi extends AbstractApi<IdentityListener> {
 
-    private final ConcurrentMap<Long, SettableFuture<ClientIdentity>> states = new ConcurrentHashMap<>();
+    private final AtomicLong requestIds = new AtomicLong(0L);
+    private final ConcurrentMap<Long, SettableFuture<ClientIdentity>> futures = new ConcurrentHashMap<>();
 
     public IdentityApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
         super(collar, identityStoreSupplier, sender);
@@ -29,11 +28,12 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
     /**
      * Ask the server to identify the player ID
      * @param playerId to identify
+     * @return identity future
      */
     public Future<ClientIdentity> identify(UUID playerId) {
         SettableFuture<ClientIdentity> future = SettableFuture.create();
-        long id = bytesToLong(TokenGenerator.byteToken(4));
-        states.put(id, future);
+        long id = requestIds.getAndIncrement();
+        futures.put(id, future);
         sender.accept(new GetIdentityRequest(identity(), id, playerId));
         return future;
     }
@@ -41,7 +41,7 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
     @Override
     public void onStateChanged(Collar.State state) {
         if (state == Collar.State.DISCONNECTED) {
-            states.clear();
+            futures.clear();
         }
     }
 
@@ -49,23 +49,10 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof GetIdentityResponse) {
             GetIdentityResponse response = (GetIdentityResponse) resp;
-            SettableFuture<ClientIdentity> future = states.get(response.id);
+            SettableFuture<ClientIdentity> future = futures.get(response.id);
             future.set(response.found);
             return true;
         }
         return false;
-    }
-
-    private static byte[] longToBytes(long x) {
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(x);
-        return buffer.array();
-    }
-
-    private static long bytesToLong(byte[] bytes) {
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.put(bytes);
-        buffer.flip();
-        return buffer.getLong();
     }
 }

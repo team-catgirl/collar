@@ -30,6 +30,10 @@ public final class TokenGenerator {
         return BaseEncoding.base64Url().encode(byteToken());
     }
 
+    public static String stringToken(int size) {
+        return BaseEncoding.base64Url().encode(byteToken(size));
+    }
+
     /**
      * @return new url token
      */

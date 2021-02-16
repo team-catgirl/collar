@@ -15,7 +15,6 @@ import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
-import team.catgirl.collar.protocol.signal.ExchangePreKeysResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
@@ -79,10 +78,10 @@ public class CollarServer {
     @OnWebSocketMessage
     public void message(Session session, InputStream is) throws IOException {
         ProtocolRequest req = read(session, is);
-        LOGGER.log(Level.INFO, req.getClass().getSimpleName() + " from " + req.identity);
+        LOGGER.log(Level.FINE, req.getClass().getSimpleName() + " from " + req.identity);
         ServerIdentity serverIdentity = services.identityStore.getIdentity();
         if (req instanceof KeepAliveRequest) {
-            LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
+            LOGGER.log(Level.FINE, "KeepAliveRequest received. Sending KeepAliveRequest.");
             sendPlain(session, new KeepAliveResponse(serverIdentity));
         } else if (req instanceof IdentifyRequest) {
             IdentifyRequest request = (IdentifyRequest)req;
@@ -106,19 +105,9 @@ public class CollarServer {
             }
         } else if (req instanceof SendPreKeysRequest) {
             SendPreKeysRequest request = (SendPreKeysRequest) req;
-            if (request.recipient == null) {
-                // Server and client exchanging keys
-                services.identityStore.trustIdentity(request);
-                SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
-                sendPlain(session, response);
-            } else {
-                // Client exchanging keys with another client
-                services.sessions.getSession(request.recipient).ifPresentOrElse(recipientSession -> {
-                    send(session, new ExchangePreKeysResponse(serverIdentity, request.id, request.preKeyBundle, request.recipient));
-                }, () -> {
-                    send(session, new SendPreKeysResponse(serverIdentity, request.id, null, request.recipient));
-                });
-            }
+            services.identityStore.trustIdentity(request);
+            SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
+            sendPlain(session, response);
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;
@@ -143,11 +132,19 @@ public class CollarServer {
             }
         } else {
             for (ProtocolHandler handler : protocolHandlers) {
-                if (handler.handleRequest(this, req, response -> send(session, response))) {
+                if (handler.handleRequest(this, req, createSender())) {
                     break;
                 }
             }
         }
+    }
+
+    private BiConsumer<ClientIdentity, ProtocolResponse> createSender() {
+        return (identity, response) -> {
+            services.sessions.getSession(identity).ifPresent(recipientSession -> {
+                send(recipientSession, response);
+            });
+        };
     }
 
     @Nonnull
@@ -173,6 +170,9 @@ public class CollarServer {
                 });
             });
         } else {
+            if (session == null) {
+                throw new IllegalStateException("Session cannot be null");
+            }
             PacketIO packetIO = new PacketIO(services.packetMapper, services.identityStore.createCypher());
             byte[] bytes;
             if (services.sessions.isIdentified(session)) {

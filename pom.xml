@@ -207,6 +207,11 @@
                 <artifactId>slf4j-jdk14</artifactId>
                 <version>1.7.30</version>
             </dependency>
+            <dependency>
+                <groupId>com.stoyanr</groupId>
+                <artifactId>evictor</artifactId>
+                <version>1.0.0</version>
+            </dependency>
             <!-- hopefully not wishful thinking -->
             <dependency>
                 <groupId>junit</groupId>

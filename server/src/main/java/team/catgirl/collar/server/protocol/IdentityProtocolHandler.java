@@ -2,6 +2,8 @@ package team.catgirl.collar.server.protocol;
 
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
+import team.catgirl.collar.protocol.identity.CreateTrustRequest;
+import team.catgirl.collar.protocol.identity.CreateTrustResponse;
 import team.catgirl.collar.protocol.identity.GetIdentityRequest;
 import team.catgirl.collar.protocol.identity.GetIdentityResponse;
 import team.catgirl.collar.security.ClientIdentity;
@@ -10,6 +12,7 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.session.SessionManager;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class IdentityProtocolHandler extends ProtocolHandler {
@@ -23,14 +26,18 @@ public class IdentityProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
+    public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof GetIdentityRequest) {
             GetIdentityRequest request = (GetIdentityRequest) req;
             sessions.getIdentity(request.player).ifPresentOrElse(identity -> {
-                sender.accept(new GetIdentityResponse(serverIdentity, request.id, identity));
+                sender.accept(request.identity, new GetIdentityResponse(serverIdentity, request.id, identity));
             }, () -> {
-                sender.accept(new GetIdentityResponse(serverIdentity, request.id, null));
+                sender.accept(request.identity, new GetIdentityResponse(serverIdentity, request.id, null));
             });
+            return true;
+        } else if (req instanceof CreateTrustRequest) {
+            CreateTrustRequest request = (CreateTrustRequest) req;
+            sender.accept(request.recipient, new CreateTrustResponse(serverIdentity, request.id, request.preKeyBundle, request.identity));
             return true;
         }
         return false;

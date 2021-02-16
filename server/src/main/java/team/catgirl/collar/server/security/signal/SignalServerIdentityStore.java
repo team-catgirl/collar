@@ -7,17 +7,13 @@ import org.whispersystems.libsignal.state.PreKeyBundle;
 import org.whispersystems.libsignal.state.SessionRecord;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
-import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.Cypher;
-import team.catgirl.collar.security.KeyPair;
-import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.*;
 import team.catgirl.collar.security.signal.PreKeys;
 import team.catgirl.collar.security.signal.SignalCypher;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,7 +22,6 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
 
     private static final Logger LOGGER = Logger.getLogger(SignalServerIdentityStore.class.getName());
 
-    private final AtomicLong preKeyMessageIds = new AtomicLong(0L);
     private final ServerSignalProtocolStore store;
     private final Supplier<ServerIdentity> serverIdentitySupplier;
 
@@ -35,7 +30,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         this.serverIdentitySupplier = Suppliers.memoize(() -> {
             IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
             return new ServerIdentity(
-                new KeyPair.PublicKey(publicKey.getFingerprint(), publicKey.serialize()),
+                new PublicKey(publicKey.serialize()),
                 store.identityKeyStore.getServerId()
             );
         });
@@ -83,7 +78,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     public SendPreKeysResponse createSendPreKeysResponse() {
         PreKeyBundle bundle = PreKeys.generate(getIdentity(), store);
         try {
-            return new SendPreKeysResponse(getIdentity(), preKeyMessageIds.getAndIncrement(), PreKeys.preKeyBundleToBytes(bundle), null);
+            return new SendPreKeysResponse(getIdentity(), PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }

@@ -32,17 +32,17 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
     public void sendPrivateMessage(MinecraftPlayer player, Message message) {
         IdentityApi identityApi = collar.identities();
         identityApi.identify(player.id)
-                .thenComposeAsync(identityApi::createTrust)
-                .thenAcceptAsync(result -> {
-                    if (result.trusted) {
+                .thenCompose(identityApi::createTrust)
+                .thenAccept(identity -> {
+                    if (identity != null) {
                         Cypher cypher = identityStore().createCypher();
                         byte[] messageBytes;
                         try {
-                            messageBytes = cypher.crypt(result.identity, Utils.messagePackMapper().writeValueAsBytes(message));
+                            messageBytes = cypher.crypt(identity, Utils.messagePackMapper().writeValueAsBytes(message));
                         } catch (JsonProcessingException e) {
                             throw new IllegalStateException("Could not process message", e);
                         }
-                        sender.accept(new SendMessageRequest(collar.identity(), result.identity, messageBytes));
+                        sender.accept(new SendMessageRequest(collar.identity(), identity, messageBytes));
                         fireListener("onPrivateMessageSent", listener -> {
                             listener.onPrivateMessageSent(collar, this, message);
                         });

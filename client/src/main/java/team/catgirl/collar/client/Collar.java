@@ -44,7 +44,7 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrustedRelationshipResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.KeyPair.PublicKey;
+import team.catgirl.collar.security.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.security.mojang.MinecraftSession;
@@ -329,7 +329,7 @@ public final class Collar {
             }, (store) -> {
                 LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server " + serverIdentity);
                 IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
-                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.getFingerprint(), publicKey.serialize()), null);
+                ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.serialize()), null);
                 IdentifyRequest request = new IdentifyRequest(clientIdentity);
                 sendRequest(webSocket, request);
             }));
@@ -356,7 +356,7 @@ public final class Collar {
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString message) {
             ProtocolResponse resp = readResponse(message.toByteArray());
-            LOGGER.log(Level.INFO, resp.getClass().getSimpleName() + " from " + resp.identity);
+            LOGGER.log(Level.FINE, resp.getClass().getSimpleName() + " from " + resp.identity);
             ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
             if (resp instanceof IdentifyResponse) {
                 IdentifyResponse response = (IdentifyResponse) resp;
@@ -368,7 +368,7 @@ public final class Collar {
                 keepAlive.stop();
                 keepAlive.start(identity);
             } else if (resp instanceof KeepAliveResponse) {
-                LOGGER.log(Level.INFO, "KeepAliveResponse received");
+                LOGGER.log(Level.FINE, "KeepAliveResponse received");
             } else if (resp instanceof RegisterDeviceResponse) {
                 RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
                 LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
@@ -385,11 +385,7 @@ public final class Collar {
                 if (identityStore == null) {
                     throw new IllegalStateException("identity has not been established");
                 }
-                if (response.owner != null) {
-                    identityStore.trustIdentity(response.owner, response.preKeyBundle);
-                } else {
-                    identityStore.trustIdentity(response.identity, response.preKeyBundle);
-                }
+                identityStore.trustIdentity(response.identity, response.preKeyBundle);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
                 sendRequest(webSocket, new IdentifyRequest(identity));
             } else if (resp instanceof StartSessionResponse) {

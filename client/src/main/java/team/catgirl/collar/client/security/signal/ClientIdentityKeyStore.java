@@ -12,6 +12,7 @@ import team.catgirl.collar.client.HomeDirectory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -119,7 +120,7 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         try {
             readLock.lockInterruptibly();
             IdentityState identityState = this.state.trusted.get(StateKey.from(address));
-            return identityState != null && identityState.fingerprint.equals(identityKey.getFingerprint());
+            return identityState != null && Arrays.equals(identityKey.serialize(), identityState.publicKey);
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         } finally {
@@ -167,19 +168,15 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         }
 
         public static IdentityState from(IdentityKey identityKey) {
-            return new IdentityState(identityKey.getPublicKey().serialize(), identityKey.getFingerprint());
+            return new IdentityState(identityKey.getPublicKey().serialize());
         }
     }
 
     private static final class IdentityState {
         public final byte[] publicKey;
-        public final String fingerprint;
 
-        public IdentityState(
-                @JsonProperty("publicKey") byte[] publicKey,
-                @JsonProperty("fingerprint") String fingerprint) {
+        public IdentityState(@JsonProperty("publicKey") byte[] publicKey) {
             this.publicKey = publicKey;
-            this.fingerprint = fingerprint;
         }
     }
 }

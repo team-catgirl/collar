@@ -21,7 +21,7 @@ public abstract class ProtocolHandler {
      * @param sender to send a response
      * @return if packet handled
      */
-    public abstract boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender);
+    public abstract boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender);
 
     /**
      * Fired before the session is stopped and all session state information is removed from {@link team.catgirl.collar.server.session.SessionManager}

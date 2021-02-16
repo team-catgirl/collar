@@ -31,7 +31,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
+    public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof GetTextureRequest) {
             GetTextureRequest request = (GetTextureRequest) req;
             // TODO: find player and return both its player and identity object? probably tons more performant...
@@ -39,7 +39,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
                 sessions.getIdentity(player).ifPresent(identity -> {
                     try {
                         Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(identity.owner, request.type)).texture;
-                        sender.accept(new GetTextureResponse(serverIdentity, texture.id, player, texture.url, texture.type));
+                        sender.accept(request.identity, new GetTextureResponse(serverIdentity, texture.id, player, texture.url, texture.type));
                     } catch (NotFoundException ignored) {}
                 });
             });

@@ -11,6 +11,7 @@ import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
+import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.*;
 import team.catgirl.collar.security.signal.PreKeys;
@@ -47,7 +48,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     @Override
     public ClientIdentity currentIdentity() {
         IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
-        return new ClientIdentity(owner, new KeyPair.PublicKey(identityKeyPair.getPublicKey().getFingerprint(), identityKeyPair.getPublicKey().serialize()), state.deviceId);
+        return new ClientIdentity(owner, new PublicKey(identityKeyPair.getPublicKey().serialize()), state.deviceId);
     }
 
     @Override
@@ -72,9 +73,9 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         try {
             sessionBuilder.process(bundle);
         } catch (InvalidKeyException | UntrustedIdentityException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Problem trusting PreKeyBundle for " + owner, e);
         }
-        LOGGER.log(Level.INFO, "Trust established with " + address);
+        LOGGER.log(Level.INFO, currentIdentity() + " now trusts " + owner);
     }
 
     @Override
@@ -124,17 +125,17 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         }
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(response.profile.id.toString(), deviceId), store);
         try {
-            return new SendPreKeysRequest(currentIdentity(), null, PreKeys.preKeyBundleToBytes(bundle), null);
+            return new SendPreKeysRequest(currentIdentity(), PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }
     }
 
     @Override
-    public SendPreKeysRequest createSendPreKeysRequest(ClientIdentity identity, long id) {
+    public CreateTrustRequest createSendPreKeysRequest(ClientIdentity identity, long id) {
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(identity.owner.toString(), identity.deviceId), store);
         try {
-            return new SendPreKeysRequest(currentIdentity(), id, PreKeys.preKeyBundleToBytes(bundle), identity);
+            return new CreateTrustRequest(currentIdentity(), id, identity, PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }

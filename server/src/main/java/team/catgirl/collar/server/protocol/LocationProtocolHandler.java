@@ -23,7 +23,7 @@ public class LocationProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
+    public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof StartSharingLocationRequest) {
             StartSharingLocationRequest request = (StartSharingLocationRequest)req;
             playerLocations.startSharing(request);
@@ -31,12 +31,12 @@ public class LocationProtocolHandler extends ProtocolHandler {
         } else if (req instanceof StopSharingLocationRequest) {
             StopSharingLocationRequest request = (StopSharingLocationRequest) req;
             BatchProtocolResponse resp = playerLocations.stopSharing(request);
-            sender.accept(resp);
+            sender.accept(request.identity, resp);
             return true;
         } else if (req instanceof UpdateLocationRequest) {
             UpdateLocationRequest request = (UpdateLocationRequest) req;
             BatchProtocolResponse resp = playerLocations.updateLocation(request);
-            sender.accept(resp);
+            sender.accept(request.identity, resp);
             return true;
         }
         return false;

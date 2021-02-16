@@ -22,6 +22,10 @@ public final class TokenGenerator {
         return bytes;
     }
 
+    public static long longToken() {
+        return RANDOM.nextLong();
+    }
+
     public static byte[] byteToken() {
         return byteToken(128);
     }

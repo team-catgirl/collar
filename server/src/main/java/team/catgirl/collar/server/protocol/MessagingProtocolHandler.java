@@ -10,9 +10,15 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.session.SessionManager;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class MessagingProtocolHandler extends ProtocolHandler {
+
+    private static final Logger LOGGER = Logger.getLogger(MessagingProtocolHandler.class.getName());
+
     private final SessionManager sessions;
     private final ServerIdentity serverIdentity;
 
@@ -22,11 +28,13 @@ public class MessagingProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
+    public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof SendMessageRequest) {
             SendMessageRequest request = (SendMessageRequest) req;
-            sessions.findPlayer(request.identity).ifPresent(player -> {
-                sender.accept(new SendMessageResponse(this.serverIdentity, req.identity, player, request.message));
+            sessions.findPlayer(request.identity).ifPresentOrElse(player -> {
+                sender.accept(request.recipient, new SendMessageResponse(this.serverIdentity, req.identity, player, request.message));
+            }, () -> {
+                LOGGER.log(Level.INFO,"Could not find player for " + req.identity);
             });
             return true;
         }

@@ -47,17 +47,17 @@ public abstract class CollarTest {
          aliceProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
                 "alice@example.com",
                 "alice",
-                "Alice UwU"
+                "Alice"
         )).profile);
         bobProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
                 "bob@example.com",
                 "bob",
-                "Bob OwO"
+                "Bob"
         )).profile);
         eveProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
                 "eve@example.com",
                 "eve",
-                "Eve >_>"
+                "Eve"
         )).profile);
 
         withServices(services);

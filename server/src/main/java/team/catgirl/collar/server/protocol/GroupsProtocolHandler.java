@@ -26,7 +26,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
+    public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         ProtocolResponse resp;
         if (req instanceof CreateGroupRequest) {
             LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity);
@@ -57,7 +57,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
             resp = null;
         }
         if (resp != null) {
-            sender.accept(resp);
+            sender.accept(req.identity, resp);
             return true;
         }
         return false;

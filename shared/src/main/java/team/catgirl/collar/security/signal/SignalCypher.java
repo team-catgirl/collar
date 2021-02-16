@@ -98,7 +98,7 @@ public class SignalCypher implements Cypher {
                 }
             }
         } catch (Throwable e) {
-            throw new IllegalStateException("Problem decrypting packet", e);
+            throw new IllegalStateException("Problem decrypting packet from " + sender, e);
         }
     }
 

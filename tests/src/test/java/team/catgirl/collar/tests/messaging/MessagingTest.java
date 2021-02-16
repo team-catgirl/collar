@@ -27,7 +27,7 @@ public class MessagingTest extends CollarTest {
         });
     }
 
-    private final class MessagingListenerImpl implements MessagingListener {
+    private static final class MessagingListenerImpl implements MessagingListener {
         Message lastMessage;
 
         @Override

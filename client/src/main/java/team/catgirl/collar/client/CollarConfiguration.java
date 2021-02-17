@@ -2,6 +2,7 @@ package team.catgirl.collar.client;
 
 import com.google.common.base.MoreObjects;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,13 +25,15 @@ public final class CollarConfiguration {
     public final HomeDirectory homeDirectory;
     public final URL collarServerURL;
     public final CollarListener listener;
+    public final Ticks.Ticker ticker;
 
-    private CollarConfiguration(Supplier<Location> playerLocation, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener) {
+    private CollarConfiguration(Supplier<Location> playerLocation, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener, Ticks.Ticker ticker) {
         this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
         this.homeDirectory = homeDirectory;
         this.collarServerURL = collarServerURL;
         this.listener = listener;
+        this.ticker = ticker;
     }
 
     public final static class Builder {
@@ -38,6 +42,7 @@ public final class CollarConfiguration {
         private Supplier<MinecraftSession> sessionSupplier;
         private File homeDirectory;
         private URL collarServerURL;
+        private Ticks.Ticker onTick;
 
         public Builder() {}
 
@@ -135,6 +140,11 @@ public final class CollarConfiguration {
             return this;
         }
 
+        public Builder withTicks(Ticks.Ticker onTick) {
+            this.onTick = onTick;
+            return this;
+        }
+
         /**
          * Builds the new configuration
          * @return configuration of the collar client
@@ -145,12 +155,13 @@ public final class CollarConfiguration {
             Objects.requireNonNull(collarServerURL, "Collar server URL must be set");
             Objects.requireNonNull(homeDirectory, "Minecraft home directory must be set");
             Objects.requireNonNull(sessionSupplier, "Session supplier not set");
+            Objects.requireNonNull(onTick, "ticks not set");
             HomeDirectory from = HomeDirectory.from(homeDirectory, collarServerURL.getHost());
             Supplier<Location> playerPosition = MoreObjects.firstNonNull(this.playerLocation, () -> {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });
-            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener);
+            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener, onTick);
         }
     }
 }

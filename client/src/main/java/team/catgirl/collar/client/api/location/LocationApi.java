@@ -6,6 +6,7 @@ import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.groups.GroupsListener;
+import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -33,11 +34,12 @@ public class LocationApi extends AbstractApi<LocationListener> {
     public LocationApi(Collar collar,
                        Supplier<ClientIdentityStore> identityStoreSupplier,
                        Consumer<ProtocolRequest> sender,
+                       Ticks ticks,
                        GroupsApi groupsApi,
                        Supplier<Location> locationSupplier) {
         super(collar, identityStoreSupplier, sender);
         this.locationSupplier = locationSupplier;
-        this.updater = new LocationUpdater(this);
+        this.updater = new LocationUpdater(this, ticks);
         groupsApi.subscribe(new GroupListenerImpl());
     }
 

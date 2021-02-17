@@ -17,6 +17,7 @@ import team.catgirl.collar.client.api.ApiListener;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.api.textures.TexturesApi;
+import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
@@ -67,6 +68,7 @@ public final class Collar {
     private Consumer<ProtocolRequest> sender;
     private ResettableClientIdentityStore identityStore;
     private final Supplier<ClientIdentityStore> identityStoreSupplier;
+    private final Ticks ticks;
 
     private Collar(CollarConfiguration configuration) {
         this.configuration = configuration;
@@ -74,7 +76,8 @@ public final class Collar {
         this.apis = new ArrayList<>();
         this.identityStoreSupplier = () -> identityStore;
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
-        this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), groupsApi, configuration.playerLocation);
+        this.ticks = new Ticks(configuration);
+        this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), ticks, groupsApi, configuration.playerLocation);
         this.texturesApi = new TexturesApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.apis.add(groupsApi);
         this.apis.add(locationApi);

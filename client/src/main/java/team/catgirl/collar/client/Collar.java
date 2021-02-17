@@ -64,7 +64,7 @@ public final class Collar {
     private final LocationApi locationApi;
     private final TexturesApi texturesApi;
     private WebSocket webSocket;
-    private State state;
+    private volatile State state;
     private final List<AbstractApi<? extends ApiListener>> apis;
     private Consumer<ProtocolRequest> sender;
     private ResettableClientIdentityStore identityStore;

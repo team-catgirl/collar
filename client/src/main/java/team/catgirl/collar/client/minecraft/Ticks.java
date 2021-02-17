@@ -5,6 +5,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Allows Collar internals to subscribe to Minecraft client ticks
+ */
 public final class Ticks {
 
     private static final Logger LOGGER = Logger.getLogger(Ticks.class.getName());
@@ -13,14 +16,23 @@ public final class Ticks {
 
     public Ticks() {}
 
-    public void subscribe(TickListener onTick) {
-        listeners.add(onTick);
+    /**
+     * @param listener to subscribe
+     */
+    public void subscribe(TickListener listener) {
+        listeners.add(listener);
     }
 
-    public void unsubscribe(TickListener onTick) {
-        listeners.remove(onTick);
+    /**
+     * @param listener to unsubscribe
+     */
+    public void unsubscribe(TickListener listener) {
+        listeners.remove(listener);
     }
 
+    /**
+     * Called by the Minecraft client on a tick event
+     */
     public void onTick() {
         listeners.forEach(onTick -> {
             try {
@@ -31,11 +43,18 @@ public final class Ticks {
         });
     }
 
+    /**
+     * @param listener to test
+     * @return subscribed
+     */
     public boolean isSubscribed(TickListener listener) {
         return listeners.contains(listener);
     }
 
     public interface TickListener {
+        /**
+         * Fired on Minecraft client tick
+         */
         void onTick();
     }
 }

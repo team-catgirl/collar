@@ -18,7 +18,6 @@ import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.api.textures.TexturesApi;
 import team.catgirl.collar.client.minecraft.Ticks;
-import team.catgirl.collar.client.minecraft.Ticks.Ticker;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
@@ -76,9 +75,9 @@ public final class Collar {
         changeState(State.DISCONNECTED);
         this.identityStoreSupplier = () -> identityStore;
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
-        this.ticks = new Ticks();
+        this.ticks = configuration.ticks;
         this.apis = new ArrayList<>();
-        this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), ticks, groupsApi, configuration.playerLocation);
+        this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), this.ticks, groupsApi, configuration.playerLocation);
         this.texturesApi = new TexturesApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.apis.add(groupsApi);
         this.apis.add(locationApi);
@@ -242,14 +241,6 @@ public final class Collar {
      */
     public MinecraftPlayer player() {
         return configuration.sessionSupplier.get().toPlayer();
-    }
-
-    /**
-     * Implementing client should call {@link Ticker#onTick()} on every client tick
-     * @return ticker
-     */
-    public Ticker ticker() {
-        return ticks.ticker;
     }
 
     private void assertConnected() {

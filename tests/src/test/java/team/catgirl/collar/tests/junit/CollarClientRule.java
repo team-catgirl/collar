@@ -13,6 +13,7 @@ import java.util.UUID;
 public final class CollarClientRule implements TestRule {
 
     public Collar collar;
+    private Ticks ticks;
 
     private final CollarConfiguration.Builder builder;
     private final Thread thread = new Thread(() -> {
@@ -20,7 +21,7 @@ public final class CollarClientRule implements TestRule {
         do {
             try {
                 if (collar.getState() == Collar.State.CONNECTED) {
-                    collar.ticker().onTick();
+                    ticks.onTick();
                 }
                 Thread.sleep(500);
             } catch (InterruptedException ignored) {
@@ -30,9 +31,11 @@ public final class CollarClientRule implements TestRule {
     }, "Collar Client Test Loop");
 
     public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder) {
+        this.ticks = new Ticks();
         this.builder = builder.withCollarServer("http://localhost:3001")
                 .withHomeDirectory(Files.createTempDir())
-                .withNoJangAuthentication(playerId, "hypixel.net");
+                .withNoJangAuthentication(playerId, "hypixel.net")
+                .withTicks(ticks);
     }
 
     @Override

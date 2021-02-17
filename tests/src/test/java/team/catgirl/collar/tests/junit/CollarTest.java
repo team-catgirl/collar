@@ -16,6 +16,7 @@ import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.utils.Utils;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -87,9 +88,9 @@ public abstract class CollarTest {
     public void waitForClientsToConnect() throws InterruptedException {
         waitForCondition("server started", () -> serverRule.isServerStarted());
         waitForCondition("device registered", () -> devicesConfirmed.get() == 3);
-        waitForCondition("client connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED);
-        waitForCondition("client connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED);
-        waitForCondition("client connected", () -> evePlayer.collar.getState() == Collar.State.CONNECTED);
+        waitForCondition("client connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
+        waitForCondition("client connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
+        waitForCondition("client connected", () -> evePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
 
         System.out.println("Alice is identity " + alicePlayer.collar.identity());
         System.out.println("Bob is identity " + bobPlayer.collar.identity());

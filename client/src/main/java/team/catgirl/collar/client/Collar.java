@@ -18,6 +18,7 @@ import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.api.textures.TexturesApi;
 import team.catgirl.collar.client.minecraft.Ticks;
+import team.catgirl.collar.client.minecraft.Ticks.Ticker;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
@@ -244,10 +245,10 @@ public final class Collar {
     }
 
     /**
-     * Implementing client should call {@link Ticks.Ticker#onTick()} on every client tick
+     * Implementing client should call {@link Ticker#onTick()} on every client tick
      * @return ticker
      */
-    public Ticks.Ticker ticker() {
+    public Ticker ticker() {
         return ticks.ticker;
     }
 

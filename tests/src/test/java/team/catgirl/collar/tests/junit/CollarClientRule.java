@@ -19,8 +19,10 @@ public final class CollarClientRule implements TestRule {
         collar.connect();
         do {
             try {
-                collar.ticker().onTick();
-                Thread.sleep(1000);
+                if (collar.getState() == Collar.State.CONNECTED) {
+                    collar.ticker().onTick();
+                }
+                Thread.sleep(500);
             } catch (InterruptedException ignored) {
                 collar.disconnect();
             }

@@ -44,7 +44,6 @@ public final class CollarConfiguration {
         private Supplier<MinecraftSession> sessionSupplier;
         private File homeDirectory;
         private URL collarServerURL;
-        private Ticks.Ticker onTick;
 
         public Builder() {}
 
@@ -152,7 +151,6 @@ public final class CollarConfiguration {
             Objects.requireNonNull(collarServerURL, "Collar server URL must be set");
             Objects.requireNonNull(homeDirectory, "Minecraft home directory must be set");
             Objects.requireNonNull(sessionSupplier, "Session supplier not set");
-            Objects.requireNonNull(onTick, "ticks not set");
             HomeDirectory from = HomeDirectory.from(homeDirectory, collarServerURL.getHost());
             Supplier<Location> playerPosition = MoreObjects.firstNonNull(this.playerLocation, () -> {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");

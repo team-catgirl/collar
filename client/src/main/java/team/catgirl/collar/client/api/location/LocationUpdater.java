@@ -20,7 +20,7 @@ public class LocationUpdater implements Ticks.TickListener {
     }
 
     public void start() {
-        ticks.unsubscribe(this);
+        ticks.subscribe(this);
     }
 
     public void stop() {

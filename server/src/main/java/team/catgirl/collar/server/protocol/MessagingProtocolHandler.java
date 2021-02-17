@@ -1,5 +1,6 @@
 package team.catgirl.collar.server.protocol;
 
+import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.messaging.SendMessageRequest;
@@ -42,5 +43,5 @@ public class MessagingProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopped(ClientIdentity identity, MinecraftPlayer player, Consumer<ProtocolResponse> sender) {}
+    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {}
 }

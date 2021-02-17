@@ -40,7 +40,7 @@ import java.util.logging.Logger;
 
 @WebSocket
 public class CollarServer {
-    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(CollarServer.class.getName());
 
     private final List<ProtocolHandler> protocolHandlers;
     private final BiConsumer<ClientIdentity, MinecraftPlayer> sessionStopped;

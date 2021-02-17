@@ -41,12 +41,12 @@ public class FriendsProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public boolean handleRequest(CollarServer collar, ProtocolRequest req, Consumer<ProtocolResponse> sender) {
+    public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof AddFriendRequest) {
             AddFriendRequest request = (AddFriendRequest) req;
             findFriendProfileId(request.profile, request.player).ifPresentOrElse(friendProfileId -> {
                 Friend friend = friends.createFriend(RequestContext.from(req.identity), new CreateFriendRequest(request.identity.owner, friendProfileId)).friend;
-                sender.accept(new AddFriendResponse(serverIdentity, friend));
+                sender.accept(req.identity, new AddFriendResponse(serverIdentity, friend));
             }, () -> {
                 LOGGER.log(Level.SEVERE, "Could not add friend with profileId " + request.profile  + " or playerId " + request.player);
             });
@@ -55,14 +55,14 @@ public class FriendsProtocolHandler extends ProtocolHandler {
             RemoveFriendRequest request = (RemoveFriendRequest) req;
             findFriendProfileId(request.profile, request.player).ifPresentOrElse(friendProfileId -> {
                 UUID deletedFriend = friends.deleteFriend(RequestContext.from(req.identity), new DeleteFriendRequest(req.identity.owner, friendProfileId)).friend;
-                sender.accept(new RemoveFriendResponse(serverIdentity, deletedFriend));
+                sender.accept(req.identity, new RemoveFriendResponse(serverIdentity, deletedFriend));
             }, () -> {
                 LOGGER.log(Level.SEVERE, "Could not add friend with profileId " + request.profile + " or playerId " + request.player);
             });
             return true;
         } else if (req instanceof GetFriendListRequest) {
             List<Friend> friends = this.friends.getFriends(RequestContext.from(req.identity), new GetFriendsRequest(req.identity.owner, null)).friends;
-            sender.accept(new GetFriendListResponse(serverIdentity, friends));
+            sender.accept(req.identity, new GetFriendListResponse(serverIdentity, friends));
             return true;
         }
         return false;

@@ -1,5 +1,6 @@
 package team.catgirl.collar.server.protocol;
 
+import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
@@ -44,5 +45,5 @@ public class IdentityProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopped(ClientIdentity identity, MinecraftPlayer player, Consumer<ProtocolResponse> sender) {}
+    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {}
 }

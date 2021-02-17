@@ -25,15 +25,17 @@ public final class CollarConfiguration {
     public final HomeDirectory homeDirectory;
     public final URL collarServerURL;
     public final CollarListener listener;
-    public final Ticks.Ticker ticker;
 
-    private CollarConfiguration(Supplier<Location> playerLocation, Supplier<MinecraftSession> sessionSupplier, HomeDirectory homeDirectory, URL collarServerURL, CollarListener listener, Ticks.Ticker ticker) {
+    private CollarConfiguration(Supplier<Location> playerLocation,
+                                Supplier<MinecraftSession> sessionSupplier,
+                                HomeDirectory homeDirectory,
+                                URL collarServerURL,
+                                CollarListener listener) {
         this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
         this.homeDirectory = homeDirectory;
         this.collarServerURL = collarServerURL;
         this.listener = listener;
-        this.ticker = ticker;
     }
 
     public final static class Builder {
@@ -140,11 +142,6 @@ public final class CollarConfiguration {
             return this;
         }
 
-        public Builder withTicks(Ticks.Ticker onTick) {
-            this.onTick = onTick;
-            return this;
-        }
-
         /**
          * Builds the new configuration
          * @return configuration of the collar client
@@ -161,7 +158,7 @@ public final class CollarConfiguration {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });
-            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener, onTick);
+            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener);
         }
     }
 }

@@ -73,10 +73,10 @@ public final class Collar {
     private Collar(CollarConfiguration configuration) {
         this.configuration = configuration;
         changeState(State.DISCONNECTED);
-        this.apis = new ArrayList<>();
         this.identityStoreSupplier = () -> identityStore;
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, request -> sender.accept(request));
-        this.ticks = new Ticks(configuration);
+        this.ticks = new Ticks();
+        this.apis = new ArrayList<>();
         this.locationApi = new LocationApi(this, identityStoreSupplier, request -> sender.accept(request), ticks, groupsApi, configuration.playerLocation);
         this.texturesApi = new TexturesApi(this, identityStoreSupplier, request -> sender.accept(request));
         this.apis.add(groupsApi);
@@ -241,6 +241,14 @@ public final class Collar {
      */
     public MinecraftPlayer player() {
         return configuration.sessionSupplier.get().toPlayer();
+    }
+
+    /**
+     * Implementing client should call {@link Ticks.Ticker#onTick()} on every client tick
+     * @return ticker
+     */
+    public Ticks.Ticker ticker() {
+        return ticks.ticker;
     }
 
     private void assertConnected() {

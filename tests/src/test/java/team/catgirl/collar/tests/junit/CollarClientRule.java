@@ -6,6 +6,7 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
+import team.catgirl.collar.client.minecraft.Ticks;
 
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ public final class CollarClientRule implements TestRule {
         collar.connect();
         do {
             try {
+                collar.ticker().onTick();
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {
                 collar.disconnect();

@@ -13,10 +13,10 @@ public final class Ticks {
     private static final Logger LOGGER = Logger.getLogger(Ticks.class.getName());
 
     private final Set<TickListener> listeners = new HashSet<>();
-    private final Ticker ticker;
+    public final Ticker ticker;
 
-    public Ticks(CollarConfiguration configuration) {
-        this.ticker = configuration.ticker;
+    public Ticks() {
+        this.ticker = new Ticker();
     }
 
     public void subscribe(TickListener onTick) {
@@ -45,7 +45,7 @@ public final class Ticks {
         void onTick();
     }
 
-    public abstract class Ticker {
+    public final class Ticker {
         public void onTick() {
             fireOnTick();
         }

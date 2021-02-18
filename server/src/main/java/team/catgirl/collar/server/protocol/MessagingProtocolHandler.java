@@ -12,7 +12,6 @@ import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,7 +32,7 @@ public class MessagingProtocolHandler extends ProtocolHandler {
         if (req instanceof SendMessageRequest) {
             SendMessageRequest request = (SendMessageRequest) req;
             sessions.findPlayer(request.identity).ifPresentOrElse(player -> {
-                sender.accept(request.recipient, new SendMessageResponse(this.serverIdentity, req.identity, player, request.message));
+                sender.accept(request.individual, new SendMessageResponse(this.serverIdentity, req.identity, request.group, player, request.message));
             }, () -> {
                 LOGGER.log(Level.INFO,"Could not find player for " + req.identity);
             });

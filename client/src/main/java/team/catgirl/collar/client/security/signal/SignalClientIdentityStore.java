@@ -132,10 +132,10 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public CreateTrustRequest createSendPreKeysRequest(ClientIdentity identity, long id) {
-        PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(identity.owner.toString(), identity.deviceId), store);
+    public CreateTrustRequest createSendPreKeysRequest(ClientIdentity recipient, long id) {
+        PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(currentIdentity().id().toString(), currentIdentity().deviceId), store);
         try {
-            return new CreateTrustRequest(currentIdentity(), id, identity, PreKeys.preKeyBundleToBytes(bundle));
+            return new CreateTrustRequest(currentIdentity(), id, recipient, PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }

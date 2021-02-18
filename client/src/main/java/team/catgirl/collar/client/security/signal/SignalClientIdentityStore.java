@@ -2,15 +2,21 @@ package team.catgirl.collar.client.security.signal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.groups.GroupSessionBuilder;
+import org.whispersystems.libsignal.groups.SenderKeyName;
+import org.whispersystems.libsignal.protocol.SenderKeyDistributionMessage;
 import org.whispersystems.libsignal.state.PreKeyBundle;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
+import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
+import team.catgirl.collar.protocol.groups.CreateGroupRequest;
+import team.catgirl.collar.protocol.groups.JoinGroupResponse;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.*;
@@ -80,7 +86,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public Cypher createCypher() {
-        return new SignalCypher(store);
+        return new SignalCypher(store, store);
     }
 
     @Override
@@ -139,6 +145,33 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         } catch (IOException e) {
             throw new IllegalStateException("could not generate PreKeyBundle");
         }
+    }
+
+    @Override
+    public CreateGroupRequest createCreateGroupRequest(List<UUID> players) {
+        UUID groupId = UUID.randomUUID();
+        GroupSessionBuilder builder = new GroupSessionBuilder(store);
+        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(groupId.toString(), signalProtocolAddressFrom(currentIdentity())));
+        return new CreateGroupRequest(currentIdentity(), groupId, players, message.serialize());
+    }
+
+    @Override
+    public void processJoinGroupResponse(ClientIdentity owner, JoinGroupResponse response) {
+        GroupSessionBuilder builder = new GroupSessionBuilder(store);
+        SenderKeyName name = new SenderKeyName(response.group.id.toString(), signalProtocolAddressFrom(owner));
+        SenderKeyDistributionMessage senderKeyDistributionMessage;
+        try {
+            senderKeyDistributionMessage = new SenderKeyDistributionMessage(response.keys);
+        } catch (LegacyMessageException | InvalidMessageException e) {
+            throw new IllegalStateException("could not join group", e);
+        }
+        builder.process(name, senderKeyDistributionMessage);
+        LOGGER.log(Level.INFO, "Started session with group " + response.group.id);
+    }
+
+    @Override
+    public void clearAllGroupSessions() {
+        store.clearAllGroupSessions();
     }
 
     public void delete() throws IOException {

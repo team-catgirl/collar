@@ -6,7 +6,6 @@ import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
-import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointFailedResponse;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointSuccessResponse;
@@ -35,6 +34,7 @@ public final class GroupService {
     private final SessionManager sessions;
 
     private final ConcurrentMap<UUID, Group> groupsById = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, byte[]> keyDistributionMessages = new ConcurrentHashMap<>();
 
     public GroupService(ServerIdentity serverIdentity, SessionManager sessions) {
         this.serverIdentity = serverIdentity;
@@ -59,9 +59,13 @@ public final class GroupService {
     public BatchProtocolResponse createGroup(CreateGroupRequest req) {
         List<MinecraftPlayer> players = sessions.findPlayers(req.identity, req.players);
         MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
-        Group group = Group.newGroup(UUID.randomUUID(), player, Location.UNKNOWN, players);
+        if (groupsById.containsKey(req.groupId)) {
+            throw new IllegalStateException("Group with id " + req.groupId + " already exists");
+        }
+        Group group = Group.newGroup(req.groupId, player, Location.UNKNOWN, players);
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
+            keyDistributionMessages.put(group.id, req.keys);
             updateState(group);
             List<Member> members = group.members.values().stream()
                     .filter(member -> member.membershipRole.equals(Group.MembershipRole.MEMBER))
@@ -80,15 +84,17 @@ public final class GroupService {
     public BatchProtocolResponse acceptMembership(JoinGroupRequest req) {
         Group group = groupsById.get(req.groupId);
         if (group == null) {
-            return BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, null, null));
+            return BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, null, null, null));
         }
         MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         synchronized (group.id) {
             Group.MembershipState state = req.state;
             group = group.updateMembershipState(player, state);
             updateState(group);
-            BatchProtocolResponse response = BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, group, player));
-            response = response.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, ((identity, updatedGroup, updatedMember) -> new JoinGroupResponse(serverIdentity, updatedGroup, player))));
+            // Send a response back to the player accepting membership, with the distribution keys
+            BatchProtocolResponse response = BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, group, player, keyDistributionMessages.get(group.id)));
+            // Let everyone else in the group know that this identity has accepted
+            response = response.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, ((identity, updatedGroup, updatedMember) -> new JoinGroupResponse(serverIdentity, updatedGroup, player, null))));
             return response;
         }
     }
@@ -259,6 +265,7 @@ public final class GroupService {
             if (group.members.isEmpty()) {
                 LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
                 groupsById.remove(group.id);
+                keyDistributionMessages.remove(group.id);
             } else {
                 groupsById.put(group.id, group);
             }

@@ -59,7 +59,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param players players
      */
     public void create(List<UUID> players) {
-        sender.accept(new CreateGroupRequest(identity(), players));
+        sender.accept(identityStore().createCreateGroupRequest(players));
     }
 
     /**
@@ -153,11 +153,18 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         } else if (resp instanceof JoinGroupResponse) {
             synchronized (this) {
                 JoinGroupResponse response = (JoinGroupResponse)resp;
-                groups.put(response.group.id, response.group);
-                fireListener("onGroupJoined", groupsListener -> {
-                    groupsListener.onGroupJoined(collar, this, response.group, response.player);
-                });
-                invitations.remove(response.group.id);
+                if (response.keys != null) {
+                    Member owner = response.group.members.values().stream()
+                            .filter(member -> member.membershipRole.equals(Group.MembershipRole.OWNER))
+                            .findFirst()
+                            .orElseThrow(() -> new IllegalStateException("could not find OWNER in group state"));
+                    collar.identities().identify(owner.player.id).thenAccept(identity -> {
+                        identityStore().processJoinGroupResponse(identity, response);
+                        joinGroup(response);
+                    });
+                } else {
+                    joinGroup(response);
+                }
             }
             return true;
         } else if (resp instanceof LeaveGroupResponse) {
@@ -256,6 +263,14 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             }
         }
         return false;
+    }
+
+    private void joinGroup(JoinGroupResponse response) {
+        groups.put(response.group.id, response.group);
+        fireListener("onGroupJoined", groupsListener -> {
+            groupsListener.onGroupJoined(collar, this, response.group, response.player);
+        });
+        invitations.remove(response.group.id);
     }
 
     private void updatePosition(UpdateLocationRequest req) {

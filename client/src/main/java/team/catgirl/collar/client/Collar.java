@@ -126,6 +126,9 @@ public final class Collar {
             LOGGER.log(Level.INFO, "Disconnected");
             this.webSocket.cancel();
             this.webSocket = null;
+            if (this.identityStore != null) {
+                this.identityStore.clearAllGroupSessions();
+            }
             changeState(State.DISCONNECTED);
         }
     }

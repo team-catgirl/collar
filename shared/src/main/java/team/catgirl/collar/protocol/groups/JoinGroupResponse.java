@@ -12,11 +12,17 @@ public final class JoinGroupResponse extends ProtocolResponse {
     public final Group group;
     @JsonProperty("player")
     public final MinecraftPlayer player;
+    @JsonProperty("keys")
+    public final byte[] keys;
 
     @JsonCreator
-    public JoinGroupResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("group") Group group, @JsonProperty("player") MinecraftPlayer player) {
+    public JoinGroupResponse(@JsonProperty("identity") ServerIdentity identity,
+                             @JsonProperty("group") Group group,
+                             @JsonProperty("player") MinecraftPlayer player,
+                             @JsonProperty("player") byte[] keys) {
         super(identity);
         this.group = group;
         this.player = player;
+        this.keys = keys;
     }
 }

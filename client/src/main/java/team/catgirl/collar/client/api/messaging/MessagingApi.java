@@ -73,7 +73,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
             throw new IllegalStateException("Could not process group message", e);
         }
         sender.accept(new SendMessageRequest(collar.identity(), null, group.id, messageBytes));
-        fireListener("", listener -> {
+        fireListener("onGroupMessageSent", listener -> {
             listener.onGroupMessageSent(collar, this, group, message);
         });
     }
@@ -93,7 +93,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                         } catch (IOException e) {
                             throw new IllegalStateException("Could not read group message", e);
                         }
-                        fireListener("onPrivateMessageReceived", listener -> {
+                        fireListener("onGroupMessageReceived", listener -> {
                             listener.onGroupMessageReceived(collar, this, group, response.player, message);
                         });
                     });

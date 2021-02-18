@@ -18,8 +18,10 @@ import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.signal.groups.ClientSenderKeyStore;
 import team.catgirl.collar.utils.Utils;
 
+import java.awt.event.AdjustmentEvent;
 import java.io.IOException;
 import java.util.List;
+import java.util.StringTokenizer;
 
 public class ClientSignalProtocolStore implements SignalProtocolStore, SenderKeyStore {
     private final ClientIdentityKeyStore identityKeyStore;
@@ -172,6 +174,22 @@ public class ClientSignalProtocolStore implements SignalProtocolStore, SenderKey
             @Override
             public void serialize(StateKey value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
                 gen.writeFieldName(value.name + ":" + value.deviceId);
+            }
+        });
+        simpleModule.addKeyDeserializer(ClientSenderKeyStore.Key.class, new KeyDeserializer() {
+            @Override
+            public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
+                StringTokenizer tokenizer = new StringTokenizer(key, ":");
+                String groupId = tokenizer.nextToken();
+                String name = tokenizer.nextToken();
+                String id = tokenizer.nextToken();
+                return new ClientSenderKeyStore.Key(groupId, name, Integer.parseInt(id));
+            }
+        });
+        simpleModule.addKeySerializer(ClientSenderKeyStore.Key.class, new JsonSerializer<ClientSenderKeyStore.Key>() {
+            @Override
+            public void serialize(ClientSenderKeyStore.Key value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                gen.writeFieldName(value.groupId + ":" + value.name + ":" + value.deviceId);
             }
         });
         ObjectMapper mapper = Utils.jsonMapper().registerModule(simpleModule);

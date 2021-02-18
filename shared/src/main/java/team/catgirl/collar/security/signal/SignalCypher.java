@@ -109,6 +109,9 @@ public class SignalCypher implements Cypher {
 
     @Override
     public byte[] crypt(Identity sender, Group recipient, byte[] bytes) {
+        if (senderKeyStore == null) {
+            throw new IllegalStateException("server cannot crypt group messages");
+        }
         GroupCipher cipher = new GroupCipher(senderKeyStore, senderKeyNameFrom(recipient, sender));
         try {
             return cipher.encrypt(bytes);
@@ -119,6 +122,9 @@ public class SignalCypher implements Cypher {
 
     @Override
     public byte[] decrypt(Identity sender, Group group, byte[] bytes) {
+        if (senderKeyStore == null) {
+            throw new IllegalStateException("server cannot decrypt group messages");
+        }
         GroupCipher cipher = new GroupCipher(senderKeyStore, senderKeyNameFrom(group, sender));
         try {
             return cipher.decrypt(bytes);

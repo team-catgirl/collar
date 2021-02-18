@@ -71,7 +71,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
 
     @Override
     public Cypher createCypher() {
-        return new SignalCypher(store);
+        return new SignalCypher(store, null);
     }
 
     @Override

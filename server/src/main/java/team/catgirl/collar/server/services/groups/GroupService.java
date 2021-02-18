@@ -6,6 +6,8 @@ import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.protocol.messaging.SendMessageRequest;
+import team.catgirl.collar.protocol.messaging.SendMessageResponse;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointFailedResponse;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse.CreateWaypointSuccessResponse;
@@ -237,6 +239,24 @@ public final class GroupService {
             }
         }
         return responses;
+    }
+
+    /**
+     * Delivers the message to all ACCEPTED members of the group it is addressed to
+     * @param req of the message
+     * @return responses
+     */
+    public ProtocolResponse deliverMessage(SendMessageRequest req) {
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        synchronized (req.group) {
+            Group group = groupsById.get(req.group);
+            if (group == null) {
+                return response;
+            }
+            MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
+            response = response.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, (identity, group1, member) -> new SendMessageResponse(serverIdentity, identity, group1.id, player, req.message)));
+        }
+        return response;
     }
 
     /**

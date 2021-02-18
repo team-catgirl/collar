@@ -2,6 +2,8 @@ package team.catgirl.collar.client.security.signal;
 
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
+import team.catgirl.collar.protocol.groups.CreateGroupRequest;
+import team.catgirl.collar.protocol.groups.JoinGroupResponse;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.ClientIdentity;
@@ -9,6 +11,8 @@ import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class ResettableClientIdentityStore implements ClientIdentityStore {
@@ -58,6 +62,21 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     @Override
     public CreateTrustRequest createSendPreKeysRequest(ClientIdentity identity, long id) {
         return currentIdentityStore.createSendPreKeysRequest(identity, id);
+    }
+
+    @Override
+    public CreateGroupRequest createCreateGroupRequest(List<UUID> players) {
+        return currentIdentityStore.createCreateGroupRequest(players);
+    }
+
+    @Override
+    public void processJoinGroupResponse(ClientIdentity groupOwner, JoinGroupResponse response) {
+        currentIdentityStore.processJoinGroupResponse(groupOwner, response);
+    }
+
+    @Override
+    public void clearAllGroupSessions() {
+        currentIdentityStore.clearAllGroupSessions();
     }
 
     @Override

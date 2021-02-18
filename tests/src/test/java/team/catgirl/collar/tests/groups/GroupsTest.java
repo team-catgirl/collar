@@ -7,11 +7,15 @@ import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.messaging.Message;
+import team.catgirl.collar.api.messaging.TextMessage;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.groups.GroupInvitation;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.groups.GroupsListener;
+import team.catgirl.collar.client.api.messaging.MessagingApi;
+import team.catgirl.collar.client.api.messaging.MessagingListener;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.tests.junit.CollarTest;
 
@@ -92,7 +96,7 @@ public class GroupsTest extends CollarTest {
     }
 
     @Test
-    public void waypoints() {
+    public void waypointsCreateAndDelete() {
         // Alice creates a new group with bob and eve
         alicePlayer.collar.groups().create(List.of(bobPlayerId, evePlayerId));
 
@@ -143,6 +147,40 @@ public class GroupsTest extends CollarTest {
         waitForCondition("eve does not have a waypoint", () -> evePlayer.collar.groups().all().get(0).waypoints.isEmpty());
     }
 
+    @Test
+    public void sendGroupMessage() {
+
+        MessagingListenerImpl aliceMessages = new MessagingListenerImpl();
+        alicePlayer.collar.messaging().subscribe(aliceMessages);
+
+        MessagingListenerImpl bobMessages = new MessagingListenerImpl();
+        bobPlayer.collar.messaging().subscribe(bobMessages);
+
+        MessagingListenerImpl eveMessages = new MessagingListenerImpl();
+        evePlayer.collar.messaging().subscribe(eveMessages);
+
+        // Alice creates a new group with bob and eve
+        alicePlayer.collar.groups().create(List.of(bobPlayerId, evePlayerId));
+
+        // Check that Eve and Bob received their invitations
+        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
+        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+
+        // Accept the invitation
+        bobPlayer.collar.groups().accept(bobListener.invitation);
+        evePlayer.collar.groups().accept(eveListener.invitation);
+
+        waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
+        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
+
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
+
+        evePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
+
+        waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
+        waitForCondition("eve receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage)bobMessages.lastReceivedMessage).content));
+    }
+
     private static class TestGroupsListener implements GroupsListener {
 
         boolean createdGroup = false;
@@ -178,6 +216,21 @@ public class GroupsTest extends CollarTest {
         @Override
         public void onWaypointCreatedSuccess(Collar collar, GroupsApi feature, Group group, Waypoint waypoint) {
             this.waypoint = waypoint;
+        }
+    }
+
+    static class MessagingListenerImpl implements MessagingListener {
+        public Message lastSentMessage;
+        public Message lastReceivedMessage;
+
+        @Override
+        public void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group group, Message message) {
+            this.lastSentMessage = message;
+        }
+
+        @Override
+        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {
+            this.lastReceivedMessage = message;
         }
     }
 }

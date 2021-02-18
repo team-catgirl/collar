@@ -43,4 +43,14 @@ public interface MessagingListener extends ApiListener {
      * @param message the message
      */
     default void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group group, Message message) {};
+
+    /**
+     * Fired when a group message was received
+     * @param collar client
+     * @param messagingApi api
+     * @param group sent to
+     * @param sender who sent it
+     * @param message the message
+     */
+    default void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {};
 }

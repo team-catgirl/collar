@@ -69,10 +69,6 @@
             <artifactId>slf4j-simple</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.Commit451</groupId>
             <artifactId>mailgun</artifactId>
         </dependency>

@@ -1,7 +1,9 @@
 package team.catgirl.collar.client.security;
 
+import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.groups.CreateGroupRequest;
+import team.catgirl.collar.protocol.groups.JoinGroupRequest;
 import team.catgirl.collar.protocol.groups.JoinGroupResponse;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -66,6 +68,12 @@ public interface ClientIdentityStore {
      * @return create group request
      */
     CreateGroupRequest createCreateGroupRequest(List<UUID> players);
+
+    /**
+     * @param groupId of the group to join
+     * @return join group request
+     */
+    JoinGroupRequest createJoinGroupRequest(UUID groupId);
 
     /**
      * Creates the messages

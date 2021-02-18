@@ -1,5 +1,6 @@
 package team.catgirl.collar.client.api.groups;
 
+import com.google.common.collect.ImmutableSet;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Location;
@@ -20,10 +21,7 @@ import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointFailedResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointSuccessResponse;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -43,6 +41,15 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         synchronized (this) {
             return new ArrayList<>(groups.values());
         }
+    }
+
+    /**
+     * Find a group by its ID
+     * @param groupId of the group to find
+     * @return group
+     */
+    public Optional<Group> findGroupById(UUID groupId) {
+        return groups.values().stream().filter(group -> group.id.equals(groupId)).findFirst();
     }
 
     /**
@@ -93,7 +100,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param invitation to accept
      */
     public void accept(GroupInvitation invitation) {
-        sender.accept(new JoinGroupRequest(identity(), invitation.groupId, Group.MembershipState.ACCEPTED));
+        sender.accept(identityStore().createJoinGroupRequest(invitation.groupId));
         invitations.remove(invitation.groupId);
     }
 

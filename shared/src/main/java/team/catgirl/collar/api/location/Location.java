@@ -2,10 +2,12 @@ package team.catgirl.collar.api.location;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.*;
 import java.util.Objects;
 
 public final class Location {
 
+    private static final int VERSION = 1;
     public static final Location UNKNOWN = new Location(Double.MIN_VALUE, Double.MIN_VALUE , Double.MIN_VALUE, Dimension.UNKNOWN);
 
     @JsonProperty("x")
@@ -16,6 +18,24 @@ public final class Location {
     public final Double z;
     @JsonProperty("dimension")
     public final Dimension dimension;
+
+    public Location(byte[] bytes) throws IOException {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
+            try (DataInputStream dataStream = new DataInputStream(inputStream)) {
+                int serializedVersion = dataStream.readInt();
+                switch (serializedVersion) {
+                    case 1:
+                        x = dataStream.readDouble();
+                        y = dataStream.readDouble();
+                        z = dataStream.readDouble();
+                        dimension = Dimension.valueOf(dataStream.readUTF());
+                        break;
+                    default:
+                        throw new IllegalStateException("unsupported Location version " + serializedVersion);
+                }
+            }
+        }
+    }
 
     public Location(@JsonProperty("x") Double x, @JsonProperty("y") Double y, @JsonProperty("z") Double z, @JsonProperty("dimension") Dimension dimension) {
         this.x = x;
@@ -44,6 +64,19 @@ public final class Location {
     @Override
     public String toString() {
         return "[" + x + "," + y + "," + z + "," + dimension + "]";
+    }
+
+    public byte[] serialize() throws IOException {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            try (DataOutputStream dataStream = new DataOutputStream(outputStream)) {
+                dataStream.writeInt(VERSION);
+                dataStream.writeDouble(x);
+                dataStream.writeDouble(y);
+                dataStream.writeDouble(z);
+                dataStream.writeUTF(dimension.name());
+            }
+            return outputStream.toByteArray();
+        }
     }
 }
 

@@ -3,6 +3,7 @@ package team.catgirl.collar.client.security.signal;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.groups.CreateGroupRequest;
+import team.catgirl.collar.protocol.groups.JoinGroupRequest;
 import team.catgirl.collar.protocol.groups.JoinGroupResponse;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -67,6 +68,11 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     @Override
     public CreateGroupRequest createCreateGroupRequest(List<UUID> players) {
         return currentIdentityStore.createCreateGroupRequest(players);
+    }
+
+    @Override
+    public JoinGroupRequest createJoinGroupRequest(UUID groupId) {
+        return currentIdentityStore.createJoinGroupRequest(groupId);
     }
 
     @Override

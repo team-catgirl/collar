@@ -116,7 +116,7 @@ public class SignalCypher implements Cypher {
         try {
             return cipher.encrypt(bytes);
         } catch (NoSessionException e) {
-            throw new IllegalStateException("Problem encrypting group message", e);
+            throw new IllegalStateException("Problem encrypting group message to group " + recipient.id, e);
         }
     }
 
@@ -129,7 +129,7 @@ public class SignalCypher implements Cypher {
         try {
             return cipher.decrypt(bytes);
         } catch (LegacyMessageException | DuplicateMessageException | InvalidMessageException | NoSessionException e) {
-            throw new IllegalStateException("Problem decrypting group message", e);
+            throw new IllegalStateException("Problem decrypting group message from " + sender, e);
         }
     }
 

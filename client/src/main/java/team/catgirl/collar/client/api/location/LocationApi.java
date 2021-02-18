@@ -16,6 +16,7 @@ import team.catgirl.collar.protocol.location.StopSharingLocationRequest;
 import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -98,7 +99,19 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     void publishLocation() {
         if (!groupsSharingWith.isEmpty()) {
-            sender.accept(new UpdateLocationRequest(identity(), locationSupplier.get()));
+            Location location = locationSupplier.get();
+            byte[] bytes;
+            try {
+                bytes = location.serialize();
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not serialize location " + location);
+            }
+            groupsSharingWith.forEach(groupId -> {
+                collar.groups().findGroupById(groupId).ifPresent(group -> {
+                    byte[] encryptedBytes = identityStore().createCypher().crypt(identity(), group, bytes);
+                    sender.accept(new UpdateLocationRequest(identity(), groupId, encryptedBytes));
+                });
+            });
         }
     }
 
@@ -107,13 +120,29 @@ public class LocationApi extends AbstractApi<LocationListener> {
         if (resp instanceof LocationUpdatedResponse) {
             LocationUpdatedResponse response = (LocationUpdatedResponse) resp;
             synchronized (this) {
-                if (response.location.equals(Location.UNKNOWN)) {
-                    playerLocations.remove(response.player);
-                } else {
-                    playerLocations.put(response.player, response.location);
-                }
-                fireListener("onLocationUpdated", locationListener -> {
-                    locationListener.onLocationUpdated(collar, this, response.player, response.location);
+                collar.groups().findGroupById(response.group).ifPresent(group -> {
+                    Location location;
+                    if (response.location == null) {
+                        // Stopped sharing
+                        location = Location.UNKNOWN;
+                    } else {
+                        byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.location);
+                        try {
+                            location = new Location(decryptedBytes);
+                        } catch (IOException e) {
+                            throw new IllegalStateException("could not decrypt location sent by " + response.sender);
+                        }
+                    }
+                    if (location.equals(Location.UNKNOWN)) {
+                        // Remove if stooped sharing
+                        playerLocations.remove(response.player);
+                    } else {
+                        // Update the location
+                        playerLocations.put(response.player, location);
+                    }
+                    fireListener("onLocationUpdated", locationListener -> {
+                        locationListener.onLocationUpdated(collar, this, response.player, location);
+                    });
                 });
             }
             return true;

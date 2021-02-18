@@ -18,6 +18,7 @@ import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.session.SessionManager;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -75,12 +76,12 @@ public class PlayerLocationService {
      */
     public BatchProtocolResponse updateLocation(UpdateLocationRequest req) {
         MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
-        return createLocationResponses(player, new LocationUpdatedResponse(serverIdentity, req.identity, player, req.location));
+        return createLocationResponses(player, new LocationUpdatedResponse(serverIdentity, req.identity, req.group, player, req.location));
     }
 
     private BatchProtocolResponse stopSharing(UUID groupId, ClientIdentity identity, MinecraftPlayer player) {
         LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + groupId);
-        LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, player, Location.UNKNOWN);
+        LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, groupId, player, null);
         BatchProtocolResponse responses = createLocationResponses(player, locationUpdatedResponse);
         synchronized (playersSharing) {
             playersSharing.remove(groupId, player);

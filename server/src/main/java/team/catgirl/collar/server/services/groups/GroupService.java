@@ -96,7 +96,7 @@ public final class GroupService {
             // Send a response back to the player accepting membership, with the distribution keys
             BatchProtocolResponse response = BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, group, player, keyDistributionMessages.get(group.id)));
             // Let everyone else in the group know that this identity has accepted
-            response = response.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, ((identity, updatedGroup, updatedMember) -> new JoinGroupResponse(serverIdentity, updatedGroup, player, null))));
+            response = response.concat(sendUpdatesToMembers(group, Group.MembershipState.ACCEPTED, ((identity, updatedGroup, updatedMember) -> new JoinGroupResponse(serverIdentity, updatedGroup, player, req.keys))));
             return response;
         }
     }

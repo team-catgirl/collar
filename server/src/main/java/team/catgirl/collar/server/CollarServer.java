@@ -141,9 +141,13 @@ public class CollarServer {
 
     private BiConsumer<ClientIdentity, ProtocolResponse> createSender() {
         return (identity, response) -> {
-            services.sessions.getSession(identity).ifPresent(recipientSession -> {
-                send(recipientSession, response);
-            });
+            if (identity == null) {
+                send(null, response);
+            } else {
+                services.sessions.getSession(identity).ifPresent(recipientSession -> {
+                    send(recipientSession, response);
+                });
+            }
         };
     }
 

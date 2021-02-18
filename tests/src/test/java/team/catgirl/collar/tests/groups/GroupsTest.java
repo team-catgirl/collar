@@ -149,7 +149,6 @@ public class GroupsTest extends CollarTest {
 
     @Test
     public void sendGroupMessage() {
-
         MessagingListenerImpl aliceMessages = new MessagingListenerImpl();
         alicePlayer.collar.messaging().subscribe(aliceMessages);
 
@@ -178,7 +177,7 @@ public class GroupsTest extends CollarTest {
         evePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
 
         waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
-        waitForCondition("eve receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage)bobMessages.lastReceivedMessage).content));
+        waitForCondition("eve receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
     }
 
     private static class TestGroupsListener implements GroupsListener {

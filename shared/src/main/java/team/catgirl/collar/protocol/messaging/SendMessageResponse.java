@@ -1,5 +1,6 @@
 package team.catgirl.collar.protocol.messaging;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
@@ -19,6 +20,7 @@ public final class SendMessageResponse extends ProtocolResponse {
     @JsonProperty("message")
     public final byte[] message;
 
+    @JsonCreator
     public SendMessageResponse(@JsonProperty("identity") ServerIdentity identity,
                                @JsonProperty("sender") Identity sender,
                                @JsonProperty("group") UUID group,

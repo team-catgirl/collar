@@ -162,7 +162,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         try {
             senderKeyDistributionMessage = new SenderKeyDistributionMessage(response.keys);
         } catch (LegacyMessageException | InvalidMessageException e) {
-            throw new IllegalStateException("could not join group", e);
+            throw new IllegalStateException("could not join group " + response.group.id, e);
         }
         builder.process(name, senderKeyDistributionMessage);
         LOGGER.log(Level.INFO, "Started session with group " + response.group.id);

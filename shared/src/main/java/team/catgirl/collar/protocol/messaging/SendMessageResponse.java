@@ -9,8 +9,8 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import java.util.UUID;
 
 public final class SendMessageResponse extends ProtocolResponse {
-    @JsonProperty("individual")
-    public final ClientIdentity individual;
+    @JsonProperty("sender")
+    public final ClientIdentity sender;
     @JsonProperty("group")
     public final UUID group;
     @JsonProperty("player")
@@ -19,12 +19,12 @@ public final class SendMessageResponse extends ProtocolResponse {
     public final byte[] message;
 
     public SendMessageResponse(@JsonProperty("identity") ServerIdentity identity,
-                               @JsonProperty("individual") ClientIdentity individual,
+                               @JsonProperty("sender") ClientIdentity sender,
                                @JsonProperty("group") UUID group,
                                @JsonProperty("player") MinecraftPlayer player,
                                @JsonProperty("message") byte[] message) {
         super(identity);
-        this.individual = individual;
+        this.sender = sender;
         this.group = group;
         this.player = player;
         this.message = message;

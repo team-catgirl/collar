@@ -1,7 +1,6 @@
 package team.catgirl.collar.client.api.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import jdk.internal.logger.BootstrapLogger;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.client.Collar;
@@ -83,14 +82,14 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof SendMessageResponse) {
             SendMessageResponse response = (SendMessageResponse) resp;
-            if (response.group != null && response.individual != null) {
+            if (response.group != null && response.sender != null) {
                 collar.groups().all().stream().filter(candidate -> candidate.id.equals(response.group))
                     .findFirst()
                     .ifPresent(group -> {
-                        identityStore().createCypher().decrypt(response.individual, group, response.message);
+                        identityStore().createCypher().decrypt(response.sender, group, response.message);
                     });
-            } else if (response.individual != null) {
-                byte[] decryptedBytes = identityStore().createCypher().decrypt(response.individual, response.message);
+            } else if (response.sender != null) {
+                byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, response.message);
                 Message message;
                 try {
                     message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);

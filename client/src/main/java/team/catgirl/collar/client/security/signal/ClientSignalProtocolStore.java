@@ -16,12 +16,14 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.signal.groups.ClientSenderKeyStore;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.utils.Utils;
 
 import java.awt.event.AdjustmentEvent;
 import java.io.IOException;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.UUID;
 
 public class ClientSignalProtocolStore implements SignalProtocolStore, SenderKeyStore {
     private final ClientIdentityKeyStore identityKeyStore;
@@ -202,7 +204,11 @@ public class ClientSignalProtocolStore implements SignalProtocolStore, SenderKey
         );
     }
 
-    public void clearAllGroupSessions() {
+    public void deleteAllGroupSessions() {
         this.clientSenderKeyStore.clear();
+    }
+
+    public void deleteGroupSession(UUID groupId, ClientIdentity sender) {
+        this.clientSenderKeyStore.removeGroupSession(new SenderKeyName(groupId.toString(), new SignalProtocolAddress(sender.id().toString(), sender.deviceId())));
     }
 }

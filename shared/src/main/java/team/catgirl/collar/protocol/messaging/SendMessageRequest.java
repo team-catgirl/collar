@@ -7,10 +7,21 @@ import team.catgirl.collar.security.ClientIdentity;
 import java.util.UUID;
 
 public final class SendMessageRequest extends ProtocolRequest {
+    /**
+     * Client recipient
+     */
     @JsonProperty("individual")
     public final ClientIdentity individual;
+
+    /**
+     * Group recipient
+     */
     @JsonProperty("group")
     public final UUID group;
+
+    /**
+     * Crypted message
+     */
     @JsonProperty("message")
     public final byte[] message;
 

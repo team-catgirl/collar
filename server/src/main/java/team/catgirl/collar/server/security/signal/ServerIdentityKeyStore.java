@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.ReplaceOptions;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.whispersystems.libsignal.IdentityKey;
@@ -88,13 +89,7 @@ public class ServerIdentityKeyStore implements IdentityKeyStore {
 
     @Override
     public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-        if (isTrustedIdentity(address, identityKey, null)) {
-            docs.replaceOne(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()), eq(FINGERPRINT, identityKey.getFingerprint())), map(address, identityKey));
-            return true;
-        } else {
-            docs.insertOne(map(address, identityKey));
-            return false;
-        }
+        return docs.replaceOne(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId()), eq(FINGERPRINT, identityKey.getFingerprint())), map(address, identityKey), new ReplaceOptions().upsert(true)).wasAcknowledged();
     }
 
     @Override

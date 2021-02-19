@@ -38,20 +38,21 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
         IdentityApi identityApi = collar.identities();
         identityApi.identify(player.id)
                 .thenCompose(identityApi::createTrust)
-                .thenAccept(identity -> {
-                    if (identity != null) {
+                .thenAccept(sender -> {
+                    if (sender != null) {
                         Cypher cypher = identityStore().createCypher();
                         byte[] messageBytes;
                         try {
-                            messageBytes = cypher.crypt(identity, Utils.messagePackMapper().writeValueAsBytes(message));
+                            messageBytes = cypher.crypt(sender, Utils.messagePackMapper().writeValueAsBytes(message));
                         } catch (JsonProcessingException e) {
-                            throw new IllegalStateException("Could not process private message", e);
+                            throw new IllegalStateException(collar.identity() + " could not process private message from " + sender, e);
                         }
-                        sender.accept(new SendMessageRequest(collar.identity(), identity, null, messageBytes));
+                        this.sender.accept(new SendMessageRequest(collar.identity(), sender, null, messageBytes));
                         fireListener("onPrivateMessageSent", listener -> {
                             listener.onPrivateMessageSent(collar, this, message);
                         });
                     } else {
+                        LOGGER.log(Level.INFO, collar.identity() + " could not locate identity for " + player + ". The private message was not sent.");
                         fireListener("onPrivateMessageRecipientIsUntrusted", listener -> {
                             listener.onPrivateMessageRecipientIsUntrusted(collar, this, message);
                         });
@@ -69,8 +70,9 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
         byte[] messageBytes;
         try {
             messageBytes = cypher.crypt(identity(), group, Utils.messagePackMapper().writeValueAsBytes(message));
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Could not process group message", e);
+        } catch (Throwable e) {
+            // If the client cant send a message to the group, something is seriously wrong
+            throw new IllegalStateException(collar.identity() + " could not encrypt group message sent to " + group.id, e);
         }
         sender.accept(new SendMessageRequest(collar.identity(), null, group.id, messageBytes));
         fireListener("onGroupMessageSent", listener -> {
@@ -91,11 +93,16 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                         try {
                             message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);
                         } catch (IOException e) {
-                            throw new IllegalStateException("Could not read group message", e);
+                            // We don't throw an exception here in case someone is doing something naughty to disrupt the group and cause the client to exit
+                            LOGGER.log(Level.SEVERE, collar.identity() + "could not read group message from group " + group.id, e);
+                            message = null;
                         }
-                        fireListener("onGroupMessageReceived", listener -> {
-                            listener.onGroupMessageReceived(collar, this, group, response.player, message);
-                        });
+                        if (message != null) {
+                            Message finalMessage = message;
+                            fireListener("onGroupMessageReceived", listener -> {
+                                listener.onGroupMessageReceived(collar, this, group, response.player, finalMessage);
+                            });
+                        }
                     });
             } else if (response.sender != null) {
                 byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, response.message);
@@ -103,13 +110,13 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                 try {
                     message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);
                 } catch (IOException e) {
-                    throw new IllegalStateException("Could not read private message", e);
+                    throw new IllegalStateException(collar.identity() + "Could not read private message from " + response.sender, e);
                 }
                 fireListener("onPrivateMessageReceived", listener -> {
                     listener.onPrivateMessageReceived(collar, this, response.player, message);
                 });
             } else {
-                LOGGER.log(Level.WARNING, "Message could not be process. It was not addressed correctly.");
+                LOGGER.log(Level.WARNING, collar.identity() + "could not process message. It was not addressed correctly.");
             }
             return true;
         }

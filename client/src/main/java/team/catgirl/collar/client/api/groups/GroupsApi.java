@@ -66,7 +66,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param players players
      */
     public void create(List<UUID> players) {
-        sender.accept(identityStore().createCreateGroupRequest(players));
+        sender.accept(new CreateGroupRequest(collar.identity(), UUID.randomUUID(), players));
     }
 
     /**
@@ -100,7 +100,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param invitation to accept
      */
     public void accept(GroupInvitation invitation) {
-        sender.accept(identityStore().createJoinGroupRequest(invitation.groupId));
+        sender.accept(new JoinGroupRequest(identity(), invitation.groupId, Group.MembershipState.ACCEPTED));
         invitations.remove(invitation.groupId);
     }
 
@@ -159,25 +159,22 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             return true;
         } else if (resp instanceof JoinGroupResponse) {
             synchronized (this) {
-                JoinGroupResponse response = (JoinGroupResponse)resp;
-                if (response.keys != null) {
-                    Member owner = response.group.members.values().stream()
-                            .filter(member -> member.membershipRole.equals(Group.MembershipRole.OWNER))
-                            .findFirst()
-                            .orElseThrow(() -> new IllegalStateException("could not find OWNER in group state"));
-                    collar.identities().identify(owner.player.id).thenAccept(identity -> {
-                        identityStore().processJoinGroupResponse(identity, response);
-                        joinGroup(response);
-                    });
-                } else {
-                    joinGroup(response);
-                }
+                JoinGroupResponse response = (JoinGroupResponse) resp;
+                groups.put(response.group.id, response.group);
+                fireListener("onGroupJoined", groupsListener -> {
+                    groupsListener.onGroupJoined(collar, this, response.group, response.player);
+                });
+                invitations.remove(response.group.id);
+                sender.accept(identityStore().createAcknowledgedGroupJoinedRequest(response));
             }
             return true;
+        } else if (resp instanceof  AcknowledgedGroupJoinedResponse) {
+            AcknowledgedGroupJoinedResponse response = (AcknowledgedGroupJoinedResponse) resp;
+            identityStore().processAcknowledgedGroupJoinedResponse(response);
         } else if (resp instanceof LeaveGroupResponse) {
             synchronized (this) {
                 LeaveGroupResponse response = (LeaveGroupResponse)resp;
-                if (response.player.equals(collar.player())) {
+                if (response.sender.equals(collar.identity())) {
                     // Remove myself from the group
                     Group removed = groups.remove(response.groupId);
                     if (removed != null) {
@@ -197,6 +194,11 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                         });
                     }
                 }
+                // Remove the group sessions of the player who left the group so that any messages they send
+                // will no longer be decrypted by the client.
+                // When this method is called after the client itself has left, it removes the session for the group
+                // until they are invited to join the same group again
+                identityStore().processLeaveGroupResponse(response);
             }
             return true;
         } else if (resp instanceof GroupInviteResponse) {
@@ -270,14 +272,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             }
         }
         return false;
-    }
-
-    private void joinGroup(JoinGroupResponse response) {
-        groups.put(response.group.id, response.group);
-        fireListener("onGroupJoined", groupsListener -> {
-            groupsListener.onGroupJoined(collar, this, response.group, response.player);
-        });
-        invitations.remove(response.group.id);
     }
 
     private void updatePosition(UpdateLocationRequest req) {

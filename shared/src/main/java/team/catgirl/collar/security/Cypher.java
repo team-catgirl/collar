@@ -2,6 +2,7 @@ package team.catgirl.collar.security;
 
 import team.catgirl.collar.api.groups.Group;
 
+// TODO: wrap all Throwables into a CypherException to make error handling more consistent where this is used
 public interface Cypher {
     /**
      * Crypt a message to an individual identity

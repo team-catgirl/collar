@@ -2,9 +2,7 @@ package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
-import team.catgirl.collar.protocol.groups.CreateGroupRequest;
-import team.catgirl.collar.protocol.groups.JoinGroupRequest;
-import team.catgirl.collar.protocol.groups.JoinGroupResponse;
+import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.ClientIdentity;
@@ -64,23 +62,21 @@ public interface ClientIdentityStore {
     CreateTrustRequest createSendPreKeysRequest(ClientIdentity identity, long id);
 
     /**
-     * @param players to create the group with
-     * @return create group request
+     * Used to distribute keys back to the client who joined
+     * @param resp of the join
+     * @return acknowledged group joined request
      */
-    CreateGroupRequest createCreateGroupRequest(List<UUID> players);
+    AcknowledgedGroupJoinedRequest createAcknowledgedGroupJoinedRequest(JoinGroupResponse resp);
 
     /**
-     * @param groupId of the group to join
-     * @return join group request
+     * @param response to process
      */
-    JoinGroupRequest createJoinGroupRequest(UUID groupId);
+    void processAcknowledgedGroupJoinedResponse(AcknowledgedGroupJoinedResponse response);
 
     /**
-     * Creates the messages
-     * @param groupOwner identity who owns the group
-     * @param response response
+     * @param response to process
      */
-    void processJoinGroupResponse(ClientIdentity groupOwner, JoinGroupResponse response);
+    void processLeaveGroupResponse(LeaveGroupResponse response);
 
     /**
      * Clears all the current group sessions

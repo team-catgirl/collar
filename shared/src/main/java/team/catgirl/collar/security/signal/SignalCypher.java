@@ -16,6 +16,7 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.protocol.PacketIO;
+import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
 
@@ -26,10 +27,12 @@ import java.io.ObjectOutputStream;
 
 public class SignalCypher implements Cypher {
 
+    private final ClientIdentity clientIdentity;
     private final SignalProtocolStore signalProtocolStore;
     private final SenderKeyStore senderKeyStore;
 
-    public SignalCypher(SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore) {
+    public SignalCypher(ClientIdentity clientIdentity, SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore) {
+        this.clientIdentity = clientIdentity;
         this.signalProtocolStore = signalProtocolStore;
         this.senderKeyStore = senderKeyStore;
     }
@@ -115,8 +118,8 @@ public class SignalCypher implements Cypher {
         GroupCipher cipher = new GroupCipher(senderKeyStore, senderKeyNameFrom(recipient, sender));
         try {
             return cipher.encrypt(bytes);
-        } catch (NoSessionException e) {
-            throw new IllegalStateException("Problem encrypting group message to group " + recipient.id, e);
+        } catch (Throwable e) {
+            throw new IllegalStateException(clientIdentity + " encountered a problem encrypting group message to group " + recipient.id, e);
         }
     }
 
@@ -128,8 +131,8 @@ public class SignalCypher implements Cypher {
         GroupCipher cipher = new GroupCipher(senderKeyStore, senderKeyNameFrom(group, sender));
         try {
             return cipher.decrypt(bytes);
-        } catch (LegacyMessageException | DuplicateMessageException | InvalidMessageException | NoSessionException e) {
-            throw new IllegalStateException("Problem decrypting group message from " + sender, e);
+        } catch (Throwable e) {
+            throw new IllegalStateException(clientIdentity + " encountered a problem decrypting group message from " + sender, e);
         }
     }
 

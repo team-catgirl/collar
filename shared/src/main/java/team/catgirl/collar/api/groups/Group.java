@@ -35,8 +35,12 @@ public final class Group {
         return new Group(id, owner.server, state.build(), new HashMap<>());
     }
 
-    public boolean containsMember(UUID playerId) {
+    public boolean containsPlayer(UUID playerId) {
         return members.values().stream().anyMatch(member -> member.player.id.equals(playerId));
+    }
+
+    public boolean containsPlayer(MinecraftPlayer player) {
+        return members.values().stream().anyMatch(member -> member.player.equals(player));
     }
 
     public Group updateMembershipState(MinecraftPlayer player, MembershipState newMembershipState) {

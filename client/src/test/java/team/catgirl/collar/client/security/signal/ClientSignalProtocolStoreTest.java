@@ -5,13 +5,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.groups.GroupSessionBuilder;
+import org.whispersystems.libsignal.groups.SenderKeyName;
+import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
+import org.whispersystems.libsignal.protocol.SenderKeyDistributionMessage;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.security.ClientIdentity;
 
 import java.io.File;
 import java.io.IOException;
@@ -120,5 +126,40 @@ public class ClientSignalProtocolStoreTest {
             store.removePreKey(preKeyRecord.getId());
             Assert.assertFalse(store.containsPreKey(preKeyRecord.getId()));
         }
+    }
+
+    @Test
+    public void senderKeyStore() throws InvalidKeyIdException, InvalidKeyException {
+        UUID profile = UUID.randomUUID();
+        UUID group = UUID.randomUUID();
+        SenderKeyName keyName = new SenderKeyName(group.toString(), new SignalProtocolAddress(profile.toString(), 1));
+        GroupSessionBuilder builder = new GroupSessionBuilder(store);
+        Assert.assertTrue(store.loadSenderKey(keyName).isEmpty());
+        SenderKeyDistributionMessage distributionMessage = builder.create(keyName);
+
+        Assert.assertNotEquals(0, distributionMessage.getChainKey().length);
+        Assert.assertNotEquals(0, distributionMessage.getId());
+        Assert.assertNotEquals(0, distributionMessage.getSignatureKey().serialize().length);
+
+        Assert.assertNotNull(store.loadSenderKey(keyName));
+        Assert.assertFalse(store.loadSenderKey(keyName).isEmpty());
+        Assert.assertNotEquals(0, store.loadSenderKey(keyName).getSenderKeyState().getSigningKeyPrivate().serialize().length);
+        Assert.assertNotEquals(0, store.loadSenderKey(keyName).getSenderKeyState().getSigningKeyPublic().serialize().length);
+        Assert.assertNotEquals(0, store.loadSenderKey(keyName).getSenderKeyState().getSenderChainKey().getSenderMessageKey().getCipherKey().length);
+        Assert.assertNotEquals(0, store.loadSenderKey(keyName).getSenderKeyState().getSenderChainKey().getSenderMessageKey().getIv().length);
+        Assert.assertNotEquals(0, store.loadSenderKey(keyName).getSenderKeyState().getSenderChainKey().getSenderMessageKey().getSeed().length);
+
+        store.deleteGroupSession(group, new ClientIdentity(profile, null,1));
+        Assert.assertTrue(store.loadSenderKey(keyName).isEmpty());
+
+        SenderKeyName keyName2 = new SenderKeyName(group.toString(), new SignalProtocolAddress(profile.toString(), 1));
+        builder.create(keyName);
+        builder.create(keyName2);
+        Assert.assertFalse(store.loadSenderKey(keyName).isEmpty());
+        Assert.assertFalse(store.loadSenderKey(keyName2).isEmpty());
+
+        store.deleteAllGroupSessions();
+        Assert.assertTrue(store.loadSenderKey(keyName).isEmpty());
+        Assert.assertTrue(store.loadSenderKey(keyName2).isEmpty());
     }
 }

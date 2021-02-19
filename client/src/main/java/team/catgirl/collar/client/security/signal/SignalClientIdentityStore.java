@@ -10,15 +10,11 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
-import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
-import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
-import team.catgirl.collar.protocol.groups.CreateGroupRequest;
-import team.catgirl.collar.protocol.groups.JoinGroupRequest;
-import team.catgirl.collar.protocol.groups.JoinGroupResponse;
+import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.*;
@@ -88,7 +84,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public Cypher createCypher() {
-        return new SignalCypher(store, store);
+        return new SignalCypher(currentIdentity(), store, store);
     }
 
     @Override
@@ -150,37 +146,35 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public CreateGroupRequest createCreateGroupRequest(List<UUID> players) {
-        UUID groupId = UUID.randomUUID();
+    public AcknowledgedGroupJoinedRequest createAcknowledgedGroupJoinedRequest(JoinGroupResponse resp) {
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
-        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(groupId.toString(), signalProtocolAddressFrom(currentIdentity())));
-        return new CreateGroupRequest(currentIdentity(), groupId, players, message.serialize());
+        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(resp.group.id.toString(), signalProtocolAddressFrom(resp.sender)));
+        LOGGER.log(Level.INFO, currentIdentity() + " creating group session for " + resp.sender + " in group " + resp.group.id);
+        return new AcknowledgedGroupJoinedRequest(currentIdentity(), resp.sender, resp.group.id, message.serialize());
     }
 
     @Override
-    public JoinGroupRequest createJoinGroupRequest(UUID groupId) {
+    public void processAcknowledgedGroupJoinedResponse(AcknowledgedGroupJoinedResponse response) {
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
-        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(groupId.toString(), signalProtocolAddressFrom(currentIdentity())));
-        return new JoinGroupRequest(currentIdentity(), groupId, Group.MembershipState.ACCEPTED, message.serialize());
-    }
-
-    @Override
-    public void processJoinGroupResponse(ClientIdentity owner, JoinGroupResponse response) {
-        GroupSessionBuilder builder = new GroupSessionBuilder(store);
-        SenderKeyName name = new SenderKeyName(response.group.id.toString(), signalProtocolAddressFrom(owner));
+        SenderKeyName name = new SenderKeyName(response.group.toString(), signalProtocolAddressFrom(response.sender));
         SenderKeyDistributionMessage senderKeyDistributionMessage;
         try {
             senderKeyDistributionMessage = new SenderKeyDistributionMessage(response.keys);
         } catch (LegacyMessageException | InvalidMessageException e) {
-            throw new IllegalStateException("could not join group " + response.group.id, e);
+            throw new IllegalStateException("could not join group " + response.group, e);
         }
         builder.process(name, senderKeyDistributionMessage);
-        LOGGER.log(Level.INFO, "Started session with group " + response.group.id);
+        LOGGER.log(Level.INFO, currentIdentity() + " processed " + response.sender + "'s session with group " + response.group);
+    }
+
+    @Override
+    public void processLeaveGroupResponse(LeaveGroupResponse response) {
+        store.deleteGroupSession(response.groupId, response.sender);
     }
 
     @Override
     public void clearAllGroupSessions() {
-        store.clearAllGroupSessions();
+        store.deleteAllGroupSessions();
     }
 
     public void delete() throws IOException {

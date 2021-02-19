@@ -64,30 +64,30 @@ public class GroupsTest extends CollarTest {
         // Find eve
         Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.id.equals(evePlayerId)).findFirst().orElseThrow();
 
-        waitForCondition("eve is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
-        waitForCondition("eve is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsMember(evePlayerId));
-        waitForCondition("eve is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsPlayer(evePlayerId));
+        waitForCondition("eve is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsPlayer(evePlayerId));
+        waitForCondition("eve is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsPlayer(evePlayerId));
 
-        waitForCondition("alice is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
-        waitForCondition("alice is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
-        waitForCondition("alice is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
+        waitForCondition("alice is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsPlayer(alicePlayerId));
+        waitForCondition("alice is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsPlayer(alicePlayerId));
+        waitForCondition("alice is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsPlayer(alicePlayerId));
 
-        waitForCondition("bob is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsMember(bobPlayerId));
-        waitForCondition("bob is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsMember(bobPlayerId));
-        waitForCondition("bob is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsMember(bobPlayerId));
+        waitForCondition("bob is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsPlayer(bobPlayerId));
+        waitForCondition("bob is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsPlayer(bobPlayerId));
+        waitForCondition("bob is in eve's group", () -> evePlayer.collar.groups().all().get(0).containsPlayer(bobPlayerId));
 
         // Remove eve
         alicePlayer.collar.groups().removeMember(theGroup, eveMember);
 
         waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().isEmpty());
-        waitForCondition("eve is no longer in alice's group state", () -> !alicePlayer.collar.groups().all().get(0).containsMember(evePlayerId));
-        waitForCondition("eve is no longer in bob's group state", () -> !bobPlayer.collar.groups().all().get(0).containsMember(evePlayerId));
+        waitForCondition("eve is no longer in alice's group state", () -> !alicePlayer.collar.groups().all().get(0).containsPlayer(evePlayerId));
+        waitForCondition("eve is no longer in bob's group state", () -> !bobPlayer.collar.groups().all().get(0).containsPlayer(evePlayerId));
 
         // Alice leaves the group
         alicePlayer.collar.groups().leave(theGroup);
 
         waitForCondition("alice is no longer a member", () -> alicePlayer.collar.groups().all().isEmpty());
-        waitForCondition("alice is no longer in bob's group state", () -> !bobPlayer.collar.groups().all().get(0).containsMember(alicePlayerId));
+        waitForCondition("alice is no longer in bob's group state", () -> !bobPlayer.collar.groups().all().get(0).containsPlayer(alicePlayerId));
 
         bobPlayer.collar.groups().leave(theGroup);
         waitForCondition("bob is no longer a member", () -> bobPlayer.collar.groups().all().isEmpty());
@@ -177,7 +177,7 @@ public class GroupsTest extends CollarTest {
         evePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
 
         waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
-        waitForCondition("eve receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
+        waitForCondition("eve receives UwU", () -> aliceMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) aliceMessages.lastReceivedMessage).content));
     }
 
     private static class TestGroupsListener implements GroupsListener {

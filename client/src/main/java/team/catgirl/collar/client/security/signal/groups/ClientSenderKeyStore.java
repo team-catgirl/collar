@@ -112,6 +112,19 @@ public class ClientSenderKeyStore implements SenderKeyStore {
         }
     }
 
+    public void removeGroupSession(SenderKeyName senderKeyName) {
+        ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
+        try {
+            writeLock.lockInterruptibly();
+            state.records.remove(fromSenderKeyName(senderKeyName));
+            writeState();
+        } catch (InterruptedException | IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            writeLock.lock();
+        }
+    }
+
     public static class Key {
         @JsonProperty("groupId")
         public final String groupId;

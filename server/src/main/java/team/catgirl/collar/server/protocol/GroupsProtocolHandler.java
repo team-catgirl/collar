@@ -53,6 +53,9 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
         } else if (req instanceof RemoveWaypointRequest) {
             RemoveWaypointRequest request = (RemoveWaypointRequest) req;
             resp = groups.removeWaypoint(request);
+        } else if (req instanceof AcknowledgedGroupJoinedRequest) {
+            AcknowledgedGroupJoinedRequest request = (AcknowledgedGroupJoinedRequest) req;
+            resp = groups.acknowledgeJoin(request);
         } else {
             resp = null;
         }

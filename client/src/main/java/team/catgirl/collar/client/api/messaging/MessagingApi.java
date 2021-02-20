@@ -87,25 +87,23 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
         if (resp instanceof SendMessageResponse) {
             SendMessageResponse response = (SendMessageResponse) resp;
             if (response.group != null && response.sender != null) {
-                collar.groups().all().stream().filter(candidate -> candidate.id.equals(response.group))
-                    .findFirst()
-                    .ifPresent(group -> {
-                        byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.message);
-                        Message message;
-                        try {
-                            message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);
-                        } catch (IOException e) {
-                            // We don't throw an exception here in case someone is doing something naughty to disrupt the group and cause the client to exit
-                            LOGGER.log(Level.SEVERE, collar.identity() + "could not read group message from group " + group.id, e);
-                            message = null;
-                        }
-                        if (message != null) {
-                            Message finalMessage = message;
-                            fireListener("onGroupMessageReceived", listener -> {
-                                listener.onGroupMessageReceived(collar, this, group, response.player, finalMessage);
-                            });
-                        }
-                    });
+                collar.groups().findGroupById(response.group).ifPresent(group -> {
+                    byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.message);
+                    Message message;
+                    try {
+                        message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);
+                    } catch (IOException e) {
+                        // We don't throw an exception here in case someone is doing something naughty to disrupt the group and cause the client to exit
+                        LOGGER.log(Level.SEVERE, collar.identity() + "could not read group message from group " + group.id, e);
+                        message = null;
+                    }
+                    if (message != null) {
+                        Message finalMessage = message;
+                        fireListener("onGroupMessageReceived", listener -> {
+                            listener.onGroupMessageReceived(collar, this, group, response.player, finalMessage);
+                        });
+                    }
+                });
             } else if (response.sender != null) {
                 byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, response.message);
                 Message message;

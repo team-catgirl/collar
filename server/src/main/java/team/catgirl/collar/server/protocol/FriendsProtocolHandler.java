@@ -89,7 +89,7 @@ public class FriendsProtocolHandler extends ProtocolHandler {
                 Friend offline = new Friend(sessionState.identity.owner, identity.owner, Status.OFFLINE, Set.of());
                 sender.accept(sessionState.session, new FriendChangedResponse(serverIdentity, offline));
             }, () -> {
-                LOGGER.log(Level.INFO, "");
+                LOGGER.log(Level.INFO, "No friends to notify");
             });
         });
     }

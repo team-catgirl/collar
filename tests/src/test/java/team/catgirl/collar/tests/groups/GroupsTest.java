@@ -1,5 +1,6 @@
 package team.catgirl.collar.tests.groups;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import spark.Response;
@@ -176,10 +177,14 @@ public class GroupsTest extends CollarTest {
         Group theGroup = alicePlayer.collar.groups().all().get(0);
 
         alicePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
-        evePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
-
         waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
-        waitForCondition("eve receives UwU", () -> aliceMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) aliceMessages.lastReceivedMessage).content));
+        waitForCondition("eve receives UwU", () -> eveMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) eveMessages.lastReceivedMessage).content));
+        waitForCondition("alice did not get UwU", () -> aliceMessages.lastReceivedMessage == null);
+
+        bobPlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("OwO"));
+        waitForCondition("eve receives OwO", () -> eveMessages.lastReceivedMessage instanceof TextMessage && "OwO".equals(((TextMessage) eveMessages.lastReceivedMessage).content));
+        waitForCondition("alice receives OwO", () -> aliceMessages.lastReceivedMessage instanceof TextMessage && "OwO".equals(((TextMessage) aliceMessages.lastReceivedMessage).content));
+        waitForCondition("bobs last message was UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
     }
 
     private static class TestGroupsListener implements GroupsListener {

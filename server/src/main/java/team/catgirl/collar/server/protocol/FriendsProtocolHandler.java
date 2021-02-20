@@ -87,6 +87,7 @@ public class FriendsProtocolHandler extends ProtocolHandler {
         friends.getFriends(RequestContext.from(identity), new GetFriendsRequest(null, identity.owner)).friends.forEach(friend -> {
             sessions.getSessionStateByOwner(friend.owner).ifPresentOrElse(sessionState -> {
                 Friend offline = new Friend(sessionState.identity.owner, identity.owner, Status.OFFLINE, Set.of());
+                LOGGER.log(Level.INFO, "Notifying " + sessionState.identity + " that player " + identity + " is OFFLINE");
                 sender.accept(sessionState.session, new FriendChangedResponse(serverIdentity, offline));
             }, () -> {
                 LOGGER.log(Level.INFO, "No friends to notify");

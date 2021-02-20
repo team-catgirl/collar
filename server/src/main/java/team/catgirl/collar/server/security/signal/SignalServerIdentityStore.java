@@ -62,7 +62,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
         }
         SessionRecord sessionRecord = store.loadSession(address);
         sessionRecord.getSessionState().clearUnacknowledgedPreKeyMessage();
-        LOGGER.log(Level.FINE, "Trust established with " + address);
+        LOGGER.log(Level.INFO, "Trust established with " + address);
     }
 
     public boolean isTrustedIdentity(ClientIdentity clientIdentity) {

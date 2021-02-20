@@ -51,7 +51,7 @@ public final class VerificationToken {
                 }
                 Date expiredAt = new Date(expiresAt);
                 if (new Date().after(expiredAt)) {
-                    LOGGER.log(Level.FINE, "Token expired at " + expiredAt);
+                    LOGGER.log(Level.INFO, "Token expired at " + expiredAt);
                     return Optional.empty();
                 } else {
                     return Optional.of(new VerificationToken(UUID.fromString(profileId), expiresAt));

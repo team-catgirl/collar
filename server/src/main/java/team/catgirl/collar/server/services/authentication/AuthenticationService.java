@@ -105,7 +105,7 @@ public class AuthenticationService {
             if (!profile.emailVerified) {
                 throw new UnauthorisedException("Verify your email address first before logging in");
             }
-            LOGGER.log(Level.FINE, "Verified account for " + profile.id);
+            LOGGER.log(Level.INFO, "Verified account for " + profile.id);
             return new VerifyAccountResponse(urlProvider.homeUrl());
         }).orElseThrow(() -> new UnauthorisedException("bad or missing token"));
     }

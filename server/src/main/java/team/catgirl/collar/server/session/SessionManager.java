@@ -88,7 +88,7 @@ public final class SessionManager {
             callback.accept(state.identity, state.player);
         }
         // Start removing state
-        LOGGER.log(e == null ? Level.FINE : Level.SEVERE, reason, e);
+        LOGGER.log(e == null ? Level.INFO : Level.SEVERE, reason, e);
         SessionState sessionState = sessions.remove(session);
         if (sessionState != null) {
             if (session.isOpen()) {

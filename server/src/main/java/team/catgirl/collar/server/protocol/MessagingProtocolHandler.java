@@ -40,7 +40,7 @@ public class MessagingProtocolHandler extends ProtocolHandler {
                 sessions.findPlayer(request.identity).ifPresentOrElse(player -> {
                     sender.accept(request.recipient, new SendMessageResponse(this.serverIdentity, req.identity, null, player, request.message));
                 }, () -> {
-                    LOGGER.log(Level.FINE, "could not find player for " + req.identity);
+                    LOGGER.log(Level.INFO, "could not find player for " + req.identity);
                 });
             } else {
                 LOGGER.log(Level.WARNING, "sent a malformed SendMessageRequest by " + req.identity);

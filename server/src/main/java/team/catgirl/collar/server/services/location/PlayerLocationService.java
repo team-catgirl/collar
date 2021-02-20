@@ -46,7 +46,7 @@ public class PlayerLocationService {
             synchronized (playersSharing) {
                 playersSharing.put(req.groupId, player);
             }
-            LOGGER.log(Level.FINE,"Player " + player + " started sharing location with group " + req.groupId);
+            LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + req.groupId);
         });
     }
 
@@ -80,7 +80,7 @@ public class PlayerLocationService {
     }
 
     private BatchProtocolResponse stopSharing(UUID groupId, ClientIdentity identity, MinecraftPlayer player) {
-        LOGGER.log(Level.FINE,"Player " + player + " started sharing location with group " + groupId);
+        LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + groupId);
         LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, groupId, player, null);
         BatchProtocolResponse responses = createLocationResponses(player, locationUpdatedResponse);
         synchronized (playersSharing) {

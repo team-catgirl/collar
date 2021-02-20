@@ -60,12 +60,12 @@ public class CollarServer {
 
     @OnWebSocketConnect
     public void connected(Session session) throws IOException {
-        LOGGER.log(Level.FINE, "New socket connected");
+        LOGGER.log(Level.INFO, "New socket connected");
     }
 
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason) {
-        LOGGER.log(Level.FINE, "Session closed " + statusCode + " " + reason);
+        LOGGER.log(Level.INFO, "Session closed " + statusCode + " " + reason);
         services.sessions.stopSession(session, reason, null, sessionStopped);
     }
 
@@ -78,15 +78,15 @@ public class CollarServer {
     @OnWebSocketMessage
     public void message(Session session, InputStream is) throws IOException {
         ProtocolRequest req = read(session, is);
-        LOGGER.log(Level.FINE, req.getClass().getSimpleName() + " from " + req.identity);
+        LOGGER.log(Level.INFO, req.getClass().getSimpleName() + " from " + req.identity);
         ServerIdentity serverIdentity = services.identityStore.getIdentity();
         if (req instanceof KeepAliveRequest) {
-            LOGGER.log(Level.FINE, "KeepAliveRequest received. Sending KeepAliveRequest.");
+            LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
             sendPlain(session, new KeepAliveResponse(serverIdentity));
         } else if (req instanceof IdentifyRequest) {
             IdentifyRequest request = (IdentifyRequest)req;
             if (request.identity == null) {
-                LOGGER.log(Level.FINE, "Signaling client to register");
+                LOGGER.log(Level.INFO, "Signaling client to register");
                 String token = services.sessions.createDeviceRegistrationToken(session);
                 String url = services.urlProvider.deviceVerificationUrl(token);
                 sendPlain(session, new RegisterDeviceResponse(serverIdentity, url, token));
@@ -100,7 +100,7 @@ public class CollarServer {
                     services.sessions.stopSession(session, "Identity " + request.identity.id() + " was not found", null, null);
                     return;
                 }
-                LOGGER.log(Level.FINE, "Profile found for " + req.identity.id());
+                LOGGER.log(Level.INFO, "Profile found for " + req.identity.id());
                 sendPlain(session, new IdentifyResponse(serverIdentity, profile));
             }
         } else if (req instanceof SendPreKeysRequest) {
@@ -109,7 +109,7 @@ public class CollarServer {
             SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
             sendPlain(session, response);
         } else if (req instanceof StartSessionRequest) {
-            LOGGER.log(Level.FINE, "Starting session with " + req.identity);
+            LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;
             if (services.minecraftSessionVerifier.verify(request.session)) {
                 services.sessions.identify(session, req.identity, request.session.toPlayer());
@@ -119,13 +119,13 @@ public class CollarServer {
                 services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
-            LOGGER.log(Level.FINE, "Checking if client/server have a trusted relationship");
+            LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
             if (services.identityStore.isTrustedIdentity(req.identity)) {
-                LOGGER.log(Level.FINE, req.identity + " is trusted. Signaling client to start encryption.");
+                LOGGER.log(Level.INFO, req.identity + " is trusted. Signaling client to start encryption.");
                 CheckTrustRelationshipResponse response = new IsTrustedRelationshipResponse(serverIdentity);
                 sendPlain(session, response);
             } else {
-                LOGGER.log(Level.FINE, req.identity + " is NOT trusted. Signaling client to restart registration.");
+                LOGGER.log(Level.INFO, req.identity + " is NOT trusted. Signaling client to restart registration.");
                 CheckTrustRelationshipResponse response = new IsUntrustedRelationshipResponse(serverIdentity);
                 sendPlain(session, response);
                 services.sessions.stopSession(session, req.identity + " identity is not trusted", null, null);

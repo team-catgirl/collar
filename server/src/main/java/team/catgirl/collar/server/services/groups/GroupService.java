@@ -114,7 +114,7 @@ public final class GroupService {
         MinecraftPlayer sender = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         Group group = groupsById.get(req.groupId);
         if (group == null) {
-            LOGGER.log(Level.FINE, sender + " was not a member of the group " + req.groupId);
+            LOGGER.log(Level.INFO, sender + " was not a member of the group " + req.groupId);
             return new BatchProtocolResponse(serverIdentity);
         }
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
@@ -124,7 +124,7 @@ public final class GroupService {
             group = group.removeMember(sender);
             updateState(group);
         }
-        LOGGER.log(Level.FINE, "Group count " + groupsById.size());
+        LOGGER.log(Level.INFO, "Group count " + groupsById.size());
         return response;
     }
 
@@ -143,7 +143,7 @@ public final class GroupService {
                 response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, player)));
             }
         }
-        LOGGER.log(Level.FINE, "Removed user " + playerToRemove + " from all groups");
+        LOGGER.log(Level.INFO, "Removed user " + playerToRemove + " from all groups");
         return response;
     }
 
@@ -161,11 +161,11 @@ public final class GroupService {
             MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
             Member requester = group.members.get(player);
             if (requester == null) {
-                LOGGER.log(Level.FINE, player + " is not a member of the group "  + group.id);
+                LOGGER.log(Level.INFO, player + " is not a member of the group "  + group.id);
                 return new BatchProtocolResponse(serverIdentity);
             }
             if (requester.membershipRole != Group.MembershipRole.OWNER) {
-                LOGGER.log(Level.FINE, player + " is not OWNER member of the group "  + group.id);
+                LOGGER.log(Level.INFO, player + " is not OWNER member of the group "  + group.id);
                 return new BatchProtocolResponse(serverIdentity);
             }
             Map<Group, List<Member>> groupToMembers = new HashMap<>();
@@ -318,7 +318,7 @@ public final class GroupService {
     private void updateState(Group group) {
         synchronized (group.id) {
             if (group.members.isEmpty()) {
-                LOGGER.log(Level.FINE, "Removed group " + group.id + " as it has no members.");
+                LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
                 groupsById.remove(group.id);
             } else {
                 groupsById.put(group.id, group);

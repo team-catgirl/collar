@@ -362,7 +362,7 @@ public final class Collar {
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString message) {
             ProtocolResponse resp = readResponse(message.toByteArray());
-            LOGGER.log(Level.FINE, resp.getClass().getSimpleName() + " from " + resp.identity);
+            LOGGER.log(Level.INFO, resp.getClass().getSimpleName() + " from " + resp.identity);
             ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
             if (resp instanceof IdentifyResponse) {
                 IdentifyResponse response = (IdentifyResponse) resp;
@@ -374,7 +374,7 @@ public final class Collar {
                 keepAlive.stop();
                 keepAlive.start(identity);
             } else if (resp instanceof KeepAliveResponse) {
-                LOGGER.log(Level.FINE, "KeepAliveResponse received");
+                LOGGER.log(Level.INFO, "KeepAliveResponse received");
             } else if (resp instanceof RegisterDeviceResponse) {
                 RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
                 LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);

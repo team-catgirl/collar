@@ -80,7 +80,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         } catch (InvalidKeyException | UntrustedIdentityException e) {
             throw new IllegalStateException("Problem trusting PreKeyBundle for " + owner, e);
         }
-        LOGGER.log(Level.FINE, currentIdentity() + " now trusts " + owner);
+        LOGGER.log(Level.INFO, currentIdentity() + " now trusts " + owner);
     }
 
     @Override

@@ -10,7 +10,6 @@ import team.catgirl.collar.security.Cypher;
 import team.catgirl.collar.security.Identity;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -64,8 +63,13 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public AcknowledgedGroupJoinedRequest createAcknowledgedGroupJoinedRequest(JoinGroupResponse resp) {
-        return currentIdentityStore.createAcknowledgedGroupJoinedRequest(resp);
+    public JoinGroupRequest createJoinGroupRequest(ClientIdentity identity, UUID groupId) {
+        return currentIdentityStore.createJoinGroupRequest(identity, groupId);
+    }
+
+    @Override
+    public AcknowledgedGroupJoinedRequest processJoinGroupResponse(JoinGroupResponse resp) {
+        return currentIdentityStore.processJoinGroupResponse(resp);
     }
 
     @Override

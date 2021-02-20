@@ -10,8 +10,8 @@ public final class SendMessageRequest extends ProtocolRequest {
     /**
      * Client recipient
      */
-    @JsonProperty("individual")
-    public final ClientIdentity individual;
+    @JsonProperty("recipient")
+    public final ClientIdentity recipient;
 
     /**
      * Group recipient
@@ -26,11 +26,11 @@ public final class SendMessageRequest extends ProtocolRequest {
     public final byte[] message;
 
     public SendMessageRequest(@JsonProperty("identity") ClientIdentity identity,
-                              @JsonProperty("individual") ClientIdentity individual,
+                              @JsonProperty("recipient") ClientIdentity recipient,
                               @JsonProperty("group") UUID group,
                               @JsonProperty("message") byte[] message) {
         super(identity);
-        this.individual = individual;
+        this.recipient = recipient;
         this.group = group;
         this.message = message;
     }

@@ -10,6 +10,7 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
+import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
@@ -79,7 +80,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         } catch (InvalidKeyException | UntrustedIdentityException e) {
             throw new IllegalStateException("Problem trusting PreKeyBundle for " + owner, e);
         }
-        LOGGER.log(Level.INFO, currentIdentity() + " now trusts " + owner);
+        LOGGER.log(Level.FINE, currentIdentity() + " now trusts " + owner);
     }
 
     @Override
@@ -136,6 +137,13 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
+    public JoinGroupRequest createJoinGroupRequest(ClientIdentity identity, UUID groupId) {
+        GroupSessionBuilder builder = new GroupSessionBuilder(store);
+        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(groupId.toString(), signalProtocolAddressFrom(identity)));
+        return new JoinGroupRequest(identity, groupId, Group.MembershipState.ACCEPTED, message.serialize());
+    }
+
+    @Override
     public CreateTrustRequest createSendPreKeysRequest(ClientIdentity recipient, long id) {
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(currentIdentity().id().toString(), currentIdentity().deviceId), store);
         try {
@@ -146,15 +154,30 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public AcknowledgedGroupJoinedRequest createAcknowledgedGroupJoinedRequest(JoinGroupResponse resp) {
+    public AcknowledgedGroupJoinedRequest processJoinGroupResponse(JoinGroupResponse resp) {
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
-        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(resp.group.id.toString(), signalProtocolAddressFrom(resp.sender)));
-        LOGGER.log(Level.INFO, currentIdentity() + " creating group session for " + resp.sender + " in group " + resp.group.id);
+        // Generate my sender key and send it back to the sender
+        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(resp.group.id.toString(), signalProtocolAddressFrom(currentIdentity())));
+        LOGGER.log(Level.INFO, currentIdentity() + " creating group session for " + currentIdentity() + " in group " + resp.group.id + " to send to " + resp.sender);
+        // Process the joining clients message
+        if (!resp.sender.equals(currentIdentity())) {
+            try {
+                SenderKeyDistributionMessage sendersMessage = new SenderKeyDistributionMessage(resp.keys);
+                builder.process(new SenderKeyName(resp.group.id.toString(), signalProtocolAddressFrom(resp.sender)), sendersMessage);
+            } catch (Throwable e) {
+                throw new IllegalStateException(currentIdentity() + " could not process group keys from " + resp.sender, e);
+            }
+        }
         return new AcknowledgedGroupJoinedRequest(currentIdentity(), resp.sender, resp.group.id, message.serialize());
     }
 
     @Override
     public void processAcknowledgedGroupJoinedResponse(AcknowledgedGroupJoinedResponse response) {
+        if (response.sender.equals(currentIdentity())) {
+            // Do not process your own identity!
+            // If you do, the private key will be overwritten and the client will not be able to crypt
+            return;
+        }
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
         SenderKeyName name = new SenderKeyName(response.group.toString(), signalProtocolAddressFrom(response.sender));
         SenderKeyDistributionMessage senderKeyDistributionMessage;

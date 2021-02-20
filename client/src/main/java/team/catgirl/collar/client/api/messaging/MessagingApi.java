@@ -52,7 +52,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                             listener.onPrivateMessageSent(collar, this, message);
                         });
                     } else {
-                        LOGGER.log(Level.INFO, collar.identity() + " could not locate identity for " + player + ". The private message was not sent.");
+                        LOGGER.log(Level.FINE, collar.identity() + " could not locate identity for " + player + ". The private message was not sent.");
                         fireListener("onPrivateMessageRecipientIsUntrusted", listener -> {
                             listener.onPrivateMessageRecipientIsUntrusted(collar, this, message);
                         });
@@ -66,6 +66,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
      * @param message to send
      */
     public void sendGroupMessage(Group group, Message message) {
+        LOGGER.log(Level.FINE, identity() + " sending message to group " + group.id);
         Cypher cypher = identityStore().createCypher();
         byte[] messageBytes;
         try {
@@ -73,8 +74,9 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
         } catch (Throwable e) {
             // If the client cant send a message to the group, something is seriously wrong
             throw new IllegalStateException(collar.identity() + " could not encrypt group message sent to " + group.id, e);
-        }
+        };
         sender.accept(new SendMessageRequest(collar.identity(), null, group.id, messageBytes));
+        LOGGER.log(Level.FINE, identity() + " sent message to group " + group.id);
         fireListener("onGroupMessageSent", listener -> {
             listener.onGroupMessageSent(collar, this, group, message);
         });

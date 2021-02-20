@@ -16,14 +16,18 @@ public final class JoinGroupRequest extends ProtocolRequest {
     public final UUID groupId;
     @JsonProperty("state")
     public final MembershipState state;
+    @JsonProperty("keys")
+    public final byte[] keys;
 
     @JsonCreator
     public JoinGroupRequest(
             @JsonProperty("identity") ClientIdentity identity,
             @JsonProperty("groupId") UUID groupId,
-            @JsonProperty("state") MembershipState state) {
+            @JsonProperty("state") MembershipState state,
+            @JsonProperty("keys") byte[] keys) {
         super(identity);
         this.groupId = groupId;
         this.state = state;
+        this.keys = keys;
     }
 }

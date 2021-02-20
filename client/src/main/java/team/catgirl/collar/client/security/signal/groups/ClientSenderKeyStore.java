@@ -36,8 +36,6 @@ public class ClientSenderKeyStore implements SenderKeyStore {
         if (file.exists()) {
             state = mapper.readValue(file, State.class);
         } else {
-            IdentityKeyPair identityKeyPair = KeyHelper.generateIdentityKeyPair();
-            int registrationId = KeyHelper.generateRegistrationId(false);
             state = new State(new HashMap<>());
         }
         ClientSenderKeyStore store = new ClientSenderKeyStore(state, file, mapper);

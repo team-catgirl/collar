@@ -16,7 +16,6 @@ import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse.RemoveWaypointFailedResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
@@ -86,20 +85,21 @@ public final class GroupService {
     public BatchProtocolResponse acceptMembership(JoinGroupRequest req) {
         Group group = groupsById.get(req.groupId);
         if (group == null) {
-            return BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, null, null, null));
+            return BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, null, null, null, req.keys));
         }
-        MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
+        MinecraftPlayer sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         synchronized (group.id) {
             MembershipState state = req.state;
-            group = group.updateMembershipState(player, state);
+            group = group.updateMembershipState(sendingPlayer, state);
             updateState(group);
             // Send a response back to the player accepting membership, with the distribution keys
-            BatchProtocolResponse response = BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, group, req.identity, player));
+            BatchProtocolResponse response = BatchProtocolResponse.one(req.identity, new JoinGroupResponse(serverIdentity, group, req.identity, sendingPlayer, req.keys));
             // Let everyone else in the group know that this identity has accepted
             Group finalGroup = group;
-            BatchProtocolResponse updates = sendUpdatesToMembers(group,
-                    member -> member.membershipState.equals(MembershipState.ACCEPTED) && !member.player.equals(player),
-                    ((identity, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup, req.identity, player)));
+            BatchProtocolResponse updates = sendUpdatesToMembers(
+                    group,
+                    member -> member.membershipState.equals(MembershipState.ACCEPTED),
+                    ((identity, player, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup, req.identity, player, req.keys)));
             response = response.concat(updates);
             return response;
         }
@@ -114,36 +114,36 @@ public final class GroupService {
         MinecraftPlayer sender = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         Group group = groupsById.get(req.groupId);
         if (group == null) {
-            LOGGER.log(Level.INFO, sender + " was not a member of the group " + req.groupId);
-            return BatchProtocolResponse.one(req.identity, new LeaveGroupResponse(serverIdentity,  null,null, null));
+            LOGGER.log(Level.FINE, sender + " was not a member of the group " + req.groupId);
+            return new BatchProtocolResponse(serverIdentity);
         }
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             Group finalGroup = group;
-            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, sender)));
+            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, sender)));
             group = group.removeMember(sender);
             updateState(group);
         }
-        LOGGER.log(Level.INFO, "Group count " + groupsById.size());
+        LOGGER.log(Level.FINE, "Group count " + groupsById.size());
         return response;
     }
 
     /**
      * Removes player from all groups
-     * @param player to remove
+     * @param playerToRemove to remove
      */
-    public BatchProtocolResponse removeUserFromAllGroups(MinecraftPlayer player) {
-        List<Group> groups = findGroupsForPlayer(player);
+    public BatchProtocolResponse removeUserFromAllGroups(MinecraftPlayer playerToRemove) {
+        List<Group> groups = findGroupsForPlayer(playerToRemove);
         BatchProtocolResponse response = new BatchProtocolResponse(null);
         for (Group group : groups) {
             synchronized (group.id) {
-                group = group.updateMembershipState(player, MembershipState.DECLINED);
+                group = group.updateMembershipState(playerToRemove, MembershipState.DECLINED);
                 updateState(group);
                 Group finalGroup = group;
-                response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, null, player)));
+                response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, player)));
             }
         }
-        LOGGER.log(Level.INFO, "Removed user " + player + " from all groups");
+        LOGGER.log(Level.FINE, "Removed user " + playerToRemove + " from all groups");
         return response;
     }
 
@@ -161,11 +161,11 @@ public final class GroupService {
             MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
             Member requester = group.members.get(player);
             if (requester == null) {
-                LOGGER.log(Level.INFO, player + " is not a member of the group "  + group.id);
+                LOGGER.log(Level.FINE, player + " is not a member of the group "  + group.id);
                 return new BatchProtocolResponse(serverIdentity);
             }
             if (requester.membershipRole != Group.MembershipRole.OWNER) {
-                LOGGER.log(Level.INFO, player + " is not OWNER member of the group "  + group.id);
+                LOGGER.log(Level.FINE, player + " is not OWNER member of the group "  + group.id);
                 return new BatchProtocolResponse(serverIdentity);
             }
             Map<Group, List<Member>> groupToMembers = new HashMap<>();
@@ -182,21 +182,21 @@ public final class GroupService {
     public ProtocolResponse ejectMember(EjectGroupMemberRequest req) {
         Group group = groupsById.get(req.groupId);
         if (group == null) {
-            return new LeaveGroupResponse(serverIdentity, null, null, null);
+            return new BatchProtocolResponse(serverIdentity);
         }
         MinecraftPlayer sender = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
         Optional<Member> playerMemberRecord = group.members.values().stream().filter(member -> member.player.equals(sender) && member.membershipRole.equals(Group.MembershipRole.OWNER)).findFirst();
         if (playerMemberRecord.isEmpty()) {
-            return new LeaveGroupResponse(serverIdentity, null, null, null);
+            return new BatchProtocolResponse(serverIdentity);
         }
         Optional<Member> memberToRemove = group.members.values().stream().filter(member -> member.player.id.equals(req.player)).findFirst();
         if (memberToRemove.isEmpty()) {
-            return new LeaveGroupResponse(serverIdentity, null, null, null);
+            return new BatchProtocolResponse(serverIdentity);
         }
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             Group finalGroup = group;
-            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, memberToRemove.get().player)));
+            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, memberToRemove.get().player)));
             group = group.removeMember(memberToRemove.get().player);
             updateState(group);
         }
@@ -208,8 +208,8 @@ public final class GroupService {
         if (group == null) {
             return new CreateWaypointFailedResponse(serverIdentity, req.groupId, req.waypointName);
         }
-        MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
-        if (group.members.values().stream().noneMatch(member -> member.player.inServerWith(player))) {
+        MinecraftPlayer sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
+        if (group.members.values().stream().noneMatch(member -> member.player.inServerWith(sendingPlayer))) {
             return new CreateWaypointFailedResponse(serverIdentity, req.groupId, req.waypointName);
         }
         Waypoint waypoint = new Waypoint(UUID.randomUUID(), req.waypointName, req.location);
@@ -218,7 +218,7 @@ public final class GroupService {
             group = group.addWaypoint(waypoint);
             updateState(group);
             Group finalGroup = group;
-            responses = responses.concat(sendUpdatesToMembers(group, member -> member.membershipState.equals(MembershipState.ACCEPTED), (identity, member) -> new CreateWaypointSuccessResponse(serverIdentity, finalGroup.id, waypoint)));
+            responses = responses.concat(sendUpdatesToMembers(group, member -> member.membershipState.equals(MembershipState.ACCEPTED), (identity, player, member) -> new CreateWaypointSuccessResponse(serverIdentity, finalGroup.id, waypoint)));
         }
         return responses;
     }
@@ -228,8 +228,8 @@ public final class GroupService {
         if (group == null) {
             return new RemoveWaypointFailedResponse(serverIdentity, req.groupId, req.waypointId);
         }
-        MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
-        if (group.members.values().stream().noneMatch(member -> member.player.inServerWith(player))) {
+        MinecraftPlayer sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
+        if (group.members.values().stream().noneMatch(member -> member.player.inServerWith(sendingPlayer))) {
             return new RemoveWaypointFailedResponse(serverIdentity, req.groupId, req.waypointId);
         }
         Waypoint waypoint = group.waypoints.get(req.waypointId);
@@ -242,7 +242,7 @@ public final class GroupService {
             if (group != null) {
                 updateState(group);
                 Group finalGroup = group;
-                responses = responses.concat(sendUpdatesToMembers(group, member -> member.membershipState.equals(MembershipState.ACCEPTED), (identity, member) -> new RemoveWaypointResponse.RemoveWaypointSuccessResponse(serverIdentity, finalGroup.id, waypoint.id)));
+                responses = responses.concat(sendUpdatesToMembers(group, member -> member.membershipState.equals(MembershipState.ACCEPTED), (identity, player, member) -> new RemoveWaypointResponse.RemoveWaypointSuccessResponse(serverIdentity, finalGroup.id, waypoint.id)));
             } else {
                 responses = responses.add(req.identity, new RemoveWaypointFailedResponse(serverIdentity, req.groupId, req.waypointId));
             }
@@ -262,11 +262,11 @@ public final class GroupService {
             if (group == null) {
                 return response;
             }
-            MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
+            MinecraftPlayer sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
             BatchProtocolResponse updates = sendUpdatesToMembers(
                     group,
-                    member -> member.membershipState.equals(MembershipState.ACCEPTED) && !member.player.equals(player),
-                    (identity, member) -> new SendMessageResponse(serverIdentity, req.identity, group.id, player, req.message)
+                    member -> member.membershipState.equals(MembershipState.ACCEPTED) && !member.player.equals(sendingPlayer),
+                    (identity, player, member) -> new SendMessageResponse(serverIdentity, req.identity, group.id, player, req.message)
             );
             response = response.concat(updates);
         }
@@ -314,7 +314,7 @@ public final class GroupService {
     private void updateState(Group group) {
         synchronized (group.id) {
             if (group.members.isEmpty()) {
-                LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
+                LOGGER.log(Level.FINE, "Removed group " + group.id + " as it has no members.");
                 groupsById.remove(group.id);
             } else {
                 groupsById.put(group.id, group);
@@ -332,7 +332,7 @@ public final class GroupService {
                     continue;
                 }
                 sessions.getIdentity(player).ifPresent(clientIdentity -> {
-                    ProtocolResponse resp = messageCreator.create(clientIdentity, member);
+                    ProtocolResponse resp = messageCreator.create(clientIdentity, player, member);
                     responses.put(resp, clientIdentity);
                 });
             }
@@ -345,6 +345,6 @@ public final class GroupService {
     }
 
     interface MessageCreator {
-        ProtocolResponse create(ClientIdentity identity, Member updatedMember);
+        ProtocolResponse create(ClientIdentity identity, MinecraftPlayer player, Member updatedMember);
     }
 }

@@ -75,7 +75,7 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
         } else {
             CreateTrustRequest request = identityStore().createSendPreKeysRequest(identity, TokenGenerator.longToken());
             CompletableFuture<ClientIdentity> future = new CompletableFuture<>();
-            LOGGER.log(Level.INFO, "Creating trust future with " + identity + " and id " + request.id);
+            LOGGER.log(Level.FINE, "Creating trust future with " + identity + " and id " + request.id);
             identifyFutures.put(request.id, future);
             sender.accept(request);
             return future;
@@ -104,10 +104,10 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
             });
             CompletableFuture<ClientIdentity> removed = identifyFutures.remove(response.id);
             if (removed == null) {
-                LOGGER.log(Level.INFO, "Sending back a CreateTrustRequest to " + response.sender + " and id " + response.id);
+                LOGGER.log(Level.FINE, "Sending back a CreateTrustRequest to " + response.sender + " and id " + response.id);
                 sender.accept(identityStore().createSendPreKeysRequest(response.sender, response.id));
             } else {
-                LOGGER.log(Level.INFO, "Finished creating trust with " + response.sender + " and id " + response.id);
+                LOGGER.log(Level.FINE, "Finished creating trust with " + response.sender + " and id " + response.id);
                 removed.complete(response.sender);
             }
             return true;

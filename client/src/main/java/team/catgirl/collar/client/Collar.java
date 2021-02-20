@@ -129,6 +129,9 @@ public final class Collar {
             if (this.identityStore != null) {
                 this.identityStore.clearAllGroupSessions();
             }
+            if (state == State.DISCONNECTED) {
+                return;
+            }
             changeState(State.DISCONNECTED);
         }
     }

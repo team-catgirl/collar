@@ -38,7 +38,7 @@ public final class Ticks {
             try {
                 onTick.onTick();
             } catch (Throwable e) {
-                LOGGER.log(Level.INFO, "Tick listener failed", e);
+                LOGGER.log(Level.FINE, "Tick listener failed", e);
             }
         });
     }

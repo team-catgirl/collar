@@ -34,6 +34,6 @@ public class LocalEmail extends AbstractEmail {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        LOGGER.log(Level.INFO, "Email sent " + file);
+        LOGGER.log(Level.FINE, "Email sent " + file);
     }
 }

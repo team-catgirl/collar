@@ -36,11 +36,11 @@ public class MessagingProtocolHandler extends ProtocolHandler {
             SendMessageRequest request = (SendMessageRequest) req;
             if (request.group != null) {
                 sender.accept(null, groups.createMessages(request));
-            } else if (request.individual != null) {
+            } else if (request.recipient != null) {
                 sessions.findPlayer(request.identity).ifPresentOrElse(player -> {
-                    sender.accept(request.individual, new SendMessageResponse(this.serverIdentity, req.identity, null, player, request.message));
+                    sender.accept(request.recipient, new SendMessageResponse(this.serverIdentity, req.identity, null, player, request.message));
                 }, () -> {
-                    LOGGER.log(Level.INFO, "could not find player for " + req.identity);
+                    LOGGER.log(Level.FINE, "could not find player for " + req.identity);
                 });
             } else {
                 LOGGER.log(Level.WARNING, "sent a malformed SendMessageRequest by " + req.identity);

@@ -55,6 +55,13 @@ public interface ClientIdentityStore {
     SendPreKeysRequest createSendPreKeysRequest(DeviceRegisteredResponse response);
 
     /**
+     * @param identity joining group
+     * @param groupId of the group being joined
+     * @return join request
+     */
+    JoinGroupRequest createJoinGroupRequest(ClientIdentity identity, UUID groupId);
+
+    /**
      * @param identity client identity to exchange keys with
      * @param id unique for this request
      * @return SendPreKeyRequest to send to the provided client identity
@@ -66,7 +73,7 @@ public interface ClientIdentityStore {
      * @param resp of the join
      * @return acknowledged group joined request
      */
-    AcknowledgedGroupJoinedRequest createAcknowledgedGroupJoinedRequest(JoinGroupResponse resp);
+    AcknowledgedGroupJoinedRequest processJoinGroupResponse(JoinGroupResponse resp);
 
     /**
      * @param response to process

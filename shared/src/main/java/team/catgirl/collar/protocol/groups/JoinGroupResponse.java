@@ -15,15 +15,19 @@ public final class JoinGroupResponse extends ProtocolResponse {
     public final ClientIdentity sender;
     @JsonProperty("player")
     public final MinecraftPlayer player;
+    @JsonProperty("keys")
+    public final byte[] keys;
 
     @JsonCreator
     public JoinGroupResponse(@JsonProperty("identity") ServerIdentity identity,
                              @JsonProperty("group") Group group,
                              @JsonProperty("sender") ClientIdentity sender,
-                             @JsonProperty("player") MinecraftPlayer player) {
+                             @JsonProperty("player") MinecraftPlayer player,
+                             @JsonProperty("keys") byte[] keys) {
         super(identity);
         this.group = group;
         this.sender = sender;
         this.player = player;
+        this.keys = keys;
     }
 }

@@ -20,6 +20,7 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
@@ -148,7 +149,7 @@ public class GroupsTest extends CollarTest {
     }
 
     @Test
-    public void sendGroupMessage() {
+    public void sendGroupMessage() throws Exception {
         MessagingListenerImpl aliceMessages = new MessagingListenerImpl();
         alicePlayer.collar.messaging().subscribe(aliceMessages);
 
@@ -174,6 +175,7 @@ public class GroupsTest extends CollarTest {
 
         Group theGroup = alicePlayer.collar.groups().all().get(0);
 
+        alicePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
         evePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
 
         waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));

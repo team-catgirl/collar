@@ -29,19 +29,19 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         ProtocolResponse resp;
         if (req instanceof CreateGroupRequest) {
-            LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity);
+            LOGGER.log(Level.FINE, "CreateGroupRequest received from " + req.identity);
             CreateGroupRequest request = (CreateGroupRequest)req;
             resp = groups.createGroup(request);
         } else if (req instanceof JoinGroupRequest) {
-            LOGGER.log(Level.INFO, "AcceptGroupMembershipRequest received from " + req.identity);
+            LOGGER.log(Level.FINE, "AcceptGroupMembershipRequest received from " + req.identity);
             JoinGroupRequest request = (JoinGroupRequest) req;
             resp = groups.acceptMembership(request);
         } else if (req instanceof LeaveGroupRequest) {
-            LOGGER.log(Level.INFO, "LeaveGroupRequest received from " + req.identity);
+            LOGGER.log(Level.FINE, "LeaveGroupRequest received from " + req.identity);
             LeaveGroupRequest request = (LeaveGroupRequest)req;
             resp = groups.leaveGroup(request);
         } else if (req instanceof GroupInviteRequest) {
-            LOGGER.log(Level.INFO, "GroupInviteRequest received from " + req.identity);
+            LOGGER.log(Level.FINE, "GroupInviteRequest received from " + req.identity);
             GroupInviteRequest request = (GroupInviteRequest)req;
             resp = groups.invite(request);
         } else if (req instanceof EjectGroupMemberRequest) {

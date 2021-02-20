@@ -1,6 +1,5 @@
 package team.catgirl.collar.client.api.groups;
 
-import com.google.common.collect.ImmutableSet;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Location;
@@ -100,7 +99,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param invitation to accept
      */
     public void accept(GroupInvitation invitation) {
-        sender.accept(new JoinGroupRequest(identity(), invitation.groupId, Group.MembershipState.ACCEPTED));
+        sender.accept(identityStore().createJoinGroupRequest(identity(), invitation.groupId));
         invitations.remove(invitation.groupId);
     }
 
@@ -165,12 +164,15 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                     groupsListener.onGroupJoined(collar, this, response.group, response.player);
                 });
                 invitations.remove(response.group.id);
-                sender.accept(identityStore().createAcknowledgedGroupJoinedRequest(response));
+                AcknowledgedGroupJoinedRequest request = identityStore().processJoinGroupResponse(response);
+                sender.accept(request);
             }
             return true;
-        } else if (resp instanceof  AcknowledgedGroupJoinedResponse) {
+        } else if (resp instanceof AcknowledgedGroupJoinedResponse) {
             AcknowledgedGroupJoinedResponse response = (AcknowledgedGroupJoinedResponse) resp;
-            identityStore().processAcknowledgedGroupJoinedResponse(response);
+            if (groups.containsKey(response.group)) {
+                identityStore().processAcknowledgedGroupJoinedResponse(response);
+            }
         } else if (resp instanceof LeaveGroupResponse) {
             synchronized (this) {
                 LeaveGroupResponse response = (LeaveGroupResponse)resp;

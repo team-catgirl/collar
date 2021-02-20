@@ -120,7 +120,7 @@ public final class GroupService {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             Group finalGroup = group;
-            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, sender)));
+            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, req.identity, sender)));
             group = group.removeMember(sender);
             updateState(group);
         }
@@ -193,10 +193,14 @@ public final class GroupService {
         if (memberToRemove.isEmpty()) {
             return new BatchProtocolResponse(serverIdentity);
         }
+        Optional<ClientIdentity> identityToRemove = sessions.getIdentity(memberToRemove.get().player);
+        if (identityToRemove.isEmpty()) {
+            return new BatchProtocolResponse(serverIdentity);
+        }
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             Group finalGroup = group;
-            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, memberToRemove.get().player)));
+            response = response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), memberToRemove.get().player)));
             group = group.removeMember(memberToRemove.get().player);
             updateState(group);
         }

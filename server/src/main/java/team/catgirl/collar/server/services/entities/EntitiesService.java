@@ -27,7 +27,7 @@ public class EntitiesService {
         MinecraftPlayer player = sessions.findPlayer(req.identity)
                 .orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
 
-        Map<UUID, Entity> updatedEntities = req.entities.stream().collect(Collectors.toMap(entity -> entity.id, entity -> entity));
+        Map<UUID, Entity> updatedEntities = req.entities.stream().filter(entity -> entity.type == EntityType.PLAYER).collect(Collectors.toMap(entity -> entity.id, entity -> entity));
         Map<UUID, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
         entityRecords.keySet().forEach(entityKey -> {
             entityRecords.compute(entityKey, (key, record) -> {

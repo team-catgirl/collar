@@ -6,7 +6,7 @@ import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.Cypher;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.Identity;
 
 import java.io.IOException;
@@ -38,7 +38,7 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public Cypher createCypher() {
+    public Cipher createCypher() {
         return currentIdentityStore.createCypher();
     }
 

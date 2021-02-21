@@ -17,7 +17,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.Cypher;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.Identity;
 
 import java.io.ByteArrayInputStream;
@@ -25,13 +25,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public class SignalCypher implements Cypher {
+public class SignalCipher implements Cipher {
 
     private final ClientIdentity clientIdentity;
     private final SignalProtocolStore signalProtocolStore;
     private final SenderKeyStore senderKeyStore;
 
-    public SignalCypher(ClientIdentity clientIdentity, SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore) {
+    public SignalCipher(ClientIdentity clientIdentity, SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore) {
         this.clientIdentity = clientIdentity;
         this.signalProtocolStore = signalProtocolStore;
         this.senderKeyStore = senderKeyStore;
@@ -111,7 +111,7 @@ public class SignalCypher implements Cypher {
 
 
     @Override
-    public byte[] crypt(Identity sender, Group recipient, byte[] bytes) {
+    public byte[] crypt(Identity sender, Group<?> recipient, byte[] bytes) {
         if (senderKeyStore == null) {
             throw new IllegalStateException("server cannot crypt group messages");
         }
@@ -124,7 +124,7 @@ public class SignalCypher implements Cypher {
     }
 
     @Override
-    public byte[] decrypt(Identity sender, Group group, byte[] bytes) {
+    public byte[] decrypt(Identity sender, Group<?> group, byte[] bytes) {
         if (senderKeyStore == null) {
             throw new IllegalStateException("server cannot decrypt group messages");
         }

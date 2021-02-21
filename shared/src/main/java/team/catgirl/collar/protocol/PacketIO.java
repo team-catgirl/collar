@@ -1,7 +1,7 @@
 package team.catgirl.collar.protocol;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import team.catgirl.collar.security.Cypher;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.Identity;
 
 import java.io.*;
@@ -18,11 +18,11 @@ public final class PacketIO {
     private static final int MODE_ENCRYPTED = 0xba5ed;
 
     private final ObjectMapper mapper;
-    private final Cypher cypher;
+    private final Cipher cipher;
 
-    public PacketIO(ObjectMapper mapper, Cypher cypher) {
+    public PacketIO(ObjectMapper mapper, Cipher cipher) {
         this.mapper = mapper;
-        this.cypher = cypher;
+        this.cipher = cipher;
     }
 
     public <T> T decode(Identity sender, InputStream is, Class<T> type) throws IOException {
@@ -42,7 +42,7 @@ public final class PacketIO {
                     if (sender == null) {
                         throw new IllegalStateException("Cannot read encrypted packets with no sender");
                     }
-                    remainingBytes = cypher.decrypt(sender, remainingBytes);
+                    remainingBytes = cipher.decrypt(sender, remainingBytes);
                     checkPacketSize(remainingBytes);
                     return mapper.readValue(remainingBytes, type);
                 } else {
@@ -73,7 +73,7 @@ public final class PacketIO {
                 if (recipient == null) {
                     throw new IllegalArgumentException("recipient cannot be null when sending MODE_ENCRYPTED packets");
                 }
-                objectStream.write(cypher.crypt(recipient, rawBytes));
+                objectStream.write(cipher.crypt(recipient, rawBytes));
             }
             byte[] bytes = outputStream.toByteArray();
             checkPacketSize(bytes);

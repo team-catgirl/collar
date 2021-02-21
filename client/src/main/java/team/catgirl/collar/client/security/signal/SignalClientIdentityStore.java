@@ -10,7 +10,7 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
-import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.MembershipState;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
@@ -19,8 +19,9 @@ import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.*;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.signal.PreKeys;
-import team.catgirl.collar.security.signal.SignalCypher;
+import team.catgirl.collar.security.signal.SignalCipher;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
@@ -84,8 +85,8 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
-    public Cypher createCypher() {
-        return new SignalCypher(currentIdentity(), store, store);
+    public Cipher createCypher() {
+        return new SignalCipher(currentIdentity(), store, store);
     }
 
     @Override
@@ -140,7 +141,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     public JoinGroupRequest createJoinGroupRequest(ClientIdentity identity, UUID groupId) {
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
         SenderKeyDistributionMessage message = builder.create(new SenderKeyName(groupId.toString(), signalProtocolAddressFrom(identity)));
-        return new JoinGroupRequest(identity, groupId, Group.MembershipState.ACCEPTED, message.serialize());
+        return new JoinGroupRequest(identity, groupId, MembershipState.ACCEPTED, message.serialize());
     }
 
     @Override

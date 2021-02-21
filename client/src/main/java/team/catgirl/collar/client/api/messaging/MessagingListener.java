@@ -2,6 +2,7 @@ package team.catgirl.collar.client.api.messaging;
 
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.messaging.Message;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.ApiListener;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
@@ -43,7 +44,7 @@ public interface MessagingListener extends ApiListener {
      * @param group sent to
      * @param message the message
      */
-    default void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group group, Message message) {};
+    default void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, Message message) {};
 
     /**
      * Fired when a group message was received
@@ -53,5 +54,5 @@ public interface MessagingListener extends ApiListener {
      * @param sender who sent it
      * @param message the message
      */
-    default void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {};
+    default void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, MinecraftPlayer sender, Message message) {};
 }

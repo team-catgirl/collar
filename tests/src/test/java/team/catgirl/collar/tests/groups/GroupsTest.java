@@ -3,7 +3,7 @@ package team.catgirl.collar.tests.groups;
 import org.junit.Before;
 import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;
-import team.catgirl.collar.api.groups.Group.Member;
+import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.messaging.Message;
@@ -57,7 +57,7 @@ public class GroupsTest extends CollarTest {
         waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
         waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
 
-        Group theGroup = alicePlayer.collar.groups().all().get(0);
+        Group<Waypoint> theGroup = alicePlayer.collar.groups().all().get(0);
 
         // Find eve
         Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.id.equals(evePlayerId)).findFirst().orElseThrow();
@@ -109,7 +109,7 @@ public class GroupsTest extends CollarTest {
         waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
         waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
 
-        Group theGroup = alicePlayer.collar.groups().all().get(0);
+        Group<Waypoint> theGroup = alicePlayer.collar.groups().all().get(0);
 
         // Check there are zero waypoints
         waitForCondition("alice does not have a waypoint", () -> alicePlayer.collar.groups().all().get(0).waypoints.isEmpty());
@@ -170,7 +170,7 @@ public class GroupsTest extends CollarTest {
         waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
         waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
 
-        Group theGroup = alicePlayer.collar.groups().all().get(0);
+        Group<Waypoint> theGroup = alicePlayer.collar.groups().all().get(0);
 
         alicePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
         waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
@@ -192,19 +192,19 @@ public class GroupsTest extends CollarTest {
         public Waypoint waypoint;
 
         @Override
-        public void onGroupCreated(Collar collar, GroupsApi groupsApi, Group group) {
+        public void onGroupCreated(Collar collar, GroupsApi groupsApi, Group<Waypoint> group) {
             createdGroup = true;
         }
 
         @Override
-        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group<Waypoint> group, MinecraftPlayer player) {
             if (collar.player().equals(player)) {
                 joinedGroup = true;
             }
         }
 
         @Override
-        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group<Waypoint> group, MinecraftPlayer player) {
             if (collar.player().equals(player)) {
                 leftGroup = true;
             }
@@ -216,7 +216,7 @@ public class GroupsTest extends CollarTest {
         }
 
         @Override
-        public void onWaypointCreatedSuccess(Collar collar, GroupsApi feature, Group group, Waypoint waypoint) {
+        public void onWaypointCreated(Collar collar, GroupsApi feature, Group<Waypoint> group, Waypoint waypoint) {
             this.waypoint = waypoint;
         }
     }
@@ -226,12 +226,12 @@ public class GroupsTest extends CollarTest {
         public Message lastReceivedMessage;
 
         @Override
-        public void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group group, Message message) {
+        public void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, Message message) {
             this.lastSentMessage = message;
         }
 
         @Override
-        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {
+        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, MinecraftPlayer sender, Message message) {
             this.lastReceivedMessage = message;
         }
     }

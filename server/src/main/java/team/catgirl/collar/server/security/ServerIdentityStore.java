@@ -3,7 +3,7 @@ package team.catgirl.collar.server.security;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.Cypher;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.ServerIdentity;
 
 import java.util.UUID;
@@ -28,9 +28,9 @@ public interface ServerIdentityStore {
     boolean isTrustedIdentity(ClientIdentity identity);
 
     /**
-     * @return creates a new {@link Cypher}
+     * @return creates a new {@link Cipher}
      */
-    Cypher createCypher();
+    Cipher createCypher();
 
     SendPreKeysResponse createSendPreKeysResponse();
 

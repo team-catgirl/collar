@@ -12,7 +12,7 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.messaging.SendMessageRequest;
 import team.catgirl.collar.protocol.messaging.SendMessageResponse;
-import team.catgirl.collar.security.Cypher;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.utils.Utils;
 
@@ -41,10 +41,10 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                 .thenCompose(identityApi::createTrust)
                 .thenAccept(sender -> {
                     if (sender.isPresent()) {
-                        Cypher cypher = identityStore().createCypher();
+                        Cipher cipher = identityStore().createCypher();
                         byte[] messageBytes;
                         try {
-                            messageBytes = cypher.crypt(sender.get(), Utils.messagePackMapper().writeValueAsBytes(message));
+                            messageBytes = cipher.crypt(sender.get(), Utils.messagePackMapper().writeValueAsBytes(message));
                         } catch (JsonProcessingException e) {
                             throw new IllegalStateException(collar.identity() + " could not process private message from " + sender, e);
                         }
@@ -68,10 +68,10 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
      */
     public void sendGroupMessage(Group group, Message message) {
         LOGGER.log(Level.INFO, identity() + " sending message to group " + group.id);
-        Cypher cypher = identityStore().createCypher();
+        Cipher cipher = identityStore().createCypher();
         byte[] messageBytes;
         try {
-            messageBytes = cypher.crypt(identity(), group, Utils.messagePackMapper().writeValueAsBytes(message));
+            messageBytes = cipher.crypt(identity(), group, Utils.messagePackMapper().writeValueAsBytes(message));
         } catch (Throwable e) {
             // If the client cant send a message to the group, something is seriously wrong
             throw new IllegalStateException(collar.identity() + " could not encrypt group message sent to " + group.id, e);

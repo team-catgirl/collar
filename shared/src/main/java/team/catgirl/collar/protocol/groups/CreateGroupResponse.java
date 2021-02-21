@@ -12,10 +12,10 @@ import team.catgirl.collar.security.ServerIdentity;
  */
 public final class CreateGroupResponse extends ProtocolResponse {
     @JsonProperty("group")
-    public final Group group;
+    public final Group<byte[]> group;
 
     @JsonCreator
-    public CreateGroupResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("group") Group group) {
+    public CreateGroupResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("group") Group<byte[]> group) {
         super(identity);
         this.group = group;
     }

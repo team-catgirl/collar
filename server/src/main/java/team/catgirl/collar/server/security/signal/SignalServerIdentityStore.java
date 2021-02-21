@@ -8,8 +8,9 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.*;
+import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.signal.PreKeys;
-import team.catgirl.collar.security.signal.SignalCypher;
+import team.catgirl.collar.security.signal.SignalCipher;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
@@ -70,8 +71,8 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
     }
 
     @Override
-    public Cypher createCypher() {
-        return new SignalCypher(null, store, null);
+    public Cipher createCypher() {
+        return new SignalCipher(null, store, null);
     }
 
     @Override

@@ -7,7 +7,7 @@ import team.catgirl.collar.security.ServerIdentity;
 
 import java.util.UUID;
 
-public abstract class RemoveWaypointResponse extends ProtocolResponse {
+public class RemoveWaypointResponse extends ProtocolResponse {
 
     @JsonProperty("groupId")
     public final UUID groupId;
@@ -21,23 +21,5 @@ public abstract class RemoveWaypointResponse extends ProtocolResponse {
         super(identity);
         this.groupId = groupId;
         this.waypointId = waypointId;
-    }
-
-    public static final class RemoveWaypointSuccessResponse extends RemoveWaypointResponse {
-        @JsonCreator
-        public RemoveWaypointSuccessResponse(@JsonProperty("identity") ServerIdentity identity,
-                                             @JsonProperty("groupId") UUID groupId,
-                                             @JsonProperty("waypointId") UUID waypointId) {
-            super(identity, groupId, waypointId);
-        }
-    }
-
-    public static final class RemoveWaypointFailedResponse extends RemoveWaypointResponse {
-        @JsonCreator
-        public RemoveWaypointFailedResponse(@JsonProperty("identity")ServerIdentity identity,
-                                            @JsonProperty("groupId") UUID groupId,
-                                            @JsonProperty("waypointId") UUID waypointId) {
-            super(identity, groupId, waypointId);
-        }
     }
 }

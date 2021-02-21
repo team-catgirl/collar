@@ -1,22 +1,24 @@
-package team.catgirl.collar.client.api.entities;
+package team.catgirl.collar.client.api.location;
 
 import team.catgirl.collar.api.entities.Entity;
+import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.minecraft.Ticks.TickListener;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class EntitiesUpdater implements TickListener {
+public class NearbyUpdater implements TickListener {
 
     private final Supplier<List<Entity>> entitySuppliers;
-    private final EntitiesApi entitiesApi;
+    private final LocationApi locationApi;
     private final List<Entity> entities = new ArrayList<>();
     private volatile boolean update = false;
 
-    public EntitiesUpdater(Supplier<List<Entity>> entitySuppliers, EntitiesApi entitiesApi) {
+    public NearbyUpdater(Supplier<List<Entity>> entitySuppliers, LocationApi locationApi, Ticks ticks) {
         this.entitySuppliers = entitySuppliers;
-        this.entitiesApi = entitiesApi;
+        this.locationApi = locationApi;
+        ticks.subscribe(this);
     }
 
     @Override
@@ -26,7 +28,7 @@ public class EntitiesUpdater implements TickListener {
         }
         List<Entity> entities = entitySuppliers.get();
         if (!this.entities.equals(entities)) {
-            entitiesApi.updateEntities(entities);
+            locationApi.publishNearby(entities);
             this.entities.clear();
             this.entities.addAll(entities);
         }

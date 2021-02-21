@@ -1,16 +1,9 @@
 package team.catgirl.collar.server.services.location;
 
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ConcurrentHashMultiset;
-import org.eclipse.jetty.util.MultiMap;
-import org.eclipse.jetty.util.log.Log;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
-import team.catgirl.collar.api.location.Location;
-import team.catgirl.collar.protocol.location.LocationUpdatedResponse;
-import team.catgirl.collar.protocol.location.StartSharingLocationRequest;
-import team.catgirl.collar.protocol.location.StopSharingLocationRequest;
-import team.catgirl.collar.protocol.location.UpdateLocationRequest;
+import team.catgirl.collar.protocol.location.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
@@ -18,7 +11,6 @@ import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.session.SessionManager;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -32,6 +24,7 @@ public class PlayerLocationService {
     private final SessionManager sessions;
     private final GroupService groups;
     private final ServerIdentity serverIdentity;
+    private final ConcurrentHashMap<NearbyKey, NearbyRecord> nearbyRecords = new ConcurrentHashMap<>();
 
     private final ArrayListMultimap<UUID, MinecraftPlayer> playersSharing = ArrayListMultimap.create();
 
@@ -89,6 +82,36 @@ public class PlayerLocationService {
         return responses;
     }
 
+    public BatchProtocolResponse updateNearbyGroups(UpdateNearbyRequest req) {
+        MinecraftPlayer player = sessions.findPlayer(req.identity)
+                .orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
+        Map<String, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
+        nearbyRecords.keySet().forEach(nearbyKey -> {
+            nearbyRecords.compute(nearbyKey, (key, record) -> {
+                if (req.nearbyHashes.contains(key.nearbyHash)) {
+                    if (record == null) {
+                        return new NearbyRecord(player.server, key.nearbyHash, Set.of(player.id));
+                    } else {
+                        Set<UUID> playersReporting = new HashSet<>(record.playersSharingHash);
+                        playersReporting.add(player.id);
+                        entityPresenceUpdates.put(nearbyKey.nearbyHash, playersReporting.stream().map(uuid -> new MinecraftPlayer(uuid, key.server)).collect(Collectors.toSet()));
+                        return new NearbyRecord(player.server, nearbyKey.nearbyHash, playersReporting);
+                    }
+                } else {
+                    if (record == null) {
+                        return null;
+                    } else {
+                        Set<UUID> playersReporting = new HashSet<>(record.playersSharingHash);
+                        playersReporting.remove(player.id);
+                        entityPresenceUpdates.put(nearbyKey.nearbyHash, playersReporting.stream().map(uuid -> new MinecraftPlayer(uuid, key.server)).collect(Collectors.toSet()));
+                        return new NearbyRecord(player.server, nearbyKey.nearbyHash, playersReporting);
+                    }
+                }
+            });
+        });
+        return groups.updateNearbyGroups(entityPresenceUpdates);
+    }
+
     private BatchProtocolResponse createLocationResponses(MinecraftPlayer player, LocationUpdatedResponse resp) {
         BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
         // Find all the groups the requesting player is a member of
@@ -115,5 +138,38 @@ public class PlayerLocationService {
             }
         }
         return responses;
+    }
+
+    public static final class NearbyKey {
+        public final String server;
+        public final String nearbyHash;
+
+        public NearbyKey(String server, String nearbyHash) {
+            this.server = server;
+            this.nearbyHash = nearbyHash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            NearbyKey nearbyKey = (NearbyKey) o;
+            return server.equals(nearbyKey.server) && nearbyHash.equals(nearbyKey.nearbyHash);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(server, nearbyHash);
+        }
+    }
+
+    public static final class NearbyRecord {
+        public final String hash;
+        public final Set<UUID> playersSharingHash;
+
+        public NearbyRecord(String server, String hash, Set<UUID> playersSharingHash) {
+            this.hash = hash;
+            this.playersSharingHash = playersSharingHash;
+        }
     }
 }

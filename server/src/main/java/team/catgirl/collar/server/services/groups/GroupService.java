@@ -39,6 +39,7 @@ public final class GroupService {
     private final SessionManager sessions;
 
     private final ConcurrentMap<UUID, Group> groupsById = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, UUID> nearbyHashToGroupId = new ConcurrentHashMap<>();
 
     public GroupService(ServerIdentity serverIdentity, SessionManager sessions) {
         this.serverIdentity = serverIdentity;
@@ -296,20 +297,21 @@ public final class GroupService {
         return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, req.group, req.keys));
     }
 
-    public BatchProtocolResponse updateNearbyGroups(Map<UUID, Set<MinecraftPlayer>> groupsToCreateUpdateOrDelete) {
-
+    public BatchProtocolResponse updateNearbyGroups(Map<String, Set<MinecraftPlayer>> groupsToCreateUpdateOrDelete) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        for (Map.Entry<UUID, Set<MinecraftPlayer>> entry : groupsToCreateUpdateOrDelete.entrySet()) {
-            UUID groupId = entry.getKey();
+        for (Map.Entry<String, Set<MinecraftPlayer>> entry : groupsToCreateUpdateOrDelete.entrySet()) {
+            String nearbyHash = entry.getKey();
             Set<MinecraftPlayer> players = entry.getValue();
             String server = players.stream().findFirst().map(player -> player.server).orElseThrow(() -> new IllegalStateException("could not find a player"));
-            synchronized (groupId) {
-                Group group = groupsById.get(groupId);
-                if (group == null) {
-                    Map<MinecraftPlayer, Member> members = players.stream().collect(Collectors.toMap(player -> player, o -> new Member(o, Group.MembershipRole.MEMBER, MembershipState.ACCEPTED, Location.UNKNOWN)));
-                    group = new Group(groupId, Group.GroupType.LOCATION, server, members, Map.of());
-                    groupsById.put(groupId, group);
-                }
+            UUID groupId = nearbyHashToGroupId.getOrDefault(nearbyHash, UUID.randomUUID());
+            Group group = groupsById.get(groupId);
+            if (group == null) {
+                Map<MinecraftPlayer, Member> members = players.stream().collect(Collectors.toMap(player -> player, o -> new Member(o, Group.MembershipRole.MEMBER, MembershipState.ACCEPTED, Location.UNKNOWN)));
+                group = new Group(groupId, Group.GroupType.LOCATION, server, members, Map.of());
+                groupsById.put(groupId, group);
+                nearbyHashToGroupId.put(nearbyHash, groupId);
+            }
+            synchronized (group.id) {
                 Set<MinecraftPlayer> playersToAdd = ImmutableSet.copyOf(Sets.difference(players, group.members.keySet()));
                 for (MinecraftPlayer player : playersToAdd) {
                     List<Member> members = playersToAdd.stream().map(playerToAdd -> new Member(player, Group.MembershipRole.MEMBER, MembershipState.PENDING, Location.UNKNOWN)).collect(Collectors.toList());
@@ -353,6 +355,11 @@ public final class GroupService {
             if (group.members.isEmpty()) {
                 LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
                 groupsById.remove(group.id);
+                // Remove any nearby hashes associated with this group
+                nearbyHashToGroupId.entrySet().stream().filter(entry -> entry.getValue().equals(group.id))
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .ifPresent(nearbyHashToGroupId::remove);
             } else {
                 groupsById.put(group.id, group);
             }

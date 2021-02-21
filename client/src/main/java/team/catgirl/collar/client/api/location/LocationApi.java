@@ -1,5 +1,8 @@
 package team.catgirl.collar.client.api.location;
 
+import com.google.common.hash.Hashing;
+import team.catgirl.collar.api.entities.Entity;
+import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
@@ -10,20 +13,16 @@ import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
-import team.catgirl.collar.protocol.location.LocationUpdatedResponse;
-import team.catgirl.collar.protocol.location.StartSharingLocationRequest;
-import team.catgirl.collar.protocol.location.StopSharingLocationRequest;
-import team.catgirl.collar.protocol.location.UpdateLocationRequest;
+import team.catgirl.collar.protocol.location.*;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class LocationApi extends AbstractApi<LocationListener> {
 
@@ -31,16 +30,21 @@ public class LocationApi extends AbstractApi<LocationListener> {
     private final ConcurrentHashMap<MinecraftPlayer, Location> playerLocations = new ConcurrentHashMap<>();
     private final Supplier<Location> locationSupplier;
     private final LocationUpdater updater;
+    private final NearbyUpdater nearbyUpdater;
+    private final Supplier<List<Entity>> entityListSupplier;
 
     public LocationApi(Collar collar,
                        Supplier<ClientIdentityStore> identityStoreSupplier,
                        Consumer<ProtocolRequest> sender,
                        Ticks ticks,
                        GroupsApi groupsApi,
-                       Supplier<Location> locationSupplier) {
+                       Supplier<Location> locationSupplier,
+                       Supplier<List<Entity>> entityListSupplier) {
         super(collar, identityStoreSupplier, sender);
         this.locationSupplier = locationSupplier;
         this.updater = new LocationUpdater(this, ticks);
+        this.nearbyUpdater = new NearbyUpdater(entityListSupplier, this, ticks);
+        this.entityListSupplier = entityListSupplier;
         groupsApi.subscribe(new GroupListenerImpl());
     }
 
@@ -115,6 +119,13 @@ public class LocationApi extends AbstractApi<LocationListener> {
         }
     }
 
+    void publishNearby(List<Entity> entities) {
+        Set<String> nearbyEntityHash = entities.stream().filter(entity -> entity.type.equals(EntityType.PLAYER))
+                .map(entity -> Hashing.sha256().hashString(entity.id.toString(), StandardCharsets.UTF_8).toString())
+                .collect(Collectors.toSet());
+        sender.accept(new UpdateNearbyRequest(identity(), nearbyEntityHash));
+    }
+
     @Override
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof LocationUpdatedResponse) {
@@ -152,11 +163,14 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     @Override
     public void onStateChanged(Collar.State state) {
-        if (state == Collar.State.DISCONNECTED) {
+        if (state == Collar.State.CONNECTED) {
+            nearbyUpdater.start();
+        } else if (state == Collar.State.DISCONNECTED) {
             synchronized (this) {
                 playerLocations.clear();
                 groupsSharingWith.clear();
             }
+            nearbyUpdater.stop();
         }
     }
 

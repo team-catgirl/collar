@@ -85,11 +85,11 @@ public final class Collar {
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender);
         this.ticks = configuration.ticks;
         this.apis = new ArrayList<>();
-        this.locationApi = new LocationApi(this, identityStoreSupplier, sender, this.ticks, groupsApi, configuration.playerLocation);
+        this.locationApi = new LocationApi(this, identityStoreSupplier, sender, this.ticks, groupsApi, configuration.playerLocation, configuration.entitiesSupplier);
         this.texturesApi = new TexturesApi(this, identityStoreSupplier, sender);
         this.identityApi = new IdentityApi(this, identityStoreSupplier, sender);
         this.messagingApi = new MessagingApi(this, identityStoreSupplier, sender);
-        this.friendsApi = new FriendsApi(this, identityStoreSupplier, request -> sender.accept(request));
+        this.friendsApi = new FriendsApi(this, identityStoreSupplier, sender::accept);
         this.apis.add(groupsApi);
         this.apis.add(locationApi);
         this.apis.add(texturesApi);

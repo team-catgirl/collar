@@ -1,5 +1,7 @@
 package team.catgirl.collar.server.services.groups;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.groups.Group.MembershipState;
@@ -64,7 +66,7 @@ public final class GroupService {
         if (groupsById.containsKey(req.groupId)) {
             throw new IllegalStateException("Group with id " + req.groupId + " already exists");
         }
-        Group group = Group.newGroup(req.groupId, player, Location.UNKNOWN, players);
+        Group group = Group.newGroup(req.groupId, Group.GroupType.PLAYER, player, Location.UNKNOWN, players);
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             updateState(group);
@@ -294,6 +296,37 @@ public final class GroupService {
         return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, req.group, req.keys));
     }
 
+    public BatchProtocolResponse updateNearbyGroups(Map<UUID, Set<MinecraftPlayer>> groupsToCreateUpdateOrDelete) {
+
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        for (Map.Entry<UUID, Set<MinecraftPlayer>> entry : groupsToCreateUpdateOrDelete.entrySet()) {
+            UUID groupId = entry.getKey();
+            Set<MinecraftPlayer> players = entry.getValue();
+            String server = players.stream().findFirst().map(player -> player.server).orElseThrow(() -> new IllegalStateException("could not find a player"));
+            synchronized (groupId) {
+                Group group = groupsById.get(groupId);
+                if (group == null) {
+                    Map<MinecraftPlayer, Member> members = players.stream().collect(Collectors.toMap(player -> player, o -> new Member(o, Group.MembershipRole.MEMBER, MembershipState.ACCEPTED, Location.UNKNOWN)));
+                    group = new Group(groupId, Group.GroupType.LOCATION, server, members, Map.of());
+                    groupsById.put(groupId, group);
+                }
+                Set<MinecraftPlayer> playersToAdd = ImmutableSet.copyOf(Sets.difference(players, group.members.keySet()));
+                for (MinecraftPlayer player : playersToAdd) {
+                    List<Member> members = playersToAdd.stream().map(playerToAdd -> new Member(player, Group.MembershipRole.MEMBER, MembershipState.PENDING, Location.UNKNOWN)).collect(Collectors.toList());
+                    response = response.concat(createGroupMembershipRequests(null, group, members));
+                }
+                Set<MinecraftPlayer> playersToRemove = ImmutableSet.copyOf(Sets.difference(group.members.keySet(), players));
+                for (MinecraftPlayer player : playersToRemove) {
+                    ClientIdentity identity = sessions.getIdentity(player.id).orElse(null);
+                    if (identity != null) {
+                        response = response.add(identity, new LeaveGroupResponse(serverIdentity, groupId, null, player));
+                    }
+                }
+            }
+        }
+        return response;
+    }
+
     /**
      * Sends membership requests to the group members
      * @param requester whos sending the request
@@ -308,7 +341,7 @@ public final class GroupService {
                     .filter(member -> member.membershipState == MembershipState.PENDING)
                     .map(member -> member.player)
                     .collect(Collectors.toMap(
-                            o -> new GroupInviteResponse(serverIdentity, group.id, sender, new ArrayList<>(group.members.keySet())),
+                            o -> new GroupInviteResponse(serverIdentity, group.id, group.type, sender, new ArrayList<>(group.members.keySet())),
                             minecraftPlayer -> sessions.getIdentity(minecraftPlayer).orElseThrow(() -> new IllegalStateException("cannot find identity for " + minecraftPlayer)))
                     );
             return new BatchProtocolResponse(serverIdentity, responses);

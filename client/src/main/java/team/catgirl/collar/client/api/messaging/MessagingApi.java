@@ -5,6 +5,7 @@ import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
+import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.identity.IdentityApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
@@ -80,6 +81,16 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
         fireListener("onGroupMessageSent", listener -> {
             listener.onGroupMessageSent(collar, this, group, message);
         });
+    }
+
+    /**
+     * Send a message to players nearby
+     * @param message to send
+     */
+    public void sendNearbyMessage(Message message) {
+        collar.groups().all().stream()
+                .filter(group -> group.type == Group.GroupType.LOCATION)
+                .forEach(group -> sendGroupMessage(group, message));
     }
 
     @Override

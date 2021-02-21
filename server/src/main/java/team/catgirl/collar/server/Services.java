@@ -53,6 +53,6 @@ public final class Services {
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, sessions);
-        this.entities = new EntitiesService(sessions);
+        this.entities = new EntitiesService(sessions, groups);
     }
 }

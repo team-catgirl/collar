@@ -205,12 +205,16 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             return true;
         } else if (resp instanceof GroupInviteResponse) {
             synchronized (this) {
-                GroupInviteResponse request = (GroupInviteResponse)resp;
-                GroupInvitation invitation = GroupInvitation.from(request);
-                invitations.put(invitation.groupId, invitation);
-                fireListener("onGroupInvited", groupsListener -> {
-                    groupsListener.onGroupInvited(collar, this, invitation);
-                });
+                GroupInviteResponse response = (GroupInviteResponse) resp;
+                GroupInvitation invitation = GroupInvitation.from(response);
+                if (response.groupType == Group.GroupType.PLAYER) {
+                    invitations.put(invitation.groupId, invitation);
+                    fireListener("onGroupInvited", groupsListener -> {
+                        groupsListener.onGroupInvited(collar, this, invitation);
+                    });
+                } else if (response.groupType == Group.GroupType.LOCATION) {
+                    accept(invitation);
+                }
             }
             return true;
         } else if (resp instanceof CreateWaypointResponse) {

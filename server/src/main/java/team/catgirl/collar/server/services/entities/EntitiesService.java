@@ -2,8 +2,11 @@ package team.catgirl.collar.server.services.entities;
 
 import com.google.common.collect.ImmutableSet;
 import team.catgirl.collar.api.entities.Entity;
+import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.protocol.entities.UpdateEntitiesRequest;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.server.protocol.BatchProtocolResponse;
+import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
@@ -12,18 +15,20 @@ import java.util.stream.Collectors;
 
 public class EntitiesService {
     private final SessionManager sessions;
+    private final GroupService groups;
     private final ConcurrentHashMap<EntityKey, EntityRecord> entityRecords = new ConcurrentHashMap<>();
 
-    public EntitiesService(SessionManager sessions) {
+    public EntitiesService(SessionManager sessions, GroupService groups) {
         this.sessions = sessions;
+        this.groups = groups;
     }
 
-    public void updateEntities(UpdateEntitiesRequest req) {
+    public BatchProtocolResponse updateEntities(UpdateEntitiesRequest req) {
         MinecraftPlayer player = sessions.findPlayer(req.identity)
                 .orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
 
         Map<UUID, Entity> updatedEntities = req.entities.stream().collect(Collectors.toMap(entity -> entity.id, entity -> entity));
-        Map<Entity, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
+        Map<UUID, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
         entityRecords.keySet().forEach(entityKey -> {
             entityRecords.compute(entityKey, (key, record) -> {
                 Entity entity = updatedEntities.get(key.entity);
@@ -33,23 +38,22 @@ public class EntitiesService {
                     } else {
                         Set<UUID> playersReporting = new HashSet<>(record.playersReporting);
                         playersReporting.add(player.id);
-                        entityPresenceUpdates.put(entity, playersReporting.stream().map(uuid -> new MinecraftPlayer(uuid, key.server)).collect(Collectors.toSet()));
+                        entityPresenceUpdates.put(entity.id, playersReporting.stream().map(uuid -> new MinecraftPlayer(uuid, key.server)).collect(Collectors.toSet()));
                         return new EntityRecord(player.server, entity, playersReporting);
                     }
                 } else {
                     if (record == null) {
-                        return record;
+                        return null;
                     } else {
                         Set<UUID> playersReporting = new HashSet<>(record.playersReporting);
                         playersReporting.remove(player.id);
-                        entityPresenceUpdates.put(entity, playersReporting.stream().map(uuid -> new MinecraftPlayer(uuid, key.server)).collect(Collectors.toSet()));
-                        return new EntityRecord(player.server, entity, playersReporting);
+                        entityPresenceUpdates.put(record.entity.id, playersReporting.stream().map(uuid -> new MinecraftPlayer(uuid, key.server)).collect(Collectors.toSet()));
+                        return new EntityRecord(player.server, record.entity, playersReporting);
                     }
                 }
             });
         });
-
-
+        return groups.updateNearbyGroups(entityPresenceUpdates);
     }
 
     public static final class EntityKey {

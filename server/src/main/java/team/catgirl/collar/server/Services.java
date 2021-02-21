@@ -10,6 +10,7 @@ import team.catgirl.collar.server.security.signal.SignalServerIdentityStore;
 import team.catgirl.collar.server.services.authentication.AuthenticationService;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
+import team.catgirl.collar.server.services.entities.EntitiesService;
 import team.catgirl.collar.server.services.friends.FriendsService;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.location.PlayerLocationService;
@@ -34,6 +35,7 @@ public final class Services {
     public final PlayerLocationService playerLocations;
     public final TextureService textures;
     public final FriendsService friends;
+    public final EntitiesService entities;
 
     public Services(Configuration configuration) {
         this.jsonMapper = Utils.jsonMapper();
@@ -51,5 +53,6 @@ public final class Services {
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, sessions);
+        this.entities = new EntitiesService(sessions);
     }
 }

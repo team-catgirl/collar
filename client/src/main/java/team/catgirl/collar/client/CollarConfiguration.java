@@ -1,6 +1,7 @@
 package team.catgirl.collar.client;
 
 import com.google.common.base.MoreObjects;
+import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.security.mojang.MinecraftSession;
@@ -9,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -21,6 +23,7 @@ public final class CollarConfiguration {
 
     public final Supplier<Location> playerLocation;
     public final Supplier<MinecraftSession> sessionSupplier;
+    public final Supplier<List<Entity>> entitiesSupplier;
     public final HomeDirectory homeDirectory;
     public final URL collarServerURL;
     public final CollarListener listener;
@@ -28,12 +31,14 @@ public final class CollarConfiguration {
 
     private CollarConfiguration(Supplier<Location> playerLocation,
                                 Supplier<MinecraftSession> sessionSupplier,
+                                Supplier<List<Entity>> entitiesSupplier,
                                 HomeDirectory homeDirectory,
                                 URL collarServerURL,
                                 CollarListener listener,
                                 Ticks ticks) {
         this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
+        this.entitiesSupplier = entitiesSupplier;
         this.homeDirectory = homeDirectory;
         this.collarServerURL = collarServerURL;
         this.listener = listener;
@@ -44,6 +49,7 @@ public final class CollarConfiguration {
         private CollarListener listener;
         private Supplier<Location> playerLocation;
         private Supplier<MinecraftSession> sessionSupplier;
+        private Supplier<List<Entity>> entitiesSupplier;
         private File homeDirectory;
         private URL collarServerURL;
         private Ticks ticks;
@@ -122,6 +128,16 @@ public final class CollarConfiguration {
         }
 
         /**
+         * Supply the nearby entity list of the player
+         * @param entitiesSupplier supplier
+         * @return builder
+         */
+        public Builder withEntitiesSupplier(Supplier<List<Entity>> entitiesSupplier) {
+            this.entitiesSupplier = entitiesSupplier;
+            return this;
+        }
+
+        /**
          * Do not verify the minecraft session on the server.
          * To use this the server must be setup with the NoJang auth scheme.
          * @param uuid of the minecraft player
@@ -164,13 +180,14 @@ public final class CollarConfiguration {
             Objects.requireNonNull(collarServerURL, "Collar server URL must be set");
             Objects.requireNonNull(homeDirectory, "Minecraft home directory must be set");
             Objects.requireNonNull(sessionSupplier, "Session supplier not set");
+            Objects.requireNonNull(entitiesSupplier, "Entities supplier not set");
             Objects.requireNonNull(ticks, "Ticks not set");
             HomeDirectory from = HomeDirectory.from(homeDirectory, collarServerURL.getHost());
             Supplier<Location> playerPosition = MoreObjects.firstNonNull(this.playerLocation, () -> {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });
-            return new CollarConfiguration(playerPosition, sessionSupplier, from, collarServerURL, listener, ticks);
+            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, from, collarServerURL, listener, ticks);
         }
     }
 }

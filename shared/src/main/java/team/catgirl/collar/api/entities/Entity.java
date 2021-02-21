@@ -9,7 +9,9 @@ public final class Entity {
     public final UUID playerId;
     public final EntityType type;
 
-    public Entity(@JsonProperty("uuid") UUID id, @JsonProperty("playerId") UUID playerId, @JsonProperty("type") EntityType type) {
+    public Entity(@JsonProperty("uuid") UUID id,
+                  @JsonProperty("playerId") UUID playerId,
+                  @JsonProperty("type") EntityType type) {
         this.id = id;
         this.playerId = playerId;
         this.type = type;

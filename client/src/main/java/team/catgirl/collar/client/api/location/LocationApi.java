@@ -31,7 +31,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
     private final Supplier<Location> locationSupplier;
     private final LocationUpdater updater;
     private final NearbyUpdater nearbyUpdater;
-    private final Supplier<List<Entity>> entityListSupplier;
+    private final Supplier<Set<Entity>> entityListSupplier;
 
     public LocationApi(Collar collar,
                        Supplier<ClientIdentityStore> identityStoreSupplier,
@@ -39,7 +39,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
                        Ticks ticks,
                        GroupsApi groupsApi,
                        Supplier<Location> locationSupplier,
-                       Supplier<List<Entity>> entityListSupplier) {
+                       Supplier<Set<Entity>> entityListSupplier) {
         super(collar, identityStoreSupplier, sender);
         this.locationSupplier = locationSupplier;
         this.updater = new LocationUpdater(this, ticks);
@@ -119,7 +119,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
         }
     }
 
-    void publishNearby(List<Entity> entities) {
+    void publishNearby(Set<Entity> entities) {
         Set<String> nearbyEntityHash = entities.stream().filter(entity -> entity.type.equals(EntityType.PLAYER))
                 .map(entity -> Hashing.sha256().hashString(entity.id.toString(), StandardCharsets.UTF_8).toString())
                 .collect(Collectors.toSet());

@@ -12,6 +12,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -23,7 +24,7 @@ public final class CollarConfiguration {
 
     public final Supplier<Location> playerLocation;
     public final Supplier<MinecraftSession> sessionSupplier;
-    public final Supplier<List<Entity>> entitiesSupplier;
+    public final Supplier<Set<Entity>> entitiesSupplier;
     public final HomeDirectory homeDirectory;
     public final URL collarServerURL;
     public final CollarListener listener;
@@ -31,7 +32,7 @@ public final class CollarConfiguration {
 
     private CollarConfiguration(Supplier<Location> playerLocation,
                                 Supplier<MinecraftSession> sessionSupplier,
-                                Supplier<List<Entity>> entitiesSupplier,
+                                Supplier<Set<Entity>> entitiesSupplier,
                                 HomeDirectory homeDirectory,
                                 URL collarServerURL,
                                 CollarListener listener,
@@ -49,7 +50,7 @@ public final class CollarConfiguration {
         private CollarListener listener;
         private Supplier<Location> playerLocation;
         private Supplier<MinecraftSession> sessionSupplier;
-        private Supplier<List<Entity>> entitiesSupplier;
+        private Supplier<Set<Entity>> entitiesSupplier;
         private File homeDirectory;
         private URL collarServerURL;
         private Ticks ticks;
@@ -132,7 +133,7 @@ public final class CollarConfiguration {
          * @param entitiesSupplier supplier
          * @return builder
          */
-        public Builder withEntitiesSupplier(Supplier<List<Entity>> entitiesSupplier) {
+        public Builder withEntitiesSupplier(Supplier<Set<Entity>> entitiesSupplier) {
             this.entitiesSupplier = entitiesSupplier;
             return this;
         }

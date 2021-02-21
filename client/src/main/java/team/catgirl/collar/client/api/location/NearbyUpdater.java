@@ -5,17 +5,19 @@ import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.minecraft.Ticks.TickListener;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public class NearbyUpdater implements TickListener {
 
-    private final Supplier<List<Entity>> entitySuppliers;
+    private final Supplier<Set<Entity>> entitySuppliers;
     private final LocationApi locationApi;
-    private final List<Entity> entities = new ArrayList<>();
+    private final Set<Entity> entities = new HashSet<>();
     private volatile boolean update = false;
 
-    public NearbyUpdater(Supplier<List<Entity>> entitySuppliers, LocationApi locationApi, Ticks ticks) {
+    public NearbyUpdater(Supplier<Set<Entity>> entitySuppliers, LocationApi locationApi, Ticks ticks) {
         this.entitySuppliers = entitySuppliers;
         this.locationApi = locationApi;
         ticks.subscribe(this);
@@ -26,7 +28,7 @@ public class NearbyUpdater implements TickListener {
         if (!update) {
             return;
         }
-        List<Entity> entities = entitySuppliers.get();
+        Set<Entity> entities = entitySuppliers.get();
         if (!this.entities.equals(entities)) {
             locationApi.publishNearby(entities);
             this.entities.clear();

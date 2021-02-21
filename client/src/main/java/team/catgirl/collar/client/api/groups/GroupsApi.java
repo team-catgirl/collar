@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public final class GroupsApi extends AbstractApi<GroupsListener> {
     private final ConcurrentMap<UUID, Group> groups = new ConcurrentHashMap<>();
@@ -38,7 +39,16 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      */
     public List<Group> all() {
         synchronized (this) {
-            return new ArrayList<>(groups.values());
+            return groups.values().stream().filter(group -> group.type == Group.GroupType.PLAYER).collect(Collectors.toList());
+        }
+    }
+
+    /**
+     * @return groups of players the current player is near
+     */
+    public List<Group> locationGroups() {
+        synchronized (this) {
+            return groups.values().stream().filter(group -> group.type == Group.GroupType.LOCATION).collect(Collectors.toList());
         }
     }
 

@@ -82,9 +82,9 @@ public final class Collar {
         changeState(State.DISCONNECTED);
         this.identityStoreSupplier = () -> identityStore;
         Consumer<ProtocolRequest> sender = request -> this.sender.accept(request);
-        this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender);
         this.ticks = configuration.ticks;
         this.apis = new ArrayList<>();
+        this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender);
         this.locationApi = new LocationApi(this, identityStoreSupplier, sender, this.ticks, groupsApi, configuration.playerLocation, configuration.entitiesSupplier);
         this.texturesApi = new TexturesApi(this, identityStoreSupplier, sender);
         this.identityApi = new IdentityApi(this, identityStoreSupplier, sender);
@@ -220,7 +220,7 @@ public final class Collar {
             }
             if (previousState != null) {
                 this.configuration.listener.onStateChanged(this, state);
-                this.groupsApi.onStateChanged(state);
+                apis.forEach(abstractApi -> abstractApi.onStateChanged(state));
             }
         } else {
             throw new IllegalStateException("Cannot change state " + state + " to the same state");

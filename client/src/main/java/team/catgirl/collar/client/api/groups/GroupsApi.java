@@ -1,6 +1,7 @@
 package team.catgirl.collar.client.api.groups;
 
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.Group.GroupType;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
@@ -24,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public final class GroupsApi extends AbstractApi<GroupsListener> {
@@ -39,7 +41,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      */
     public List<Group> all() {
         synchronized (this) {
-            return groups.values().stream().filter(group -> group.type == Group.GroupType.PLAYER).collect(Collectors.toList());
+            return groups.values().stream().filter(group -> group.type == GroupType.PLAYER).collect(Collectors.toList());
         }
     }
 
@@ -48,7 +50,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      */
     public List<Group> locationGroups() {
         synchronized (this) {
-            return groups.values().stream().filter(group -> group.type == Group.GroupType.LOCATION).collect(Collectors.toList());
+            return groups.values().stream().filter(group -> group.type == GroupType.LOCATION).collect(Collectors.toList());
         }
     }
 
@@ -217,12 +219,13 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             synchronized (this) {
                 GroupInviteResponse response = (GroupInviteResponse) resp;
                 GroupInvitation invitation = GroupInvitation.from(response);
-                if (response.groupType == Group.GroupType.PLAYER) {
+                if (response.groupType == GroupType.PLAYER) {
                     invitations.put(invitation.groupId, invitation);
                     fireListener("onGroupInvited", groupsListener -> {
                         groupsListener.onGroupInvited(collar, this, invitation);
                     });
-                } else if (response.groupType == Group.GroupType.LOCATION) {
+                } else if (response.groupType == GroupType.LOCATION) {
+                    // Auto-accept invitations from location typed groups
                     accept(invitation);
                 }
             }

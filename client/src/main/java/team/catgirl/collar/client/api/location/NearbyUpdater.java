@@ -4,12 +4,13 @@ import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.minecraft.Ticks.TickListener;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * Updates nearby player states without sending coordinates to the server
+ */
 public class NearbyUpdater implements TickListener {
 
     private final Supplier<Set<Entity>> entitySuppliers;

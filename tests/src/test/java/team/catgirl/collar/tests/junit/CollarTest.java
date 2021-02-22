@@ -2,6 +2,8 @@ package team.catgirl.collar.tests.junit;
 
 import org.junit.Before;
 import org.junit.Rule;
+import team.catgirl.collar.api.entities.Entity;
+import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
@@ -15,6 +17,7 @@ import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.utils.Utils;
 
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -70,27 +73,42 @@ public abstract class CollarTest {
     public CollarClientRule alicePlayer = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder()
             .withListener(new ApprovingListener(aliceProfile, services, devicesConfirmed))
             .withPlayerLocation(locationSupplier)
+            .withEntitiesSupplier(this::aliceEntities)
     );
 
     @Rule
     public CollarClientRule bobPlayer = new CollarClientRule(bobPlayerId, new CollarConfiguration.Builder()
             .withListener(new ApprovingListener(bobProfile, services, devicesConfirmed))
             .withPlayerLocation(locationSupplier)
+            .withEntitiesSupplier(this::bobEntities)
     );
 
     @Rule
     public CollarClientRule evePlayer = new CollarClientRule(evePlayerId, new CollarConfiguration.Builder()
             .withListener(new ApprovingListener(eveProfile, services, devicesConfirmed))
             .withPlayerLocation(locationSupplier)
+            .withEntitiesSupplier(this::eveEntities)
     );
 
+    protected Set<Entity> aliceEntities() {
+        return Set.of();
+    }
+
+    protected Set<Entity> bobEntities() {
+        return Set.of();
+    }
+
+    protected Set<Entity> eveEntities() {
+        return Set.of();
+    }
+
     @Before
-    public void waitForClientsToConnect() throws InterruptedException {
+    public void waitForClientsToConnect() {
         waitForCondition("server started", () -> serverRule.isServerStarted());
         waitForCondition("device registered", () -> devicesConfirmed.get() == 3);
-        waitForCondition("client connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
-        waitForCondition("client connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
-        waitForCondition("client connected", () -> evePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
+        waitForCondition("alice connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
+        waitForCondition("bob connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
+        waitForCondition("eve connected", () -> evePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
 
         System.out.println("Alice is identity " + alicePlayer.collar.identity());
         System.out.println("Bob is identity " + bobPlayer.collar.identity());

@@ -3,7 +3,6 @@ package team.catgirl.collar.tests.groups;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import spark.Response;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.location.Dimension;
@@ -21,8 +20,6 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
 
@@ -150,7 +147,7 @@ public class GroupsTest extends CollarTest {
     }
 
     @Test
-    public void sendGroupMessage() throws Exception {
+    public void sendGroupMessage() {
         MessagingListenerImpl aliceMessages = new MessagingListenerImpl();
         alicePlayer.collar.messaging().subscribe(aliceMessages);
 
@@ -187,13 +184,13 @@ public class GroupsTest extends CollarTest {
         waitForCondition("bobs last message was UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
     }
 
-    private static class TestGroupsListener implements GroupsListener {
+    public static class TestGroupsListener implements GroupsListener {
 
-        boolean createdGroup = false;
-        boolean joinedGroup = false;
-        boolean leftGroup = false;
-        GroupInvitation invitation = null;
-        Waypoint waypoint;
+        public boolean createdGroup = false;
+        public boolean joinedGroup = false;
+        public boolean leftGroup = false;
+        public GroupInvitation invitation = null;
+        public Waypoint waypoint;
 
         @Override
         public void onGroupCreated(Collar collar, GroupsApi groupsApi, Group group) {
@@ -225,7 +222,7 @@ public class GroupsTest extends CollarTest {
         }
     }
 
-    static class MessagingListenerImpl implements MessagingListener {
+    public static class MessagingListenerImpl implements MessagingListener {
         public Message lastSentMessage;
         public Message lastReceivedMessage;
 

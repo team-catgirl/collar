@@ -306,8 +306,7 @@ public final class GroupService {
             UUID groupId = nearbyHashToGroupId.getOrDefault(nearbyHash, UUID.randomUUID());
             Group group = groupsById.get(groupId);
             if (group == null) {
-                Map<MinecraftPlayer, Member> members = players.stream().collect(Collectors.toMap(player -> player, o -> new Member(o, Group.MembershipRole.MEMBER, MembershipState.ACCEPTED, Location.UNKNOWN)));
-                group = new Group(groupId, Group.GroupType.LOCATION, server, members, Map.of());
+                group = new Group(groupId, Group.GroupType.LOCATION, server, Map.of(), Map.of());
                 groupsById.put(groupId, group);
                 nearbyHashToGroupId.put(nearbyHash, groupId);
             }
@@ -315,6 +314,8 @@ public final class GroupService {
                 Set<MinecraftPlayer> playersToAdd = ImmutableSet.copyOf(Sets.difference(players, group.members.keySet()));
                 for (MinecraftPlayer player : playersToAdd) {
                     List<Member> members = playersToAdd.stream().map(playerToAdd -> new Member(player, Group.MembershipRole.MEMBER, MembershipState.PENDING, Location.UNKNOWN)).collect(Collectors.toList());
+                    group = group.addMembers(members.stream().map(member -> member.player).collect(Collectors.toList()), Group.MembershipRole.MEMBER, MembershipState.PENDING, (group1, members1) -> {});
+                    updateState(group);
                     response = response.concat(createGroupMembershipRequests(null, group, members));
                 }
                 Set<MinecraftPlayer> playersToRemove = ImmutableSet.copyOf(Sets.difference(group.members.keySet(), players));
@@ -323,6 +324,8 @@ public final class GroupService {
                     if (identity != null) {
                         response = response.add(identity, new LeaveGroupResponse(serverIdentity, groupId, null, player));
                     }
+                    group = group.removeMember(player);
+                    updateState(group);
                 }
             }
         }
@@ -336,8 +339,8 @@ public final class GroupService {
      * @param members members to send requests to. If null, defaults to the full member list.
      */
     private BatchProtocolResponse createGroupMembershipRequests(ClientIdentity requester, Group group, List<Member> members) {
-        MinecraftPlayer sender = sessions.findPlayer(requester).orElseThrow(() -> new IllegalStateException("could not find player for " + requester));
         synchronized (group.id) {
+            MinecraftPlayer sender = sessions.findPlayer(requester).orElse(null);
             Collection<Member> memberList = members == null ? group.members.values() : members;
             Map<ProtocolResponse, ClientIdentity> responses = memberList.stream()
                     .filter(member -> member.membershipState == MembershipState.PENDING)

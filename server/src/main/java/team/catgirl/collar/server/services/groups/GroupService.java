@@ -1,8 +1,6 @@
 package team.catgirl.collar.server.services.groups;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.GroupType;
 import team.catgirl.collar.api.groups.Group.Member;
@@ -23,14 +21,12 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
-import team.catgirl.collar.server.services.location.NearbyGroup;
 import team.catgirl.collar.server.services.location.NearbyGroups;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -100,13 +96,13 @@ public final class GroupService {
             MembershipState state = req.state;
             group = group.updateMembershipState(sendingPlayer, state);
             // Send a response back to the player accepting membership, with the distribution keys
-            response.add(req.identity, new JoinGroupResponse(serverIdentity, group, req.identity, sendingPlayer, req.keys));
+            response.add(req.identity, new JoinGroupResponse(serverIdentity, group.id, req.identity, sendingPlayer, req.keys));
             // Let everyone else in the group know that this identity has accepted
             Group finalGroup = group;
             BatchProtocolResponse updates = sendUpdatesToMembers(
                     group,
                     member -> member.membershipState.equals(MembershipState.ACCEPTED),
-                    ((identity, player, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup, req.identity, player, req.keys)));
+                    ((identity, player, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup.id, req.identity, player, req.keys)));
             response.concat(updates);
             return checkState(group);
         });
@@ -288,7 +284,7 @@ public final class GroupService {
         if (!group.containsPlayer(player)) {
             throw new IllegalStateException(player + " is not a member of group " + group.id);
         }
-        return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, req.group, req.keys));
+        return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, player, group, req.keys));
     }
 
     public BatchProtocolResponse updateNearbyGroups(NearbyGroups.Result result) {

@@ -170,20 +170,20 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         } else if (resp instanceof JoinGroupResponse) {
             synchronized (this) {
                 JoinGroupResponse response = (JoinGroupResponse) resp;
-                groups.put(response.group.id, response.group);
-                fireListener("onGroupJoined", groupsListener -> {
-                    groupsListener.onGroupJoined(collar, this, response.group, response.player);
-                });
-                invitations.remove(response.group.id);
                 AcknowledgedGroupJoinedRequest request = identityStore().processJoinGroupResponse(response);
                 sender.accept(request);
             }
             return true;
         } else if (resp instanceof AcknowledgedGroupJoinedResponse) {
             AcknowledgedGroupJoinedResponse response = (AcknowledgedGroupJoinedResponse) resp;
-            if (groups.containsKey(response.group)) {
+            groups.put(response.group.id, response.group);
+            invitations.remove(response.group.id);
+            if (groups.containsKey(response.group.id)) {
                 identityStore().processAcknowledgedGroupJoinedResponse(response);
             }
+            fireListener("onGroupJoined", groupsListener -> {
+                groupsListener.onGroupJoined(collar, this, response.group, response.player);
+            });
         } else if (resp instanceof LeaveGroupResponse) {
             synchronized (this) {
                 LeaveGroupResponse response = (LeaveGroupResponse)resp;

@@ -1,6 +1,5 @@
 package team.catgirl.collar.tests.groups;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;

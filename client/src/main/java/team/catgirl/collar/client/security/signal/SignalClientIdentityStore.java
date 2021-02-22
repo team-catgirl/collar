@@ -157,18 +157,18 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     public AcknowledgedGroupJoinedRequest processJoinGroupResponse(JoinGroupResponse resp) {
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
         // Generate my sender key and send it back to the sender
-        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(resp.group.id.toString(), signalProtocolAddressFrom(currentIdentity())));
-        LOGGER.log(Level.INFO, currentIdentity() + " creating group session for " + currentIdentity() + " in group " + resp.group.id + " to send to " + resp.sender);
+        SenderKeyDistributionMessage message = builder.create(new SenderKeyName(resp.group.toString(), signalProtocolAddressFrom(currentIdentity())));
+        LOGGER.log(Level.INFO, currentIdentity() + " creating group session for " + currentIdentity() + " in group " + resp.group + " to send to " + resp.sender);
         // Process the joining clients message
         if (!resp.sender.equals(currentIdentity())) {
             try {
                 SenderKeyDistributionMessage sendersMessage = new SenderKeyDistributionMessage(resp.keys);
-                builder.process(new SenderKeyName(resp.group.id.toString(), signalProtocolAddressFrom(resp.sender)), sendersMessage);
+                builder.process(new SenderKeyName(resp.group.toString(), signalProtocolAddressFrom(resp.sender)), sendersMessage);
             } catch (Throwable e) {
                 throw new IllegalStateException(currentIdentity() + " could not process group keys from " + resp.sender, e);
             }
         }
-        return new AcknowledgedGroupJoinedRequest(currentIdentity(), resp.sender, resp.group.id, message.serialize());
+        return new AcknowledgedGroupJoinedRequest(currentIdentity(), resp.sender, resp.group, message.serialize());
     }
 
     @Override
@@ -179,15 +179,15 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             return;
         }
         GroupSessionBuilder builder = new GroupSessionBuilder(store);
-        SenderKeyName name = new SenderKeyName(response.group.toString(), signalProtocolAddressFrom(response.sender));
+        SenderKeyName name = new SenderKeyName(response.group.id.toString(), signalProtocolAddressFrom(response.sender));
         SenderKeyDistributionMessage senderKeyDistributionMessage;
         try {
             senderKeyDistributionMessage = new SenderKeyDistributionMessage(response.keys);
         } catch (LegacyMessageException | InvalidMessageException e) {
-            throw new IllegalStateException("could not join group " + response.group, e);
+            throw new IllegalStateException("could not join group " + response.group.id, e);
         }
         builder.process(name, senderKeyDistributionMessage);
-        LOGGER.log(Level.INFO, currentIdentity() + " processed " + response.sender + "'s session with group " + response.group);
+        LOGGER.log(Level.INFO, currentIdentity() + " processed " + response.sender + "'s session with group " + response.group.id);
     }
 
     @Override

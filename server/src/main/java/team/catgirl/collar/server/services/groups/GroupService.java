@@ -23,6 +23,8 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
+import team.catgirl.collar.server.services.location.NearbyGroup;
+import team.catgirl.collar.server.services.location.NearbyGroups;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
@@ -289,32 +291,38 @@ public final class GroupService {
         return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, req.group, req.keys));
     }
 
-    public BatchProtocolResponse updateNearbyGroups(Map<String, Set<MinecraftPlayer>> groupsToCreateUpdateOrDelete) {
+    public BatchProtocolResponse updateNearbyGroups(NearbyGroups.Result result) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        for (Map.Entry<String, Set<MinecraftPlayer>> entry : groupsToCreateUpdateOrDelete.entrySet()) {
-            String nearbyHash = entry.getKey();
-            Set<MinecraftPlayer> players = entry.getValue();
-            String server = players.stream().findFirst().map(player -> player.server).orElseThrow(() -> new IllegalStateException("could not find a player"));
-            UUID groupId = nearbyHashToGroupId.getOrDefault(nearbyHash, UUID.randomUUID());
-            groupsById.compute(groupId, (uuid, group) -> {
-                if (group == null) {
-                    group = new Group(groupId, GroupType.NEARBY, server, Map.of(), Map.of());
-                    nearbyHashToGroupId.put(nearbyHash, groupId);
+
+        result.add.forEach((uuid, nearbyGroup) -> {
+            String server = nearbyGroup.players.stream().findFirst().orElseThrow(() -> new IllegalStateException("could not find any players")).server;
+            groupsById.compute(uuid, (uuid1, group) -> {
+                if (group != null) {
+                    throw new IllegalStateException("group " + uuid + " already exists");
                 }
-                List<MinecraftPlayer> playersToAdd = ImmutableList.copyOf(Sets.difference(players, group.members.keySet()));
+                group = new Group(uuid, GroupType.NEARBY, server, Map.of(), Map.of());
                 Map<Group, List<Member>> groupToMembers = new HashMap<>();
-                group = group.addMembers(playersToAdd, Group.MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
+                group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), Group.MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
                 for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {
                     response.concat(createGroupMembershipRequests(null, memberEntry.getKey(), memberEntry.getValue()));
                 }
-                Set<MinecraftPlayer> playersToRemove = ImmutableSet.copyOf(Sets.difference(group.members.keySet(), players));
-                for (MinecraftPlayer player : playersToRemove) {
-                    sessions.getIdentity(player.id).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, groupId, null, player)));
+                return checkState(group);
+            });
+        });
+
+        // TODO: delay group removal by 1 minute
+        result.remove.forEach((uuid, nearbyGroup) -> {
+            groupsById.compute(uuid, (uuid1, group) -> {
+                if (group == null) {
+                    throw new IllegalStateException("group " + uuid + " does not exist");
+                }
+                for (MinecraftPlayer player : nearbyGroup.players) {
+                    sessions.getIdentity(player.id).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player)));
                     group = group.removeMember(player);
                 }
                 return checkState(group);
             });
-        }
+        });
         return response;
     }
 

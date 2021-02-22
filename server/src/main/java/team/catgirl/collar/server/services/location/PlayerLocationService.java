@@ -4,6 +4,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Sets;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
+import team.catgirl.collar.protocol.groups.EjectGroupMemberRequest;
 import team.catgirl.collar.protocol.location.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
@@ -25,8 +26,7 @@ public class PlayerLocationService {
     private final SessionManager sessions;
     private final GroupService groups;
     private final ServerIdentity serverIdentity;
-    private final ConcurrentHashMap<NearbyKey, NearbyRecord> nearbyRecords = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<MinecraftPlayer, NearMeRecord> nearMeRecords = new ConcurrentHashMap<>();
+    private final NearbyGroups nearbyGroups = new NearbyGroups();
 
     private final ArrayListMultimap<UUID, MinecraftPlayer> playersSharing = ArrayListMultimap.create();
 
@@ -85,49 +85,9 @@ public class PlayerLocationService {
     }
 
     public BatchProtocolResponse updateNearbyGroups(UpdateNearbyRequest req) {
-        MinecraftPlayer player = sessions.findPlayer(req.identity)
-                .orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
-        Map<String, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
-        nearMeRecords.put(player, new NearMeRecord(player, req.nearbyHashes));
-        for (String nearbyHash : req.nearbyHashes) {
-            nearbyRecords.compute(new NearbyKey(player.server, nearbyHash), (key, record) -> {
-                if (record == null) {
-                    record = new NearbyRecord(player.server, nearbyHash, Set.of(player.id));
-                } else {
-                    boolean isMatch = record.playersSharingHash.stream().anyMatch(uuid -> {
-                        NearMeRecord nearMeRecord = nearMeRecords.get(new MinecraftPlayer(uuid, player.server));
-                        if (nearMeRecord == null) {
-                            return false;
-                        }
-                        return !Sets.intersection(req.nearbyHashes, nearMeRecord.nearbyHashes).isEmpty();
-                    });
-                    if (isMatch) {
-                        HashSet<UUID> players = new HashSet<>(record.playersSharingHash);
-                        players.add(player.id);
-                        record = new NearbyRecord(player.server, nearbyHash, players);
-                        entityPresenceUpdates.put(nearbyHash, record.playersSharingHash.stream()
-                                .map(uuid -> new MinecraftPlayer(uuid, player.server))
-                                .collect(Collectors.toSet()));
-                    }
-                }
-                return record;
-            });
-            for (Map.Entry<NearbyKey, NearbyRecord> entry : nearbyRecords.entrySet()) {
-                nearbyRecords.compute(entry.getKey(), (key, record) -> {
-                    if (record == null) return null;
-                    if (!req.nearbyHashes.contains(key.nearbyHash) && record.playersSharingHash.contains(player.id)) {
-                        HashSet<UUID> players = new HashSet<>(record.playersSharingHash);
-                        players.remove(player.id);
-                        record = new NearbyRecord(player.server, nearbyHash, players);
-                        entityPresenceUpdates.put(nearbyHash, record.playersSharingHash.stream()
-                                .map(uuid -> new MinecraftPlayer(uuid, player.server))
-                                .collect(Collectors.toSet()));
-                    }
-                    return record;
-                });
-            }
-        }
-        return groups.updateNearbyGroups(entityPresenceUpdates);
+        MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
+        NearbyGroups.Result result = this.nearbyGroups.updateNearbyGroups(player, req.nearbyHashes);
+        return groups.updateNearbyGroups(result);
     }
 
     private BatchProtocolResponse createLocationResponses(MinecraftPlayer player, LocationUpdatedResponse resp) {
@@ -158,52 +118,7 @@ public class PlayerLocationService {
         return responses;
     }
 
-    public void clearState(MinecraftPlayer player) {
-        nearMeRecords.remove(player);
-    }
-
-    public static final class NearbyKey {
-        public final String server;
-        public final String nearbyHash;
-
-        public NearbyKey(String server, String nearbyHash) {
-            this.server = server;
-            this.nearbyHash = nearbyHash;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            NearbyKey nearbyKey = (NearbyKey) o;
-            return server.equals(nearbyKey.server) && nearbyHash.equals(nearbyKey.nearbyHash);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(server, nearbyHash);
-        }
-    }
-
-    public static final class NearbyRecord {
-        public final String server;
-        public final String hash;
-        public final Set<UUID> playersSharingHash;
-
-        public NearbyRecord(String server, String hash, Set<UUID> playersSharingHash) {
-            this.server = server;
-            this.hash = hash;
-            this.playersSharingHash = playersSharingHash;
-        }
-    }
-
-    public static final class NearMeRecord {
-        public final MinecraftPlayer player;
-        public final Set<String> nearbyHashes;
-
-        public NearMeRecord(MinecraftPlayer player, Set<String> nearbyHashes) {
-            this.player = player;
-            this.nearbyHashes = nearbyHashes;
-        }
+    public void removePlayerState(MinecraftPlayer player) {
+        this.nearbyGroups.removePlayerState(player);
     }
 }

@@ -188,7 +188,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         } else if (resp instanceof LeaveGroupResponse) {
             synchronized (this) {
                 LeaveGroupResponse response = (LeaveGroupResponse)resp;
-                if (response.sender.equals(collar.identity())) {
+                if (response.sender == null || response.sender.equals(collar.identity())) {
                     // Remove myself from the group
                     Group removed = groups.remove(response.groupId);
                     if (removed != null) {

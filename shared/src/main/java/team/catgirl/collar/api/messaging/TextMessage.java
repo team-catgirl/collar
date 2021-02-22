@@ -18,4 +18,9 @@ public final class TextMessage implements Message {
         }
         this.content = content;
     }
+
+    @Override
+    public String toString() {
+        return "TextMessage '" + content + "'";
+    }
 }

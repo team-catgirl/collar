@@ -1,5 +1,6 @@
 package team.catgirl.collar.server.services.groups;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import team.catgirl.collar.api.groups.Group;
@@ -304,19 +305,21 @@ public final class GroupService {
             Set<MinecraftPlayer> players = entry.getValue();
             String server = players.stream().findFirst().map(player -> player.server).orElseThrow(() -> new IllegalStateException("could not find a player"));
             UUID groupId = nearbyHashToGroupId.getOrDefault(nearbyHash, UUID.randomUUID());
+            groupsById.compute(groupId, (uuid, group) -> {
+                if (group == null) {
+                    group = new Group(groupId, Group.GroupType.LOCATION, server, Map.of(), Map.of());
+                    nearbyHashToGroupId.put(nearbyHash, groupId);
+                }
+                return group;
+            });
             Group group = groupsById.get(groupId);
-            if (group == null) {
-                group = new Group(groupId, Group.GroupType.LOCATION, server, Map.of(), Map.of());
-                groupsById.put(groupId, group);
-                nearbyHashToGroupId.put(nearbyHash, groupId);
-            }
             synchronized (group.id) {
-                Set<MinecraftPlayer> playersToAdd = ImmutableSet.copyOf(Sets.difference(players, group.members.keySet()));
-                for (MinecraftPlayer player : playersToAdd) {
-                    List<Member> members = playersToAdd.stream().map(playerToAdd -> new Member(player, Group.MembershipRole.MEMBER, MembershipState.PENDING, Location.UNKNOWN)).collect(Collectors.toList());
-                    group = group.addMembers(members.stream().map(member -> member.player).collect(Collectors.toList()), Group.MembershipRole.MEMBER, MembershipState.PENDING, (group1, members1) -> {});
-                    updateState(group);
-                    response = response.concat(createGroupMembershipRequests(null, group, members));
+                List<MinecraftPlayer> playersToAdd = ImmutableList.copyOf(Sets.difference(players, group.members.keySet()));
+                Map<Group, List<Member>> groupToMembers = new HashMap<>();
+                group = group.addMembers(playersToAdd, Group.MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
+                updateState(group);
+                for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {
+                    response = response.concat(createGroupMembershipRequests(null, memberEntry.getKey(), memberEntry.getValue()));
                 }
                 Set<MinecraftPlayer> playersToRemove = ImmutableSet.copyOf(Sets.difference(group.members.keySet(), players));
                 for (MinecraftPlayer player : playersToRemove) {

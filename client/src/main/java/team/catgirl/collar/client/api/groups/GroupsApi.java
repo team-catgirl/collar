@@ -275,10 +275,6 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         return false;
     }
 
-    private void updatePosition(UpdateLocationRequest req) {
-        sender.accept(req);
-    }
-
     Group<Waypoint> decryptGroup(Group<byte[]> group) {
         Map<UUID, Waypoint> waypoints = group.waypoints.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, o -> {
             byte[] decrypt = identityStore().createCypher().decrypt(null, group, o.getValue());

@@ -21,17 +21,13 @@ public final class BatchProtocolResponse extends ProtocolResponse {
     }
 
     public BatchProtocolResponse add(ClientIdentity identity, ProtocolResponse response) {
-        Map<ProtocolResponse, ClientIdentity> responsesCopy = new HashMap<>();
-        responsesCopy.put(response, identity);
-        responsesCopy.putAll(responses);
-        return new BatchProtocolResponse(this.identity, responsesCopy);
+        responses.put(response, identity);
+        return this;
     }
 
     public BatchProtocolResponse concat(BatchProtocolResponse response) {
-        Map<ProtocolResponse, ClientIdentity> responsesCopy = new HashMap<>();
-        responsesCopy.putAll(responses);
-        responsesCopy.putAll(response.responses);
-        return new BatchProtocolResponse(identity, responsesCopy);
+        responses.putAll(response.responses);
+        return this;
     }
 
     public static BatchProtocolResponse one(ClientIdentity identity, ProtocolResponse response) {

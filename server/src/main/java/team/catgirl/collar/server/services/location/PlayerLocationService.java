@@ -57,9 +57,9 @@ public class PlayerLocationService {
                 .filter(candidate -> candidate.getValue().contains(player))
                 .map(Map.Entry::getKey)
                 .map(uuid -> stopSharing(uuid, identity, player))
-                .collect(Collectors.toList());;
+                .collect(Collectors.toList());
         for (BatchProtocolResponse response : allResponses) {
-            responses = responses.concat(response);
+            responses.concat(response);
         }
         return responses;
     }
@@ -85,13 +85,10 @@ public class PlayerLocationService {
     }
 
     public BatchProtocolResponse updateNearbyGroups(UpdateNearbyRequest req) {
-
         MinecraftPlayer player = sessions.findPlayer(req.identity)
                 .orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         Map<String, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
-
         nearMeRecords.put(player, new NearMeRecord(player, req.nearbyHashes));
-
         for (String nearbyHash : req.nearbyHashes) {
             nearbyRecords.compute(new NearbyKey(player.server, nearbyHash), (key, record) -> {
                 if (record == null) {
@@ -102,17 +99,17 @@ public class PlayerLocationService {
                         if (nearMeRecord == null) {
                             return false;
                         }
-                        return Sets.intersection(nearMeRecord.nearbyHashes, req.nearbyHashes).size() > 0;
+                        return !Sets.intersection(req.nearbyHashes, nearMeRecord.nearbyHashes).isEmpty();
                     });
                     if (isMatch) {
                         HashSet<UUID> players = new HashSet<>(record.playersSharingHash);
                         players.add(player.id);
                         record = new NearbyRecord(player.server, nearbyHash, players);
+                        entityPresenceUpdates.put(nearbyHash, record.playersSharingHash.stream()
+                                .map(uuid -> new MinecraftPlayer(uuid, player.server))
+                                .collect(Collectors.toSet()));
                     }
                 }
-                entityPresenceUpdates.put(nearbyHash, record.playersSharingHash.stream()
-                        .map(uuid -> new MinecraftPlayer(uuid, player.server))
-                        .collect(Collectors.toSet()));
                 return record;
             });
             for (Map.Entry<NearbyKey, NearbyRecord> entry : nearbyRecords.entrySet()) {
@@ -155,7 +152,7 @@ public class PlayerLocationService {
                 }
                 uniquePlayers.add(memberPlayer);
                 ClientIdentity identity = sessions.getIdentity(memberPlayer).orElseThrow(() -> new IllegalStateException("Could not find identity for player " + player));
-                responses = responses.add(identity, resp);
+                responses.add(identity, resp);
             }
         }
         return responses;
@@ -189,10 +186,12 @@ public class PlayerLocationService {
     }
 
     public static final class NearbyRecord {
+        public final String server;
         public final String hash;
         public final Set<UUID> playersSharingHash;
 
         public NearbyRecord(String server, String hash, Set<UUID> playersSharingHash) {
+            this.server = server;
             this.hash = hash;
             this.playersSharingHash = playersSharingHash;
         }

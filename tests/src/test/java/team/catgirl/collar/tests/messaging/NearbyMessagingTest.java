@@ -47,8 +47,11 @@ public class NearbyMessagingTest extends CollarTest {
 
         Group aliceGroup = alicePlayer.collar.groups().locationGroups().get(0);
         Group bobGroup = bobPlayer.collar.groups().locationGroups().get(0);
+        Group eveGroup = evePlayer.collar.groups().locationGroups().get(0);
 
         Assert.assertEquals(aliceGroup.id, bobGroup.id);
+        Assert.assertNotEquals(eveGroup.id, bobGroup.id);
+        Assert.assertNotEquals(eveGroup.id, aliceGroup.id);
 
         bobPlayer.collar.messaging().sendNearbyMessage(new TextMessage("Marco?"));
         alicePlayer.collar.messaging().sendNearbyMessage(new TextMessage("Polo!"));

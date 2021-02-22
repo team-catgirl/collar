@@ -307,7 +307,7 @@ public final class GroupService {
             UUID groupId = nearbyHashToGroupId.getOrDefault(nearbyHash, UUID.randomUUID());
             groupsById.compute(groupId, (uuid, group) -> {
                 if (group == null) {
-                    group = new Group(groupId, Group.GroupType.LOCATION, server, Map.of(), Map.of());
+                    group = new Group(groupId, Group.GroupType.NEARBY, server, Map.of(), Map.of());
                     nearbyHashToGroupId.put(nearbyHash, groupId);
                 }
                 return group;

@@ -121,6 +121,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     void publishNearby(Set<Entity> entities) {
         Set<String> nearbyHashes = entities.stream().filter(entity -> entity.type.equals(EntityType.PLAYER))
+                .limit(500)
                 .map(entity -> Hashing.sha256().hashString(entity.id.toString(), StandardCharsets.UTF_8).toString())
                 .collect(Collectors.toSet());
         sender.accept(new UpdateNearbyRequest(identity(), nearbyHashes));

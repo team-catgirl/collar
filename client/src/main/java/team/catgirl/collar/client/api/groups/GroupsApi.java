@@ -25,7 +25,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public final class GroupsApi extends AbstractApi<GroupsListener> {
@@ -50,7 +49,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      */
     public List<Group> locationGroups() {
         synchronized (this) {
-            return groups.values().stream().filter(group -> group.type == GroupType.LOCATION).collect(Collectors.toList());
+            return groups.values().stream().filter(group -> group.type == GroupType.NEARBY).collect(Collectors.toList());
         }
     }
 
@@ -224,7 +223,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                     fireListener("onGroupInvited", groupsListener -> {
                         groupsListener.onGroupInvited(collar, this, invitation);
                     });
-                } else if (response.groupType == GroupType.LOCATION) {
+                } else if (response.groupType == GroupType.NEARBY) {
                     // Auto-accept invitations from location typed groups
                     accept(invitation);
                 }

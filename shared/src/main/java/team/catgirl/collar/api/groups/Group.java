@@ -112,7 +112,7 @@ public final class Group {
         /**
          * Groups that use seen entities to infer players nearby the member. Entirely managed by the server.
          */
-        LOCATION
+        NEARBY
     }
 
     public enum MembershipRole {

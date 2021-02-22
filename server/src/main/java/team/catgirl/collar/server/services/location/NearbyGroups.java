@@ -7,6 +7,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * State machine for managing dynamically created {@link team.catgirl.collar.api.groups.Group}'s based on hashing
+ * every players player entity list and comparing them.
+ */
 public final class NearbyGroups {
 
     private final ConcurrentMap<MinecraftPlayer, Set<String>> playerHashes = new ConcurrentHashMap<>();

@@ -4,6 +4,9 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.*;
 
+/**
+ * Represents players that appear in each others entity lists that should be placed in a group together
+ */
 public final class NearbyGroup {
     public final Set<MinecraftPlayer> players;
 

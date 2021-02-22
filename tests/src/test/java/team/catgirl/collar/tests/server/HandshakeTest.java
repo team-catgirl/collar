@@ -14,6 +14,7 @@ import team.catgirl.collar.tests.junit.CollarServerRule;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.io.File;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,6 +44,7 @@ public class HandshakeTest {
     public CollarClientRule alicePlayer = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder()
             .withListener(new CollarTest.ApprovingListener(aliceProfile, services, devicesConfirmed))
             .withHomeDirectory(tempDir)
+            .withEntitiesSupplier(Set::of)
     );
 
     @Test

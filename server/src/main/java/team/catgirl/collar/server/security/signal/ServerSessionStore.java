@@ -65,7 +65,7 @@ public class ServerSessionStore implements SessionStore {
         state.put(DEVICE_ID, address.getDeviceId());
         state.put(RECORD, record.serialize());
         UpdateResult result = docs.replaceOne(and(eq(NAME, address.getName()), eq(DEVICE_ID, address.getDeviceId())), new Document(state), new ReplaceOptions().upsert(true));
-        if (!result.wasAcknowledged() && result.getMatchedCount() != 1) {
+        if (!result.wasAcknowledged() && result.getModifiedCount() != 1) {
             throw new IllegalStateException("did not save session for " + address);
         }
     }

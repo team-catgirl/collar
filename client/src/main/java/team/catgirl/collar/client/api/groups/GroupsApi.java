@@ -282,27 +282,4 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         }));
         return new Group<>(group.id, group.type, group.server, group.members, waypoints);
     }
-
-    private static final class WaypointKey {
-        public final UUID group;
-        public final UUID id;
-
-        public WaypointKey(UUID group, UUID id) {
-            this.group = group;
-            this.id = id;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            WaypointKey that = (WaypointKey) o;
-            return group.equals(that.group) && id.equals(that.id);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(group, id);
-        }
-    }
 }

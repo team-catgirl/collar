@@ -7,7 +7,7 @@ import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.groups.MembershipState;
 import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.location.Location;
-import team.catgirl.collar.api.waypoints.Waypoint;
+import team.catgirl.collar.api.waypoints.EncryptedWaypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.messaging.SendMessageRequest;
@@ -38,7 +38,7 @@ public final class GroupService {
     private final ServerIdentity serverIdentity;
     private final SessionManager sessions;
 
-    private final ConcurrentMap<UUID, Group<byte[]>> groupsById = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Group<EncryptedWaypoint>> groupsById = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, UUID> nearbyHashToGroupId = new ConcurrentHashMap<>();
 
     public GroupService(ServerIdentity serverIdentity, SessionManager sessions) {
@@ -50,7 +50,7 @@ public final class GroupService {
      * @param groupIds to find
      * @return the list of matching groups
      */
-    public List<Group<byte[]>> findGroups(List<UUID> groupIds) {
+    public List<Group<EncryptedWaypoint>> findGroups(List<UUID> groupIds) {
         return groupsById.entrySet().stream()
                 .filter(entry -> groupIds.contains(entry.getKey()))
                 .map(Map.Entry::getValue).collect(Collectors.toList());
@@ -97,7 +97,7 @@ public final class GroupService {
             // Send a response back to the player accepting membership, with the distribution keys
             response.add(req.identity, new JoinGroupResponse(serverIdentity, group.id, req.identity, sendingPlayer, req.keys));
             // Let everyone else in the group know that this identity has accepted
-            Group<byte[]> finalGroup = group;
+            Group<EncryptedWaypoint> finalGroup = group;
             BatchProtocolResponse updates = sendUpdatesToMembers(
                     group,
                     member -> member.membershipState.equals(MembershipState.ACCEPTED),
@@ -120,7 +120,7 @@ public final class GroupService {
             if (group == null) {
                 return null;
             }
-            Group<byte[]> finalGroup = group;
+            Group<EncryptedWaypoint> finalGroup = group;
             response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, req.identity, sender)));
             group = group.removeMember(sender);
             return checkState(group);
@@ -134,12 +134,12 @@ public final class GroupService {
      * @param playerToRemove to remove
      */
     public BatchProtocolResponse removeUserFromAllGroups(MinecraftPlayer playerToRemove) {
-        List<Group<byte[]>> groups = findGroupsForPlayer(playerToRemove);
+        List<Group<EncryptedWaypoint>> groups = findGroupsForPlayer(playerToRemove);
         BatchProtocolResponse response = new BatchProtocolResponse(null);
-        for (Group<byte[]> group : groups) {
+        for (Group<EncryptedWaypoint> group : groups) {
             groupsById.compute(group.id, (uuid, group1) -> {
                 group1 = group.updateMembershipState(playerToRemove, MembershipState.DECLINED);
-                Group<byte[]> finalGroup = group1;
+                Group<EncryptedWaypoint> finalGroup = group1;
                 response.concat(sendUpdatesToMembers(group1, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, player)));
                 return checkState(finalGroup);
             });
@@ -166,10 +166,10 @@ public final class GroupService {
                     LOGGER.log(Level.INFO, player + " is not OWNER member of the group "  + group.id);
                     return group;
                 }
-                Map<Group<byte[]>, List<Member>> groupToMembers = new HashMap<>();
+                Map<Group<EncryptedWaypoint>, List<Member>> groupToMembers = new HashMap<>();
                 List<MinecraftPlayer> players = sessions.findPlayers(req.identity, req.players);
                 group = group.addMembers(players, MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
-                for (Map.Entry<Group<byte[]>, List<Member>> entry : groupToMembers.entrySet()) {
+                for (Map.Entry<Group<EncryptedWaypoint>, List<Member>> entry : groupToMembers.entrySet()) {
                     response.concat(createGroupMembershipRequests(req.identity, entry.getKey(), entry.getValue()));
                 }
             }
@@ -195,7 +195,7 @@ public final class GroupService {
                 if (identityToRemove.isEmpty()) {
                     return group;
                 }
-                Group<byte[]> finalGroup = group;
+                Group<EncryptedWaypoint> finalGroup = group;
                 response.concat(sendUpdatesToMembers(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), memberToRemove.get().player)));
                 group = group.removeMember(memberToRemove.get().player);
             }
@@ -214,8 +214,8 @@ public final class GroupService {
             if (group.members.values().stream().noneMatch(member -> member.player.inServerWith(sendingPlayer))) {
                 return null;
             }
-            group = group.addWaypoint(req.waypointId, req.waypoint);
-            Group<byte[]> finalGroup = group;
+            group = group.addWaypoint(req.waypointId, new EncryptedWaypoint(req.identity, req.waypoint));
+            Group<EncryptedWaypoint> finalGroup = group;
             responses.concat(sendUpdatesToMembers(group, member -> member.membershipState.equals(MembershipState.ACCEPTED), (identity, player, member) -> new CreateWaypointResponse(serverIdentity, finalGroup.id, req.identity, req.waypointId, req.waypoint)));
             return checkState(group);
         });
@@ -234,7 +234,7 @@ public final class GroupService {
             }
             group = group.removeWaypoint(req.waypointId);
             if (group != null) {
-                Group<byte[]> finalGroup = group;
+                Group<EncryptedWaypoint> finalGroup = group;
                 response.concat(sendUpdatesToMembers(group, member -> member.membershipState.equals(MembershipState.ACCEPTED), (identity, player, member) -> new RemoveWaypointResponse(serverIdentity, finalGroup.id, req.waypointId)));
             }
             return checkState(group);
@@ -271,7 +271,7 @@ public final class GroupService {
      */
     public ProtocolResponse acknowledgeJoin(AcknowledgedGroupJoinedRequest req) {
         // Make sure the sender is a member of the group
-        Group<byte[]> group = groupsById.get(req.group);
+        Group<EncryptedWaypoint> group = groupsById.get(req.group);
         MinecraftPlayer player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException(req.identity + " could not be found in the session"));
         if (!group.containsPlayer(player)) {
             throw new IllegalStateException(player + " is not a member of group " + group.id);
@@ -289,9 +289,9 @@ public final class GroupService {
                     throw new IllegalStateException("group " + uuid + " already exists");
                 }
                 group = new Group<>(uuid, GroupType.NEARBY, server, Map.of(), Map.of());
-                Map<Group<byte[]>, List<Member>> groupToMembers = new HashMap<>();
+                Map<Group<EncryptedWaypoint>, List<Member>> groupToMembers = new HashMap<>();
                 group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
-                for (Map.Entry<Group<byte[]>, List<Member>> memberEntry : groupToMembers.entrySet()) {
+                for (Map.Entry<Group<EncryptedWaypoint>, List<Member>> memberEntry : groupToMembers.entrySet()) {
                     response.concat(createGroupMembershipRequests(null, memberEntry.getKey(), memberEntry.getValue()));
                 }
                 return checkState(group);
@@ -316,11 +316,11 @@ public final class GroupService {
 
     /**
      * Sends membership requests to the group members
-     * @param requester whos sending the request
+     * @param requester who's sending the request
      * @param group the group to invite to
      * @param members members to send requests to. If null, defaults to the full member list.
      */
-    private BatchProtocolResponse createGroupMembershipRequests(ClientIdentity requester, Group<byte[]> group, List<Member> members) {
+    private BatchProtocolResponse createGroupMembershipRequests(ClientIdentity requester, Group<EncryptedWaypoint> group, List<Member> members) {
         MinecraftPlayer sender = sessions.findPlayer(requester).orElse(null);
         Collection<Member> memberList = members == null ? group.members.values() : members;
         Map<ProtocolResponse, ClientIdentity> responses = memberList.stream()
@@ -338,7 +338,7 @@ public final class GroupService {
      * @param group to check
      * @return group if still valid or null
      */
-    private Group<byte[]> checkState(Group<byte[]> group) {
+    private Group<EncryptedWaypoint> checkState(Group<EncryptedWaypoint> group) {
         if (group != null && group.members.isEmpty()) {
             LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
             // Remove any nearby hashes associated with this group
@@ -351,7 +351,7 @@ public final class GroupService {
         return group;
     }
 
-    private BatchProtocolResponse sendUpdatesToMembers(Group<byte[]> group, Predicate<Member> filter, MessageCreator messageCreator) {
+    private BatchProtocolResponse sendUpdatesToMembers(Group<EncryptedWaypoint> group, Predicate<Member> filter, MessageCreator messageCreator) {
         final Map<ProtocolResponse, ClientIdentity> responses = new HashMap<>();
         for (Map.Entry<MinecraftPlayer, Member> memberEntry : group.members.entrySet()) {
             MinecraftPlayer player = memberEntry.getKey();
@@ -367,7 +367,7 @@ public final class GroupService {
         return new BatchProtocolResponse(serverIdentity, responses);
     }
 
-    private List<Group<byte[]>> findGroupsForPlayer(MinecraftPlayer player) {
+    private List<Group<EncryptedWaypoint>> findGroupsForPlayer(MinecraftPlayer player) {
         return groupsById.values().stream().filter(group -> group.members.containsKey(player)).collect(Collectors.toList());
     }
 

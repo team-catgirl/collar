@@ -5,6 +5,7 @@ import team.catgirl.collar.api.groups.Group.GroupType;
 import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.waypoints.EncryptedWaypoint;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
@@ -275,9 +276,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         return false;
     }
 
-    Group<Waypoint> decryptGroup(Group<byte[]> group) {
+    private Group<Waypoint> decryptGroup(Group<EncryptedWaypoint> group) {
         Map<UUID, Waypoint> waypoints = group.waypoints.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, o -> {
-            byte[] decrypt = identityStore().createCypher().decrypt(null, group, o.getValue());
+            byte[] decrypt = identityStore().createCypher().decrypt(o.getValue().sender, group, o.getValue().waypoint);
             return new Waypoint(decrypt);
         }));
         return new Group<>(group.id, group.type, group.server, group.members, waypoints);

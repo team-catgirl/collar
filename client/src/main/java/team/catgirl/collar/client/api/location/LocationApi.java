@@ -5,6 +5,7 @@ import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.api.groups.GroupsApi;
@@ -31,7 +32,6 @@ public class LocationApi extends AbstractApi<LocationListener> {
     private final Supplier<Location> locationSupplier;
     private final LocationUpdater updater;
     private final NearbyUpdater nearbyUpdater;
-    private final Supplier<Set<Entity>> entityListSupplier;
 
     public LocationApi(Collar collar,
                        Supplier<ClientIdentityStore> identityStoreSupplier,
@@ -44,7 +44,6 @@ public class LocationApi extends AbstractApi<LocationListener> {
         this.locationSupplier = locationSupplier;
         this.updater = new LocationUpdater(this, ticks);
         this.nearbyUpdater = new NearbyUpdater(entityListSupplier, this, ticks);
-        this.entityListSupplier = entityListSupplier;
         groupsApi.subscribe(new GroupListenerImpl());
     }
 
@@ -56,7 +55,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * Start sharing your coordinates with a group
      * @param group to share with
      */
-    public void startSharingWith(Group group) {
+    public void startSharingWith(Group<Waypoint> group) {
         // Start sharing
         if (!this.updater.isRunning()) {
             this.updater.start();
@@ -74,7 +73,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * Start sharing your coordinates with a group
      * @param group to stop sharing with
      */
-    public void stopSharingWith(Group group) {
+    public void stopSharingWith(Group<Waypoint> group) {
         synchronized (this) {
             stopSharingForGroup(group);
             sender.accept(new StopSharingLocationRequest(identity(), group.id));
@@ -86,13 +85,13 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * @param group to test
      * @return sharing
      */
-    public boolean isSharingWith(Group group) {
+    public boolean isSharingWith(Group<Waypoint> group) {
         synchronized (this) {
             return groupsSharingWith.contains(group.id);
         }
     }
 
-    private void stopSharingForGroup(Group group) {
+    private void stopSharingForGroup(Group<Waypoint> group) {
         synchronized (this) {
             if (updater.isRunning() && groupsSharingWith.contains(group.id) && (groupsSharingWith.size() - 1) == 0) {
                 updater.stop();
@@ -152,9 +151,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
                         // Update the location
                         playerLocations.put(response.player, location);
                     }
-                    fireListener("onLocationUpdated", locationListener -> {
-                        locationListener.onLocationUpdated(collar, this, response.player, location);
-                    });
+                    fireListener("onLocationUpdated", listener -> listener.onLocationUpdated(collar, this, response.player, location));
                 });
             }
             return true;
@@ -177,7 +174,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     class GroupListenerImpl implements GroupsListener {
         @Override
-        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group<Waypoint> group, MinecraftPlayer player) {
             stopSharingForGroup(group);
         }
     }

@@ -1,12 +1,13 @@
 package team.catgirl.collar.api.waypoints;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
 
 import java.io.*;
 import java.util.UUID;
 
+/**
+ * Marks a location in a Minecraft world
+ */
 public final class Waypoint {
     private static final int VERSION = 1;
 

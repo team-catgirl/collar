@@ -95,17 +95,6 @@ public final class Group<W> {
         return removed != null ? new Group<>(id, type, server, members, waypoints) : null;
     }
 
-    public Group<W> updateMemberPosition(MinecraftPlayer player, Location location) {
-        Member member = this.members.get(player);
-        if (member == null) {
-            return this;
-        }
-        member = member.updatePosition(location);
-        ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder().putAll(members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList()));
-        state.put(member.player, member);
-        return new Group<>(id, type, server, state.build(), waypoints);
-    }
-
     public enum GroupType {
         /**
          * Created and managed by the players

@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 /**
  * Updates nearby player states without sending coordinates to the server
  */
-public class NearbyUpdater implements TickListener {
+public final class NearbyUpdater implements TickListener {
 
     private final Supplier<Set<Entity>> entitySuppliers;
     private final LocationApi locationApi;

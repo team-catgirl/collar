@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.Group.GroupType;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.api.groups.Group.MembershipState;
 import team.catgirl.collar.api.location.Location;
@@ -68,7 +69,7 @@ public final class GroupService {
         if (groupsById.containsKey(req.groupId)) {
             throw new IllegalStateException("Group with id " + req.groupId + " already exists");
         }
-        Group group = Group.newGroup(req.groupId, Group.GroupType.PLAYER, player, Location.UNKNOWN, players);
+        Group group = Group.newGroup(req.groupId, GroupType.PLAYER, player, Location.UNKNOWN, players);
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         synchronized (group.id) {
             updateState(group);
@@ -307,7 +308,7 @@ public final class GroupService {
             UUID groupId = nearbyHashToGroupId.getOrDefault(nearbyHash, UUID.randomUUID());
             groupsById.compute(groupId, (uuid, group) -> {
                 if (group == null) {
-                    group = new Group(groupId, Group.GroupType.NEARBY, server, Map.of(), Map.of());
+                    group = new Group(groupId, GroupType.NEARBY, server, Map.of(), Map.of());
                     nearbyHashToGroupId.put(nearbyHash, groupId);
                 }
                 return group;

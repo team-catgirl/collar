@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.services.location;
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Sets;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Group.Member;
 import team.catgirl.collar.protocol.location.*;
@@ -25,6 +26,7 @@ public class PlayerLocationService {
     private final GroupService groups;
     private final ServerIdentity serverIdentity;
     private final ConcurrentHashMap<NearbyKey, NearbyRecord> nearbyRecords = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<MinecraftPlayer, NearMeRecord> nearMeRecords = new ConcurrentHashMap<>();
 
     private final ArrayListMultimap<UUID, MinecraftPlayer> playersSharing = ArrayListMultimap.create();
 
@@ -83,18 +85,30 @@ public class PlayerLocationService {
     }
 
     public BatchProtocolResponse updateNearbyGroups(UpdateNearbyRequest req) {
+
         MinecraftPlayer player = sessions.findPlayer(req.identity)
                 .orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         Map<String, Set<MinecraftPlayer>> entityPresenceUpdates = new HashMap<>();
+
+        nearMeRecords.put(player, new NearMeRecord(player, req.nearbyHashes));
 
         for (String nearbyHash : req.nearbyHashes) {
             nearbyRecords.compute(new NearbyKey(player.server, nearbyHash), (key, record) -> {
                 if (record == null) {
                     record = new NearbyRecord(player.server, nearbyHash, Set.of(player.id));
                 } else {
-                    HashSet<UUID> players = new HashSet<>(record.playersSharingHash);
-                    players.add(player.id);
-                    record = new NearbyRecord(player.server, nearbyHash, players);
+                    boolean isMatch = record.playersSharingHash.stream().anyMatch(uuid -> {
+                        NearMeRecord nearMeRecord = nearMeRecords.get(new MinecraftPlayer(uuid, player.server));
+                        if (nearMeRecord == null) {
+                            return false;
+                        }
+                        return Sets.intersection(nearMeRecord.nearbyHashes, req.nearbyHashes).size() > 0;
+                    });
+                    if (isMatch) {
+                        HashSet<UUID> players = new HashSet<>(record.playersSharingHash);
+                        players.add(player.id);
+                        record = new NearbyRecord(player.server, nearbyHash, players);
+                    }
                 }
                 entityPresenceUpdates.put(nearbyHash, record.playersSharingHash.stream()
                         .map(uuid -> new MinecraftPlayer(uuid, player.server))
@@ -147,6 +161,10 @@ public class PlayerLocationService {
         return responses;
     }
 
+    public void clearState(MinecraftPlayer player) {
+        nearMeRecords.remove(player);
+    }
+
     public static final class NearbyKey {
         public final String server;
         public final String nearbyHash;
@@ -177,6 +195,16 @@ public class PlayerLocationService {
         public NearbyRecord(String server, String hash, Set<UUID> playersSharingHash) {
             this.hash = hash;
             this.playersSharingHash = playersSharingHash;
+        }
+    }
+
+    public static final class NearMeRecord {
+        public final MinecraftPlayer player;
+        public final Set<String> nearbyHashes;
+
+        public NearMeRecord(MinecraftPlayer player, Set<String> nearbyHashes) {
+            this.player = player;
+            this.nearbyHashes = nearbyHashes;
         }
     }
 }

@@ -54,5 +54,7 @@ public class LocationProtocolHandler extends ProtocolHandler {
     public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {
         BatchProtocolResponse resp = playerLocations.stopSharing(player);
         sender.accept(null, resp);
+
+        playerLocations.clearState(player);
     }
 }

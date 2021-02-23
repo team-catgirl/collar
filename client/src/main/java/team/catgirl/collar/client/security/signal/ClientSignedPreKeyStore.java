@@ -114,7 +114,7 @@ public class ClientSignedPreKeyStore implements SignedPreKeyStore {
     }
 
     public static ClientSignedPreKeyStore from(HomeDirectory home, ObjectMapper mapper) throws IOException {
-        File file = new File(home.security(), "signedPreKeyStore.json");
+        File file = new File(home.security(), "signedPreKeyStore");
         State state;
         if (file.exists()) {
             state = Utils.jsonMapper().readValue(file, State.class);

@@ -34,7 +34,7 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
     }
 
     public static ClientIdentityKeyStore from(HomeDirectory homeDirectory, ObjectMapper mapper) throws IOException {
-        File file = new File(homeDirectory.security(), "identityKeyStore.json");
+        File file = new File(homeDirectory.security(), "identityKeyStore");
         State state;
         if (file.exists()) {
            state = mapper.readValue(file, State.class);

@@ -194,7 +194,7 @@ public class ClientSignalProtocolStore implements SignalProtocolStore, SenderKey
                 gen.writeFieldName(value.groupId + ":" + value.name + ":" + value.deviceId);
             }
         });
-        ObjectMapper mapper = Utils.jsonMapper().registerModule(simpleModule);
+        ObjectMapper mapper = Utils.messagePackMapper().registerModule(simpleModule);
         return new ClientSignalProtocolStore(
                 ClientIdentityKeyStore.from(home, mapper),
                 ClientPreKeyStore.from(home, mapper),

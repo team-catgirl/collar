@@ -94,7 +94,7 @@ public final class ClientPreKeyStore implements PreKeyStore {
     }
 
     public static ClientPreKeyStore from(HomeDirectory home, ObjectMapper mapper) throws IOException {
-        File file = new File(home.security(), "clientPreKeyStore.json");
+        File file = new File(home.security(), "clientPreKeyStore");
         State state;
         if (file.exists()) {
             state = Utils.jsonMapper().readValue(file, State.class);

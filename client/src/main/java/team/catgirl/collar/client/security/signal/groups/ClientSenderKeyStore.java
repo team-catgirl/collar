@@ -31,7 +31,7 @@ public class ClientSenderKeyStore implements SenderKeyStore {
     }
 
     public static ClientSenderKeyStore from(HomeDirectory homeDirectory, ObjectMapper mapper) throws IOException {
-        File file = new File(homeDirectory.security(), "clientSenderKeyStore.json");
+        File file = new File(homeDirectory.security(), "clientSenderKeyStore");
         State state;
         if (file.exists()) {
             state = mapper.readValue(file, State.class);

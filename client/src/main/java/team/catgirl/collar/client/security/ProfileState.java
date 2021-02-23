@@ -29,7 +29,7 @@ public final class ProfileState {
 
     public static ProfileState read(HomeDirectory home)  {
         try {
-            return Utils.messagePackMapper().readValue(new File(home.profile(), "profile.json"), ProfileState.class);
+            return Utils.messagePackMapper().readValue(new File(home.profile(), "profile"), ProfileState.class);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -37,7 +37,7 @@ public final class ProfileState {
 
     public static boolean exists(HomeDirectory home) {
         try {
-            return new File(home.profile(), "profile.json").exists();
+            return new File(home.profile(), "profile").exists();
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

@@ -269,7 +269,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         SignalClientIdentityStore clientIdentityStore;
         if (file.exists()) {
             try {
-                state = Utils.jsonMapper().readValue(file, State.class);
+                state = Utils.messagePackMapper().readValue(file, State.class);
             } catch (IOException e) {
                 throw new IllegalStateException("Could not read profile store", e);
             }
@@ -303,6 +303,6 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     private static void writeState(File file, State state) throws IOException {
-        Utils.jsonMapper().writeValue(file, state);
+        Utils.messagePackMapper().writeValue(file, state);
     }
 }

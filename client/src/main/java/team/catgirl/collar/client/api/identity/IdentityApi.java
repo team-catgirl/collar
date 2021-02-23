@@ -14,8 +14,10 @@ import team.catgirl.collar.protocol.identity.CreateTrustResponse;
 import team.catgirl.collar.protocol.identity.GetIdentityRequest;
 import team.catgirl.collar.protocol.identity.GetIdentityResponse;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.TokenGenerator;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -33,19 +35,19 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
     private static final Logger LOGGER = Logger.getLogger(IdentityApi.class.getName());
 
     // TODO: switch this over to a global task execution scheduler when we use this pattern again
-    private final RegularTaskEvictionScheduler<Long, CompletableFuture<ClientIdentity>> identifyFuturesScheduler =  new RegularTaskEvictionScheduler<Long, CompletableFuture<ClientIdentity>>(2, TimeUnit.SECONDS) {
+    private final RegularTaskEvictionScheduler<Long, CompletableFuture<Optional<ClientIdentity>>> identifyFuturesScheduler = new RegularTaskEvictionScheduler<Long, CompletableFuture<Optional<ClientIdentity>>>(1, TimeUnit.SECONDS) {
         /**
          * Completes the future if we do not get a response from the server
          * @param entry to evict
          */
         @Override
-        protected void onScheduleEviction(EvictibleEntry<Long, CompletableFuture<ClientIdentity>> entry) {
+        protected void onScheduleEviction(EvictibleEntry<Long, CompletableFuture<Optional<ClientIdentity>>> entry) {
             super.onScheduleEviction(entry);
             entry.getValue().complete(null);
         }
     };
 
-    private final ConcurrentMapWithTimedEviction<Long, CompletableFuture<ClientIdentity>> identifyFutures = new ConcurrentHashMapWithTimedEviction<>(identifyFuturesScheduler);
+    private final ConcurrentMapWithTimedEviction<Long, CompletableFuture<Optional<ClientIdentity>>> identifyFutures = new ConcurrentHashMapWithTimedEviction<>(identifyFuturesScheduler);
 
     public IdentityApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
         super(collar, identityStoreSupplier, sender);
@@ -56,8 +58,8 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
      * @param playerId to identify
      * @return identity future
      */
-    public CompletableFuture<ClientIdentity> identify(UUID playerId) {
-        CompletableFuture<ClientIdentity> future = new CompletableFuture<>();
+    public CompletableFuture<Optional<ClientIdentity>> identify(UUID playerId) {
+        CompletableFuture<Optional<ClientIdentity>> future = new CompletableFuture<>();
         long id = TokenGenerator.longToken();
         identifyFutures.put(id, future);
         sender.accept(new GetIdentityRequest(identity(), id, playerId));
@@ -69,12 +71,13 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
      * @param identity to create bi-directional trust with
      * @return future for when trust relationship has been created
      */
-    public CompletableFuture<ClientIdentity> createTrust(ClientIdentity identity) {
-        if (identityStore().isTrustedIdentity(identity)) {
+    public CompletableFuture<Optional<ClientIdentity>> createTrust(Optional<ClientIdentity> identity) {
+        ClientIdentity clientIdentity = identity.orElse(null);
+        if (clientIdentity == null || identityStore().isTrustedIdentity(clientIdentity)) {
             return CompletableFuture.completedFuture(identity);
         } else {
-            CreateTrustRequest request = identityStore().createSendPreKeysRequest(identity, TokenGenerator.longToken());
-            CompletableFuture<ClientIdentity> future = new CompletableFuture<>();
+            CreateTrustRequest request = identityStore().createSendPreKeysRequest(clientIdentity, TokenGenerator.longToken());
+            CompletableFuture<Optional<ClientIdentity>> future = new CompletableFuture<>();
             LOGGER.log(Level.INFO, "Creating trust future with " + identity + " and id " + request.id);
             identifyFutures.put(request.id, future);
             sender.accept(request);
@@ -93,8 +96,8 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof GetIdentityResponse) {
             GetIdentityResponse response = (GetIdentityResponse) resp;
-            CompletableFuture<ClientIdentity> future = identifyFutures.get(response.id);
-            future.complete(response.found);
+            CompletableFuture<Optional<ClientIdentity>> future = identifyFutures.get(response.id);
+            future.complete(response.found == null ? Optional.empty() : Optional.of(response.found));
             return true;
         } else if (resp instanceof CreateTrustResponse) {
             CreateTrustResponse response = (CreateTrustResponse) resp;
@@ -102,13 +105,13 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
             fireListener("onIdentityTrusted", listener -> {
                 listener.onIdentityTrusted(collar, this, identityStore(), response.sender);
             });
-            CompletableFuture<ClientIdentity> removed = identifyFutures.remove(response.id);
+            CompletableFuture<Optional<ClientIdentity>> removed = identifyFutures.remove(response.id);
             if (removed == null) {
                 LOGGER.log(Level.INFO, "Sending back a CreateTrustRequest to " + response.sender + " and id " + response.id);
                 sender.accept(identityStore().createSendPreKeysRequest(response.sender, response.id));
             } else {
                 LOGGER.log(Level.INFO, "Finished creating trust with " + response.sender + " and id " + response.id);
-                removed.complete(response.sender);
+                removed.complete(response.sender == null ? Optional.empty() : Optional.of(response.sender));
             }
             return true;
         }

@@ -10,19 +10,20 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.UUID;
 
 public class IdentityTest extends CollarTest {
     @Test
     public void getIdentityForCollarPlayer() throws Exception {
-        ClientIdentity bobIdentity = alicePlayer.collar.identities().identify(bobPlayerId).get();
-        Assert.assertEquals(bobIdentity, bobPlayer.collar.identity());
+        Optional<ClientIdentity> bobIdentity = alicePlayer.collar.identities().identify(bobPlayerId).get();
+        Assert.assertEquals(bobIdentity.get(), bobPlayer.collar.identity());
     }
 
     @Test
     public void getIdentityForNonCollarPlayer() throws Exception {
-        ClientIdentity bobIdentity = alicePlayer.collar.identities().identify(UUID.randomUUID()).get();
-        Assert.assertNull(bobIdentity);
+        Optional<ClientIdentity> bobIdentity = alicePlayer.collar.identities().identify(UUID.randomUUID()).get();
+        Assert.assertTrue(bobIdentity.isEmpty());
     }
 
     @Test
@@ -34,11 +35,11 @@ public class IdentityTest extends CollarTest {
         bobPlayer.collar.identities().subscribe(bobListener);
 
         // Map from bobs player to his identity
-        ClientIdentity bobIdentity = alicePlayer.collar.identities().identify(bobPlayerId).get();
+        Optional<ClientIdentity> bobIdentity = alicePlayer.collar.identities().identify(bobPlayerId).get();
 
         // Start setting up bidirectional trust
-        ClientIdentity trustedIdentity = alicePlayer.collar.identities().createTrust(bobIdentity).get();
-        Assert.assertEquals(trustedIdentity, bobIdentity);
+        Optional<ClientIdentity> trustedIdentity = alicePlayer.collar.identities().createTrust(bobIdentity).get();
+        Assert.assertEquals(trustedIdentity.get(), bobIdentity.get());
 
         // Trust was exchanged
         Assert.assertEquals(bobPlayer.collar.identity(), aliceListener.lastIdentityTrusted);

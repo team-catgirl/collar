@@ -40,22 +40,22 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
         identityApi.identify(player.id)
                 .thenCompose(identityApi::createTrust)
                 .thenAccept(sender -> {
-                    if (sender != null) {
+                    if (sender.isPresent()) {
                         Cypher cypher = identityStore().createCypher();
                         byte[] messageBytes;
                         try {
-                            messageBytes = cypher.crypt(sender, Utils.messagePackMapper().writeValueAsBytes(message));
+                            messageBytes = cypher.crypt(sender.get(), Utils.messagePackMapper().writeValueAsBytes(message));
                         } catch (JsonProcessingException e) {
                             throw new IllegalStateException(collar.identity() + " could not process private message from " + sender, e);
                         }
-                        this.sender.accept(new SendMessageRequest(collar.identity(), sender, null, messageBytes));
+                        this.sender.accept(new SendMessageRequest(collar.identity(), sender.get(), null, messageBytes));
                         fireListener("onPrivateMessageSent", listener -> {
                             listener.onPrivateMessageSent(collar, this, message);
                         });
                     } else {
                         LOGGER.log(Level.INFO, collar.identity() + " could not locate identity for " + player + ". The private message was not sent.");
                         fireListener("onPrivateMessageRecipientIsUntrusted", listener -> {
-                            listener.onPrivateMessageRecipientIsUntrusted(collar, this, message);
+                            listener.onPrivateMessageRecipientIsUntrusted(collar, this, player, message);
                         });
                     }
                 });

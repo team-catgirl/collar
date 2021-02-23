@@ -21,7 +21,7 @@ public final class ProfileState {
 
     public void write(HomeDirectory home) {
         try {
-            Utils.jsonMapper().writeValue(new File(home.profile(), "profile.json"), this);
+            Utils.messagePackMapper().writeValue(new File(home.profile(), "profile"), this);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -29,7 +29,7 @@ public final class ProfileState {
 
     public static ProfileState read(HomeDirectory home)  {
         try {
-            return Utils.jsonMapper().readValue(new File(home.profile(), "profile.json"), ProfileState.class);
+            return Utils.messagePackMapper().readValue(new File(home.profile(), "profile.json"), ProfileState.class);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Key for {@link Content} within the {@link DistributedHashTable}
+ * Key for {@link Content} within the {@link InMemoryDistributedHashTable}
  */
 public final class Key {
     @JsonProperty("ns")

@@ -3,7 +3,9 @@ package team.catgirl.collar.tests.location;
 import org.junit.Assert;
 import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.groups.GroupInvitation;
 import team.catgirl.collar.client.api.groups.GroupsApi;
@@ -11,10 +13,12 @@ import team.catgirl.collar.client.api.groups.GroupsListener;
 import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.api.location.LocationListener;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.tests.groups.GroupsTest;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
@@ -87,6 +91,72 @@ public class LocationTest extends CollarTest {
         Assert.assertEquals("last event should be unknown location", aliceLocationListener.events.getLast().location, Location.UNKNOWN);
     }
 
+    @Test
+    public void waypointsCreateAndDelete() {
+
+        GroupsTest.TestGroupsListener aliceListener = new GroupsTest.TestGroupsListener();
+        WaypointListener aliceWaypointListener = new WaypointListener();
+        alicePlayer.collar.groups().subscribe(aliceListener);
+        alicePlayer.collar.location().subscribe(aliceWaypointListener);
+        GroupsTest.TestGroupsListener bobListener = new GroupsTest.TestGroupsListener();
+        WaypointListener bobWaypointListener = new WaypointListener();
+        bobPlayer.collar.groups().subscribe(bobListener);
+        bobPlayer.collar.location().subscribe(bobWaypointListener);
+        GroupsTest.TestGroupsListener eveListener = new GroupsTest.TestGroupsListener();
+        WaypointListener eveWaypointListener = new WaypointListener();
+        evePlayer.collar.groups().subscribe(eveListener);
+        evePlayer.collar.location().subscribe(eveWaypointListener);
+
+        // Alice creates a new group with bob and eve
+        alicePlayer.collar.groups().create(List.of(bobPlayerId, evePlayerId));
+
+        // Check that Eve and Bob received their invitations
+        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
+        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+
+        // Accept the invitation
+        bobPlayer.collar.groups().accept(bobListener.invitation);
+        evePlayer.collar.groups().accept(eveListener.invitation);
+
+        waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
+        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
+
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
+
+        // Check there are zero waypoints
+        waitForCondition("alice does not have a waypoint", () -> alicePlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+        waitForCondition("bob does not have a waypoint", () -> bobPlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+        waitForCondition("bob does not have a waypoint", () -> evePlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+
+        // Bob creates a waypoint
+        Location baseLocation = new Location(0d, 64d, 0d, Dimension.OVERWORLD);
+        bobPlayer.collar.location().addWaypoint(theGroup, "Our base", baseLocation);
+
+        waitForCondition("alice has a waypoint", () -> !alicePlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+        waitForCondition("bob has a waypoint", () -> !bobPlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+        waitForCondition("eve has a waypoint", () -> !evePlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+
+        waitForCondition("alice has the waypoint", () -> {
+            Waypoint waypoint = alicePlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(aliceWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            return waypoint != null;
+        });
+        waitForCondition("bob has the waypoint", () -> {
+            Waypoint waypoint = bobPlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(bobWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            return waypoint != null;
+        });
+
+        waitForCondition("eve has the waypoint", () -> {
+            Waypoint waypoint = evePlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(eveWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            return waypoint != null;
+        });
+
+        alicePlayer.collar.location().removeWaypoint(theGroup, aliceWaypointListener.lastWaypointCreated);
+
+        waitForCondition("alice does not have a waypoint", () -> alicePlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+        waitForCondition("eve does not have a waypoint", () -> evePlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+        waitForCondition("bob does not have a waypoint", () -> bobPlayer.collar.location().groupWaypoints(theGroup).isEmpty());
+    }
+
     public static class Event {
         public final MinecraftPlayer player;
         public final Location location;
@@ -94,6 +164,21 @@ public class LocationTest extends CollarTest {
         public Event(MinecraftPlayer player, Location location) {
             this.player = player;
             this.location = location;
+        }
+    }
+
+    public static class WaypointListener implements LocationListener {
+        public Waypoint lastWaypointCreated;
+        public Waypoint lastWaypointDeleted;
+
+        @Override
+        public void onWaypointCreated(Collar collar, LocationApi locationApi, Group group, Waypoint waypoint) {
+            this.lastWaypointCreated = waypoint;
+        }
+
+        @Override
+        public void onWaypointRemoved(Collar collar, LocationApi locationApi, Group group, Waypoint waypoint) {
+            this.lastWaypointDeleted = waypoint;
         }
     }
 

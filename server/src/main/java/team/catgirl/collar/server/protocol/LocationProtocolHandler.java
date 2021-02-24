@@ -7,22 +7,24 @@ import team.catgirl.collar.protocol.location.StartSharingLocationRequest;
 import team.catgirl.collar.protocol.location.StopSharingLocationRequest;
 import team.catgirl.collar.protocol.location.UpdateLocationRequest;
 import team.catgirl.collar.protocol.location.UpdateNearbyRequest;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
-import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.location.PlayerLocationService;
+import team.catgirl.collar.server.services.location.WaypointService;
 
 import java.util.function.BiConsumer;
 
 public class LocationProtocolHandler extends ProtocolHandler {
 
     private final PlayerLocationService playerLocations;
-    private final GroupService groups;
+    private final WaypointService waypoints;
 
-    public LocationProtocolHandler(PlayerLocationService playerLocations, GroupService groups) {
+    public LocationProtocolHandler(PlayerLocationService playerLocations, WaypointService waypoints) {
         this.playerLocations = playerLocations;
-        this.groups = groups;
+        this.waypoints = waypoints;
     }
 
     @Override
@@ -39,12 +41,22 @@ public class LocationProtocolHandler extends ProtocolHandler {
         } else if (req instanceof UpdateLocationRequest) {
             UpdateLocationRequest request = (UpdateLocationRequest) req;
             BatchProtocolResponse resp = playerLocations.updateLocation(request);
-            sender.accept(request.identity, resp);
+            sender.accept(request.identity, playerLocations.updateLocation(request));
             return true;
         } else if (req instanceof UpdateNearbyRequest) {
             UpdateNearbyRequest request = (UpdateNearbyRequest) req;
-            BatchProtocolResponse response = playerLocations.updateNearbyGroups(request);
-            sender.accept(null, response);
+            BatchProtocolResponse resp = playerLocations.updateNearbyGroups(request);
+            sender.accept(null, resp);
+            return true;
+        } else if (req instanceof CreateWaypointRequest) {
+            CreateWaypointRequest request = (CreateWaypointRequest) req;
+            ProtocolResponse resp = waypoints.createWaypoint(request);
+            sender.accept(null, resp);
+            return true;
+        } else if (req instanceof RemoveWaypointRequest) {
+            RemoveWaypointRequest request = (RemoveWaypointRequest) req;
+            ProtocolResponse resp = waypoints.removeWaypoint(request);
+            sender.accept(null, resp);
             return true;
         }
         return false;

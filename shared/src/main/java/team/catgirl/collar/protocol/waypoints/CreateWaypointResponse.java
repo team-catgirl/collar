@@ -8,7 +8,7 @@ import team.catgirl.collar.security.ServerIdentity;
 
 import java.util.UUID;
 
-public class CreateWaypointResponse extends ProtocolResponse {
+public final class CreateWaypointResponse extends ProtocolResponse {
     @JsonProperty("group")
     public final UUID group;
 

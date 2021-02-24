@@ -3,15 +3,17 @@ package team.catgirl.collar.api.waypoints;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.security.ClientIdentity;
 
+import java.util.UUID;
+
 /**
  * Encrypted {@link Waypoint}
  */
 public final class EncryptedWaypoint {
     /**
-     * The identity that created the waypoint and who's keys can decode it
+     * The ID of the waypoint
      */
-    @JsonProperty("sender")
-    public final ClientIdentity sender;
+    @JsonProperty("waypointId")
+    public final UUID waypointId;
 
     /**
      * The encrypted {@link Waypoint} data
@@ -19,9 +21,9 @@ public final class EncryptedWaypoint {
     @JsonProperty("waypoint")
     public final byte[] waypoint;
 
-    public EncryptedWaypoint(@JsonProperty("sender") ClientIdentity sender,
+    public EncryptedWaypoint(@JsonProperty("waypointId") UUID waypointId,
                              @JsonProperty("waypoint") byte[] waypoint) {
-        this.sender = sender;
+        this.waypointId = waypointId;
         this.waypoint = waypoint;
     }
 }

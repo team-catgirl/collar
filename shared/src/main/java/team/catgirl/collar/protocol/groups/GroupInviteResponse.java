@@ -2,7 +2,7 @@ package team.catgirl.collar.protocol.groups;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
@@ -17,7 +17,7 @@ public final class GroupInviteResponse extends ProtocolResponse {
     @JsonProperty("groupId")
     public final UUID groupId;
     @JsonProperty("groupType")
-    public final Group.GroupType groupType;
+    public final GroupType groupType;
     @JsonProperty("player")
     public final MinecraftPlayer player;
     @JsonProperty("members")
@@ -27,7 +27,7 @@ public final class GroupInviteResponse extends ProtocolResponse {
     public GroupInviteResponse(
             @JsonProperty("identity") ServerIdentity identity,
             @JsonProperty("groupId") UUID groupId,
-            @JsonProperty("groupType") Group.GroupType groupType,
+            @JsonProperty("groupType") GroupType groupType,
             @JsonProperty("player") MinecraftPlayer player,
             @JsonProperty("members") List<MinecraftPlayer> members) {
         super(identity);

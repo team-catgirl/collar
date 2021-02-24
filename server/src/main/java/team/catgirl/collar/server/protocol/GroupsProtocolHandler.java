@@ -47,12 +47,6 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
         } else if (req instanceof EjectGroupMemberRequest) {
             EjectGroupMemberRequest request = (EjectGroupMemberRequest) req;
             resp = groups.ejectMember(request);
-        } else if (req instanceof CreateWaypointRequest) {
-            CreateWaypointRequest request = (CreateWaypointRequest) req;
-            resp = groups.createWaypoint(request);
-        } else if (req instanceof RemoveWaypointRequest) {
-            RemoveWaypointRequest request = (RemoveWaypointRequest) req;
-            resp = groups.removeWaypoint(request);
         } else if (req instanceof AcknowledgedGroupJoinedRequest) {
             AcknowledgedGroupJoinedRequest request = (AcknowledgedGroupJoinedRequest) req;
             resp = groups.acknowledgeJoin(request);

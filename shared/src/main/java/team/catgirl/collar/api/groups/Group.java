@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public final class Group<W> {
+public final class Group {
 
     @JsonProperty("id")
     public final UUID id;
@@ -19,25 +19,21 @@ public final class Group<W> {
     public final String server;
     @JsonProperty("members")
     public final Map<MinecraftPlayer, Member> members;
-    @JsonProperty("waypoints")
-    public final Map<UUID, W> waypoints;
 
     public Group(@JsonProperty("id") UUID id,
                  @JsonProperty("type") GroupType type, @JsonProperty("server") String server,
-                 @JsonProperty("members") Map<MinecraftPlayer, Member> members,
-                 @JsonProperty("waypoints") Map<UUID, W> waypoints) {
+                 @JsonProperty("members") Map<MinecraftPlayer, Member> members) {
         this.id = id;
         this.type = type;
         this.server = server;
         this.members = members;
-        this.waypoints = waypoints;
     }
 
-    public static <W> Group<W> newGroup(UUID id, GroupType type, MinecraftPlayer owner, Location ownerLocation, List<MinecraftPlayer> members) {
+    public static Group newGroup(UUID id, GroupType type, MinecraftPlayer owner, Location ownerLocation, List<MinecraftPlayer> members) {
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder()
                 .put(owner, new Member(owner, MembershipRole.OWNER, MembershipState.ACCEPTED, ownerLocation));
         members.forEach(uuid -> state.put(uuid, new Member(uuid, MembershipRole.MEMBER, MembershipState.PENDING, Location.UNKNOWN)));
-        return new Group<>(id, type, owner.server, state.build(), new HashMap<>());
+        return new Group(id, type, owner.server, state.build());
     }
 
     public boolean containsPlayer(UUID playerId) {
@@ -48,7 +44,7 @@ public final class Group<W> {
         return members.values().stream().anyMatch(member -> member.player.equals(player));
     }
 
-    public Group<W> updateMembershipState(MinecraftPlayer player, MembershipState newMembershipState) {
+    public Group updateMembershipState(MinecraftPlayer player, MembershipState newMembershipState) {
         Member member = members.get(player);
         if (member == null) {
             return this;
@@ -58,16 +54,16 @@ public final class Group<W> {
         if (newMembershipState != MembershipState.DECLINED) {
             state = state.put(player, member.updateMembershipState(newMembershipState));
         }
-        return new Group<>(id, type, server, state.build(), waypoints);
+        return new Group(id, type, server, state.build());
     }
 
-    public Group<W> removeMember(MinecraftPlayer player) {
+    public Group removeMember(MinecraftPlayer player) {
         List<Map.Entry<MinecraftPlayer, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList());
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder().putAll(members);
-        return new Group<W>(id, type, server, state.build(), waypoints);
+        return new Group(id, type, server, state.build());
     }
 
-    public Group<W> addMembers(List<MinecraftPlayer> players, MembershipRole role, MembershipState membershipState, BiConsumer<Group<W>, List<Member>> newMemberConsumer) {
+    public Group addMembers(List<MinecraftPlayer> players, MembershipRole role, MembershipState membershipState, BiConsumer<Group, List<Member>> newMemberConsumer) {
         ImmutableMap.Builder<MinecraftPlayer, Member> state = ImmutableMap.<MinecraftPlayer, Member>builder()
                 .putAll(this.members);
         List<Member> newMembers = new ArrayList<>();
@@ -78,31 +74,9 @@ public final class Group<W> {
                 newMembers.add(newMember);
             }
         });
-        Group<W> group = new Group<>(id, type, server, state.build(), waypoints);
+        Group group = new Group(id, type, server, state.build());
         newMemberConsumer.accept(group, newMembers);
         return group;
     }
 
-    public Group<W> addWaypoint(UUID id, W waypoint) {
-        Map<UUID, W> waypoints = new HashMap<>(this.waypoints);
-        waypoints.put(id, waypoint);
-        return new Group<>(id, type, server, members, waypoints);
-    }
-
-    public Group<W> removeWaypoint(UUID waypointId) {
-        Map<UUID, W> waypoints = new HashMap<>(this.waypoints);
-        W removed = waypoints.remove(waypointId);
-        return removed != null ? new Group<>(id, type, server, members, waypoints) : null;
-    }
-
-    public enum GroupType {
-        /**
-         * Created and managed by the players
-         */
-        PLAYER,
-        /**
-         * Groups that use seen entities to infer players nearby the member. Entirely managed by the server.
-         */
-        NEARBY
-    }
 }

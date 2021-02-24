@@ -98,10 +98,10 @@ public class PlayerLocationService {
         List<UUID> sharingWithGroups = playersSharing.entries().stream().filter(entry -> player.equals(entry.getValue()))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
-        List<Group<EncryptedWaypoint>> memberGroups = groups.findGroups(sharingWithGroups);
+        List<Group> memberGroups = groups.findGroups(sharingWithGroups);
         // Keep track of players we have sent to, so we do not send them duplicate messages (e.g. if they share membership of 2 or more groups)
         HashSet<MinecraftPlayer> uniquePlayers = new HashSet<>();
-        for (Group<EncryptedWaypoint> group : memberGroups) {
+        for (Group group : memberGroups) {
             for (Map.Entry<MinecraftPlayer, Member> entry : group.members.entrySet()) {
                 MinecraftPlayer memberPlayer = entry.getKey();
                 // Do not send to self

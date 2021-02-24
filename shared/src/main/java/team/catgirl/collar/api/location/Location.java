@@ -66,7 +66,7 @@ public final class Location {
         return "[" + x + "," + y + "," + z + "," + dimension + "]";
     }
 
-    public byte[] serialize() throws IOException {
+    public byte[] serialize() {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             try (DataOutputStream dataStream = new DataOutputStream(outputStream)) {
                 dataStream.writeInt(VERSION);
@@ -76,6 +76,8 @@ public final class Location {
                 dataStream.writeUTF(dimension.name());
             }
             return outputStream.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not serialize Location " + this, e);
         }
     }
 }

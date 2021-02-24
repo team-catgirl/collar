@@ -12,6 +12,7 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.api.groups.MembershipState;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.client.security.ClientCipher;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
@@ -21,7 +22,6 @@ import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.*;
 import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.signal.PreKeys;
-import team.catgirl.collar.security.signal.SignalCipher;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
@@ -86,7 +86,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public Cipher createCypher() {
-        return new SignalCipher(currentIdentity(), store, store);
+        return new ClientCipher(store, store, currentIdentity());
     }
 
     @Override

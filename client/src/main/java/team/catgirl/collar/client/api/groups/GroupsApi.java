@@ -1,25 +1,16 @@
 package team.catgirl.collar.client.api.groups;
 
 import team.catgirl.collar.api.groups.Group;
-import team.catgirl.collar.api.groups.Group.GroupType;
+import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.groups.MembershipRole;
-import team.catgirl.collar.api.location.Location;
-import team.catgirl.collar.api.waypoints.EncryptedWaypoint;
-import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
-import team.catgirl.collar.protocol.location.UpdateLocationRequest;
-import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
-import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
-import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
-import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -27,7 +18,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public final class GroupsApi extends AbstractApi<GroupsListener> {
-    private final ConcurrentMap<UUID, Group<Waypoint>> groups = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Group> groups = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, GroupInvitation> invitations = new ConcurrentHashMap<>();
 
     public GroupsApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
@@ -37,7 +28,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     /**
      * @return groups the client is a member of
      */
-    public List<Group<Waypoint>> all() {
+    public List<Group> all() {
         synchronized (this) {
             return groups.values().stream().filter(group -> group.type == GroupType.PLAYER).collect(Collectors.toList());
         }
@@ -57,7 +48,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param groupId of the group to find
      * @return group
      */
-    public Optional<Group<Waypoint>> findGroupById(UUID groupId) {
+    public Optional<Group> findGroupById(UUID groupId) {
         return groups.values().stream().filter(group -> group.id.equals(groupId)).findFirst();
     }
 
@@ -82,7 +73,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * Leave the group
      * @param group the group to leave
      */
-    public void leave(Group<Waypoint> group) {
+    public void leave(Group group) {
         sender.accept(new LeaveGroupRequest(identity(), group.id));
     }
 
@@ -91,7 +82,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param group to invite players to
      * @param players to invite
      */
-    public void invite(Group<Waypoint> group, List<UUID> players) {
+    public void invite(Group group, List<UUID> players) {
         sender.accept(new GroupInviteRequest(identity(), group.id, players));
     }
 
@@ -100,7 +91,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param group to invite players to
      * @param players to invite
      */
-    public void invite(Group<Waypoint> group, UUID... players) {
+    public void invite(Group group, UUID... players) {
         invite(group, Arrays.asList(players));
     }
 
@@ -119,35 +110,8 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param group to remove player from
      * @param member the member to remove
      */
-    public void removeMember(Group<Waypoint> group, Member member) {
+    public void removeMember(Group group, Member member) {
         sender.accept(new EjectGroupMemberRequest(identity(), group.id, member.player.id));
-    }
-
-    /**
-     * Add a shared {@link team.catgirl.collar.api.waypoints.Waypoint} to the group
-     * @param group to add waypoint to
-     * @param name of the waypoint
-     * @param location of the waypoint
-     */
-    public void addWaypoint(Group<Waypoint> group, String name, Location location) {
-        UUID waypointId = UUID.randomUUID();
-        byte[] bytes;
-        try {
-            bytes = new Waypoint(waypointId, name, location).serialize();
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not serialize waypoint", e);
-        }
-        byte[] waypoint = identityStore().createCypher().crypt(identityStore().currentIdentity(), group, bytes);
-        sender.accept(new CreateWaypointRequest(identity(), group.id, waypointId, waypoint));
-    }
-
-    /**
-     * Remove a shared {@link Waypoint} from a group
-     * @param group to the waypoint belongs to
-     * @param waypoint the waypoint to remove
-     */
-    public void removeWaypoint(Group<Waypoint> group, Waypoint waypoint) {
-        sender.accept(new RemoveWaypointRequest(identity(), group.id, waypoint.id));
     }
 
     @Override
@@ -165,7 +129,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         if (resp instanceof CreateGroupResponse) {
             synchronized (this) {
                 CreateGroupResponse response = (CreateGroupResponse)resp;
-                Group<Waypoint> group = decryptGroup(response.group);
+                Group group = response.group;
                 groups.put(response.group.id, group);
                 fireListener("onGroupCreated", groupsListener -> {
                     groupsListener.onGroupCreated(collar, this, group);
@@ -197,7 +161,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 LeaveGroupResponse response = (LeaveGroupResponse)resp;
                 if (response.sender == null || response.sender.equals(collar.identity())) {
                     // Remove myself from the group
-                    Group<Waypoint> removed = groups.remove(response.groupId);
+                    Group removed = groups.remove(response.groupId);
                     if (removed != null) {
                         fireListener("onGroupLeft", groupsListener -> {
                             groupsListener.onGroupLeft(collar, this, removed, response.player);
@@ -206,9 +170,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                     invitations.remove(response.groupId);
                 } else {
                     // Remove another player from the group
-                    Group<Waypoint> group = groups.get(response.groupId);
+                    Group group = groups.get(response.groupId);
                     if (group != null) {
-                        Group<Waypoint> updatedGroup = group.removeMember(response.player);
+                        Group updatedGroup = group.removeMember(response.player);
                         groups.put(updatedGroup.id, updatedGroup);
                         fireListener("onGroupLeft", groupsListener -> {
                             groupsListener.onGroupLeft(collar, this, updatedGroup, response.player);
@@ -237,50 +201,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 }
             }
             return true;
-        } else if (resp instanceof CreateWaypointResponse) {
-            synchronized (this) {
-            CreateWaypointResponse response = (CreateWaypointResponse) resp;
-                Group<Waypoint> group = groups.get(response.group);
-                if (group != null) {
-                    byte[] decrypt = identityStore().createCypher().decrypt(response.sender, group, response.waypoint);
-                    Waypoint waypoint = new Waypoint(decrypt);
-                    group = group.addWaypoint(response.waypointId, waypoint);
-                    groups.put(group.id, group);
-                    Group<Waypoint> finalGroup = group;
-                    fireListener("onWaypointCreatedSuccess", groupListener -> {
-                        groupListener.onWaypointCreated(collar, this, finalGroup, waypoint);
-                    });
-                }
-                return true;
-            }
-        } else if (resp instanceof RemoveWaypointResponse) {
-            synchronized (this) {
-                    RemoveWaypointResponse response = (RemoveWaypointResponse) resp;
-                    Group<Waypoint> group = groups.get(response.groupId);
-                    if (group != null) {
-                        Waypoint waypoint = group.waypoints.get(response.waypointId);
-                        if (waypoint != null) {
-                            group = group.removeWaypoint(response.waypointId);
-                            if (group != null) {
-                                Group<Waypoint> finalGroup = group;
-                                groups.put(group.id, group);
-                                fireListener("onWaypointRemovedSuccess", groupListener -> {
-                                    groupListener.onWaypointRemoved(collar, this, finalGroup, waypoint);
-                                });
-                            }
-                        }
-                    }
-                    return true;
-            }
         }
         return false;
-    }
-
-    private Group<Waypoint> decryptGroup(Group<EncryptedWaypoint> group) {
-        Map<UUID, Waypoint> waypoints = group.waypoints.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, o -> {
-            byte[] decrypt = identityStore().createCypher().decrypt(o.getValue().sender, group, o.getValue().waypoint);
-            return new Waypoint(decrypt);
-        }));
-        return new Group<>(group.id, group.type, group.server, group.members, waypoints);
     }
 }

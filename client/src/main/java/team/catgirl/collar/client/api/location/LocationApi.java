@@ -1,5 +1,6 @@
 package team.catgirl.collar.client.api.location;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.Hashing;
 import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.entities.EntityType;
@@ -15,12 +16,18 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.location.*;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -29,6 +36,8 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     private final HashSet<UUID> groupsSharingWith = new HashSet<>();
     private final ConcurrentHashMap<MinecraftPlayer, Location> playerLocations = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Waypoint> privateWaypoints = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Map<UUID, Waypoint>> groupWaypoints = new ConcurrentHashMap<>();
     private final Supplier<Location> locationSupplier;
     private final LocationUpdater updater;
     private final NearbyUpdater nearbyUpdater;
@@ -47,15 +56,39 @@ public class LocationApi extends AbstractApi<LocationListener> {
         groupsApi.subscribe(new GroupListenerImpl());
     }
 
+    /**
+     * Players who are sharing their location with you
+     * @return players to their locations
+     */
     public Map<MinecraftPlayer, Location> playerLocations() {
         return new HashMap<>(playerLocations);
+    }
+
+    /**
+     * @return your private waypoints
+     */
+    public Set<Waypoint> privateWaypoints() {
+        return ImmutableSet.copyOf(privateWaypoints.values());
+    }
+
+    /**
+     * Waypoints shared with you via a group
+     * @param group the waypoints belong to
+     * @return waypoints
+     */
+    public Set<Waypoint> groupWaypoints(Group group) {
+        Map<UUID, Waypoint> waypoints = groupWaypoints.get(group.id);
+        if (waypoints == null) {
+            return ImmutableSet.of();
+        }
+        return ImmutableSet.copyOf(waypoints.values());
     }
 
     /**
      * Start sharing your coordinates with a group
      * @param group to share with
      */
-    public void startSharingWith(Group<Waypoint> group) {
+    public void startSharingWith(Group group) {
         // Start sharing
         if (!this.updater.isRunning()) {
             this.updater.start();
@@ -73,7 +106,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * Start sharing your coordinates with a group
      * @param group to stop sharing with
      */
-    public void stopSharingWith(Group<Waypoint> group) {
+    public void stopSharingWith(Group group) {
         synchronized (this) {
             stopSharingForGroup(group);
             sender.accept(new StopSharingLocationRequest(identity(), group.id));
@@ -85,13 +118,62 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * @param group to test
      * @return sharing
      */
-    public boolean isSharingWith(Group<Waypoint> group) {
+    public boolean isSharingWith(Group group) {
         synchronized (this) {
             return groupsSharingWith.contains(group.id);
         }
     }
 
-    private void stopSharingForGroup(Group<Waypoint> group) {
+    /**
+     * Add a shared {@link team.catgirl.collar.api.waypoints.Waypoint} to the group
+     * @param group to add waypoint to
+     * @param name of the waypoint
+     * @param location of the waypoint
+     */
+    public void addWaypoint(Group group, String name, Location location) {
+        Waypoint waypoint = new Waypoint(UUID.randomUUID(), name, location);
+        groupWaypoints.compute(group.id, (groupId, waypointMap) -> {
+            waypointMap = waypointMap == null ? new ConcurrentHashMap<>() : waypointMap;
+            waypointMap.computeIfAbsent(waypoint.id, waypointId -> waypoint);
+            return waypointMap;
+        });
+        byte[] bytes = waypoint.serialize();
+        byte[] crypted = identityStore().createCypher().crypt(identityStore().currentIdentity(), group, bytes);
+        sender.accept(new CreateWaypointRequest(identity(), group.id, waypoint.id, crypted));
+        fireListener("onWaypointCreated", listener -> listener.onWaypointCreated(collar, this, group, waypoint));
+    }
+
+    /**
+     * Remove a shared {@link Waypoint} from a group
+     * @param group to the waypoint belongs to
+     * @param waypoint the waypoint to remove
+     */
+    public void removeWaypoint(Group group, Waypoint waypoint) {
+        sender.accept(new RemoveWaypointRequest(identity(), group.id, waypoint.id));
+    }
+
+    /**
+     * Add a {@link Waypoint} to the players private waypoint list
+     * @param name of the waypoint
+     * @param location of the waypoint
+     */
+    public void addWaypoint(String name, Location location) {
+        Waypoint waypoint = privateWaypoints.computeIfAbsent(UUID.randomUUID(), uuid -> new Waypoint(uuid, name, location));
+        byte[] bytes = waypoint.serialize();
+        byte[] encryptedBytes = identityStore().createCypher().crypt(bytes);
+        sender.accept(new CreateWaypointRequest(identity(), null, waypoint.id, encryptedBytes));
+    }
+
+    /**
+     * Remove a {@link Waypoint} from the players private waypoint list
+     * @param waypoint to remove
+     */
+    public void removeWaypoint(Waypoint waypoint) {
+        privateWaypoints.remove(waypoint.id);
+        sender.accept(new RemoveWaypointRequest(identity(), null, waypoint.id));
+    }
+
+    private void stopSharingForGroup(Group group) {
         synchronized (this) {
             if (updater.isRunning() && groupsSharingWith.contains(group.id) && (groupsSharingWith.size() - 1) == 0) {
                 updater.stop();
@@ -103,12 +185,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
     void publishLocation() {
         if (!groupsSharingWith.isEmpty()) {
             Location location = locationSupplier.get();
-            byte[] bytes;
-            try {
-                bytes = location.serialize();
-            } catch (IOException e) {
-                throw new IllegalStateException("Could not serialize location " + location);
-            }
+            byte[] bytes = location.serialize();
             groupsSharingWith.forEach(groupId -> {
                 collar.groups().findGroupById(groupId).ifPresent(group -> {
                     byte[] encryptedBytes = identityStore().createCypher().crypt(identity(), group, bytes);
@@ -155,6 +232,55 @@ public class LocationApi extends AbstractApi<LocationListener> {
                 });
             }
             return true;
+        } else if (resp instanceof CreateWaypointResponse) {
+            CreateWaypointResponse response = (CreateWaypointResponse) resp;
+            if (response.group == null) {
+                privateWaypoints.computeIfAbsent(response.waypointId, waypointId -> {
+                    byte[] decryptedBytes = identityStore().createCypher().decrypt(response.waypoint);
+                    return new Waypoint(decryptedBytes);
+                });
+            } else {
+                collar.groups().findGroupById(response.group).ifPresent(group -> {
+                    AtomicReference<Waypoint> createdWaypoint = new AtomicReference<>();
+                    groupWaypoints.compute(group.id, (waypointId, waypointMap) -> {
+                        waypointMap = waypointMap == null ? new ConcurrentHashMap<>() : waypointMap;
+                        waypointMap.computeIfAbsent(response.waypointId, theWaypointId -> {
+                            byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.waypoint);
+                            Waypoint waypoint =  new Waypoint(decryptedBytes);
+                            createdWaypoint.set(waypoint);
+                            return waypoint;
+                        });
+                        return waypointMap;
+                    });
+                    if (createdWaypoint.get() != null) {
+                        fireListener("onWaypointCreated", listener -> listener.onWaypointCreated(collar, this, group, createdWaypoint.get()));
+                    }
+                });
+            }
+            return true;
+        } else if (resp instanceof RemoveWaypointResponse) {
+            RemoveWaypointResponse response = (RemoveWaypointResponse) resp;
+            if (response.groupId == null) {
+                privateWaypoints.remove(response.waypointId);
+            } else {
+                collar.groups().findGroupById(response.groupId).ifPresent(group -> {
+                    AtomicReference<Waypoint> removedWaypoint = new AtomicReference<>();
+                    groupWaypoints.compute(response.groupId, (groupId, waypointMap) -> {
+                        if (waypointMap != null) {
+                            Waypoint waypoint = waypointMap.remove(response.waypointId);
+                            removedWaypoint.set(waypoint);
+                            if (waypointMap.isEmpty()) {
+                                return null;
+                            }
+                        }
+                        return waypointMap;
+                    });
+                    if (removedWaypoint.get() != null) {
+                        fireListener("onWaypointRemoved", listener -> listener.onWaypointRemoved(collar, this, group, removedWaypoint.get()));
+                    }
+                });
+            }
+            return true;
         }
         return false;
     }
@@ -174,7 +300,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     class GroupListenerImpl implements GroupsListener {
         @Override
-        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group<Waypoint> group, MinecraftPlayer player) {
+        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
             stopSharingForGroup(group);
         }
     }

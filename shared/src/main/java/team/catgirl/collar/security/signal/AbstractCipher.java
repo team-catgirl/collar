@@ -1,10 +1,9 @@
 package team.catgirl.collar.security.signal;
 
-import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.groups.GroupCipher;
-import org.whispersystems.libsignal.groups.SenderKeyName;
-import org.whispersystems.libsignal.groups.state.SenderKeyStore;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.PreKeySignalMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
@@ -14,27 +13,21 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
-import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.protocol.PacketIO;
-import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.Identity;
+import team.catgirl.collar.security.cipher.Cipher;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public class SignalCipher implements Cipher {
+public abstract class AbstractCipher implements Cipher {
 
-    private final ClientIdentity clientIdentity;
     private final SignalProtocolStore signalProtocolStore;
-    private final SenderKeyStore senderKeyStore;
 
-    public SignalCipher(ClientIdentity clientIdentity, SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore) {
-        this.clientIdentity = clientIdentity;
+    public AbstractCipher(SignalProtocolStore signalProtocolStore) {
         this.signalProtocolStore = signalProtocolStore;
-        this.senderKeyStore = senderKeyStore;
     }
 
     @Override
@@ -109,38 +102,7 @@ public class SignalCipher implements Cipher {
         }
     }
 
-
-    @Override
-    public byte[] crypt(Identity sender, Group<?> recipient, byte[] bytes) {
-        if (senderKeyStore == null) {
-            throw new IllegalStateException("server cannot crypt group messages");
-        }
-        GroupCipher cipher = new GroupCipher(senderKeyStore, senderKeyNameFrom(recipient, sender));
-        try {
-            return cipher.encrypt(bytes);
-        } catch (Throwable e) {
-            throw new IllegalStateException(clientIdentity + " encountered a problem encrypting group message to group " + recipient.id, e);
-        }
-    }
-
-    @Override
-    public byte[] decrypt(Identity sender, Group<?> group, byte[] bytes) {
-        if (senderKeyStore == null) {
-            throw new IllegalStateException("server cannot decrypt group messages");
-        }
-        GroupCipher cipher = new GroupCipher(senderKeyStore, senderKeyNameFrom(group, sender));
-        try {
-            return cipher.decrypt(bytes);
-        } catch (Throwable e) {
-            throw new IllegalStateException(clientIdentity + " encountered a problem decrypting group message from " + sender, e);
-        }
-    }
-
-    private static SignalProtocolAddress signalProtocolAddressFrom(Identity identity) {
+    protected static SignalProtocolAddress signalProtocolAddressFrom(Identity identity) {
         return new SignalProtocolAddress(identity.id().toString(), identity.deviceId());
-    }
-
-    private static SenderKeyName senderKeyNameFrom(Group group, Identity identity) {
-        return new SenderKeyName(group.id.toString(), signalProtocolAddressFrom(identity));
     }
 }

@@ -35,6 +35,7 @@ public final class Waypoint {
                             locationBytes[i] = dataStream.readByte();
                         }
                         location = new Location(locationBytes);
+                        break;
                     default:
                         throw new IllegalStateException("Unsupported Waypoint version " + serializedVersion);
                 }
@@ -44,7 +45,7 @@ public final class Waypoint {
         }
     }
 
-    public byte[] serialize() throws IOException {
+    public byte[] serialize() {
         byte[] locationBytes = location.serialize();
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             try (DataOutputStream dataStream = new DataOutputStream(outputStream)) {
@@ -57,6 +58,13 @@ public final class Waypoint {
                 }
             }
             return outputStream.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not serialize waypoint " + this);
         }
+    }
+
+    @Override
+    public String toString() {
+        return name + ":" + id + "@" + location.toString();
     }
 }

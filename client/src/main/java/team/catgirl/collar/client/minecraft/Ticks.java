@@ -1,7 +1,6 @@
 package team.catgirl.collar.client.minecraft;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -12,7 +11,7 @@ public final class Ticks {
 
     private static final Logger LOGGER = Logger.getLogger(Ticks.class.getName());
 
-    private final Set<TickListener> listeners = new HashSet<>();
+    private final CopyOnWriteArrayList<TickListener> listeners = new CopyOnWriteArrayList<>();
 
     public Ticks() {}
 

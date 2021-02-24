@@ -2,6 +2,7 @@ package team.catgirl.collar.protocol.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
@@ -9,6 +10,9 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.UUID;
 
+/**
+ * Sent back to you when your keys are distributed and the Group is ready to use
+ */
 public final class AcknowledgedGroupJoinedResponse extends ProtocolResponse {
     @JsonProperty("sender")
     public final ClientIdentity sender;

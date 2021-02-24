@@ -44,7 +44,7 @@ public interface MessagingListener extends ApiListener {
      * @param group sent to
      * @param message the message
      */
-    default void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, Message message) {};
+    default void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group group, Message message) {};
 
     /**
      * Fired when a group message was received
@@ -54,5 +54,5 @@ public interface MessagingListener extends ApiListener {
      * @param sender who sent it
      * @param message the message
      */
-    default void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, MinecraftPlayer sender, Message message) {};
+    default void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {};
 }

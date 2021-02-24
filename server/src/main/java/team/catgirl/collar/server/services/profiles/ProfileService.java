@@ -198,6 +198,14 @@ public class ProfileService {
         public static UpdateProfileRequest hashedPassword(UUID profile, String newPassword) {
             return new UpdateProfileRequest(profile, null, newPassword);
         }
+
+        public static UpdateProfileRequest removeWaypoint(UUID waypointId) {
+            return null;
+        }
+
+        public static UpdateProfileRequest addWaypoint(UUID waypointId, byte[] waypoint) {
+            return null;
+        }
     }
 
     public static final class UpdateProfileResponse {

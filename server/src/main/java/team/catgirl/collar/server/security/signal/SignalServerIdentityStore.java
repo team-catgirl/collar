@@ -10,7 +10,7 @@ import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.security.*;
 import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.signal.PreKeys;
-import team.catgirl.collar.security.signal.SignalCipher;
+import team.catgirl.collar.server.security.ServerCipher;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import java.io.IOException;
@@ -72,7 +72,7 @@ public class SignalServerIdentityStore implements ServerIdentityStore {
 
     @Override
     public Cipher createCypher() {
-        return new SignalCipher(null, store, null);
+        return new ServerCipher(store);
     }
 
     @Override

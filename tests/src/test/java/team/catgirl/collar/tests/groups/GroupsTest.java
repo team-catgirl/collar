@@ -57,7 +57,7 @@ public class GroupsTest extends CollarTest {
         waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
         waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
 
-        Group<Waypoint> theGroup = alicePlayer.collar.groups().all().get(0);
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
 
         // Find eve
         Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.id.equals(evePlayerId)).findFirst().orElseThrow();
@@ -94,58 +94,6 @@ public class GroupsTest extends CollarTest {
     }
 
     @Test
-    public void waypointsCreateAndDelete() {
-        // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(List.of(bobPlayerId, evePlayerId));
-
-        // Check that Eve and Bob received their invitations
-        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
-        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
-
-        // Accept the invitation
-        bobPlayer.collar.groups().accept(bobListener.invitation);
-        evePlayer.collar.groups().accept(eveListener.invitation);
-
-        waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
-        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
-
-        Group<Waypoint> theGroup = alicePlayer.collar.groups().all().get(0);
-
-        // Check there are zero waypoints
-        waitForCondition("alice does not have a waypoint", () -> alicePlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("bob does not have a waypoint", () -> bobPlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("bob does not have a waypoint", () -> evePlayer.collar.groups().all().get(0).waypoints.isEmpty());
-
-        // Bob creates a waypoint
-        Location baseLocation = new Location(0d, 64d, 0d, Dimension.OVERWORLD);
-        bobPlayer.collar.groups().addWaypoint(theGroup, "Our base", baseLocation);
-
-        waitForCondition("alice has the waypoint", () -> !alicePlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("bob has a waypoint", () -> !bobPlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("bob has a waypoint", () -> !evePlayer.collar.groups().all().get(0).waypoints.isEmpty());
-
-        waitForCondition("alice has the waypoint", () -> {
-            Waypoint waypoint = alicePlayer.collar.groups().all().get(0).waypoints.get(aliceListener.waypoint.id);
-            return waypoint.location.equals(baseLocation) && waypoint.name.equals("Our base");
-        });
-        waitForCondition("bob has the waypoint", () -> {
-            Waypoint waypoint = bobPlayer.collar.groups().all().get(0).waypoints.get(bobListener.waypoint.id);
-            return waypoint.location.equals(baseLocation) && waypoint.name.equals("Our base");
-        });
-
-        waitForCondition("eve has the waypoint", () -> {
-            Waypoint waypoint = evePlayer.collar.groups().all().get(0).waypoints.get(eveListener.waypoint.id);
-            return waypoint.location.equals(baseLocation) && waypoint.name.equals("Our base");
-        });
-
-        alicePlayer.collar.groups().removeWaypoint(theGroup, aliceListener.waypoint);
-
-        waitForCondition("alice does not have a waypoint", () -> alicePlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("bob does not have a waypoint", () -> bobPlayer.collar.groups().all().get(0).waypoints.isEmpty());
-        waitForCondition("eve does not have a waypoint", () -> evePlayer.collar.groups().all().get(0).waypoints.isEmpty());
-    }
-
-    @Test
     public void sendGroupMessage() {
         MessagingListenerImpl aliceMessages = new MessagingListenerImpl();
         alicePlayer.collar.messaging().subscribe(aliceMessages);
@@ -170,7 +118,7 @@ public class GroupsTest extends CollarTest {
         waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
         waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
 
-        Group<Waypoint> theGroup = alicePlayer.collar.groups().all().get(0);
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
 
         alicePlayer.collar.messaging().sendGroupMessage(theGroup, new TextMessage("UwU"));
         waitForCondition("bob receives UwU", () -> bobMessages.lastReceivedMessage instanceof TextMessage && "UwU".equals(((TextMessage) bobMessages.lastReceivedMessage).content));
@@ -188,23 +136,22 @@ public class GroupsTest extends CollarTest {
         public boolean createdGroup = false;
         public boolean joinedGroup = false;
         public boolean leftGroup = false;
-        public GroupInvitation invitation = null;
-        public Waypoint waypoint;
+        public GroupInvitation invitation;
 
         @Override
-        public void onGroupCreated(Collar collar, GroupsApi groupsApi, Group<Waypoint> group) {
+        public void onGroupCreated(Collar collar, GroupsApi groupsApi, Group group) {
             createdGroup = true;
         }
 
         @Override
-        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group<Waypoint> group, MinecraftPlayer player) {
+        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
             if (collar.player().equals(player)) {
                 joinedGroup = true;
             }
         }
 
         @Override
-        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group<Waypoint> group, MinecraftPlayer player) {
+        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
             if (collar.player().equals(player)) {
                 leftGroup = true;
             }
@@ -214,11 +161,6 @@ public class GroupsTest extends CollarTest {
         public void onGroupInvited(Collar collar, GroupsApi groupsApi, GroupInvitation invitation) {
             this.invitation = invitation;
         }
-
-        @Override
-        public void onWaypointCreated(Collar collar, GroupsApi feature, Group<Waypoint> group, Waypoint waypoint) {
-            this.waypoint = waypoint;
-        }
     }
 
     public static class MessagingListenerImpl implements MessagingListener {
@@ -226,12 +168,12 @@ public class GroupsTest extends CollarTest {
         public Message lastReceivedMessage;
 
         @Override
-        public void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, Message message) {
+        public void onGroupMessageSent(Collar collar, MessagingApi messagingApi, Group group, Message message) {
             this.lastSentMessage = message;
         }
 
         @Override
-        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group<Waypoint> group, MinecraftPlayer sender, Message message) {
+        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {
             this.lastReceivedMessage = message;
         }
     }

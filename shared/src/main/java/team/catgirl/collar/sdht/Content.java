@@ -10,10 +10,21 @@ public final class Content {
 
     private static final int MAX_SIZE = 2000;
 
+    /**
+     * Checksum of content
+     */
     @JsonProperty("checksum")
     public final byte[] checksum;
+
+    /**
+     * Content
+     */
     @JsonProperty("bytes")
     public final byte[] bytes;
+
+    /**
+     * For debugging purposes. Not to be relied on.
+     */
     @JsonProperty("author")
     public final UUID author;
 
@@ -76,5 +87,20 @@ public final class Content {
         if (bytes.length > MAX_SIZE) {
             throw new IllegalStateException("content size exceeds " + MAX_SIZE + " bytes");
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Content content = (Content) o;
+        return Arrays.equals(checksum, content.checksum) && Arrays.equals(bytes, content.bytes);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Arrays.hashCode(checksum);
+        result = 31 * result + Arrays.hashCode(bytes);
+        return result;
     }
 }

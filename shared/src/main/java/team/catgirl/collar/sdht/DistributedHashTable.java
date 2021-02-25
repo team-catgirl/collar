@@ -39,4 +39,9 @@ public interface DistributedHashTable {
      * @return content removed
      */
     Optional<Content> remove(Record record);
+
+    /**
+     * Remove all content from the table
+     */
+    void removeAll();
 }

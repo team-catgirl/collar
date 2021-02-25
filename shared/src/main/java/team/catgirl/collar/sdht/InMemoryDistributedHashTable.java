@@ -84,4 +84,9 @@ public final class InMemoryDistributedHashTable implements DistributedHashTable 
         });
         return removedContent.get() == null ? Optional.empty() : Optional.of(removedContent.get());
     }
+
+    @Override
+    public void removeAll() {
+        namespacedData.clear();
+    }
 }

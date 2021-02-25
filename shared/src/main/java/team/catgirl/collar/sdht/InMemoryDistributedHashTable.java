@@ -59,8 +59,10 @@ public final class InMemoryDistributedHashTable implements DistributedHashTable 
             if (contentMap.size() > MAX_RECORDS) {
                 throw new IllegalStateException("namespace " + namespace + " exceeded maximum records " + MAX_RECORDS);
             }
-            Content computed = contentMap.computeIfAbsent(record.key.id, contentId -> content);
-            computedContent.set(computed);
+            if (!contentMap.containsKey(record.key.id)) {
+                computedContent.set(content);
+            }
+            contentMap.computeIfAbsent(record.key.id, contentId -> content);
             return contentMap;
         });
         return computedContent.get() == null ? Optional.empty() : Optional.of(computedContent.get());

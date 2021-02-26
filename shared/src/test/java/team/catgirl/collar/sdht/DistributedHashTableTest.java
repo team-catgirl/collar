@@ -29,7 +29,6 @@ public class DistributedHashTableTest {
     public void hashTableOperations() {
         UUID namespace = UUID.randomUUID();
         byte[] bytes = TokenGenerator.byteToken(256);
-        UUID author = UUID.randomUUID();
         Content content = Content.from(bytes, String.class);
         UUID contentId = UUID.randomUUID();
         Record record = content.toRecord(new Key(namespace, contentId));

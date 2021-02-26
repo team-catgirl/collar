@@ -33,4 +33,9 @@ public final class Key {
     public int hashCode() {
         return Objects.hash(namespace, id);
     }
+
+    @Override
+    public String toString() {
+        return namespace + ":" + id;
+    }
 }

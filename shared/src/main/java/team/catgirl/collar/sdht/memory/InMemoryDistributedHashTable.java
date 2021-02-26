@@ -1,10 +1,13 @@
 package team.catgirl.collar.sdht.memory;
 
 import com.google.common.collect.ImmutableSet;
-import team.catgirl.collar.sdht.Content;
-import team.catgirl.collar.sdht.DistributedHashTable;
-import team.catgirl.collar.sdht.Key;
+import team.catgirl.collar.sdht.*;
 import team.catgirl.collar.sdht.Record;
+import team.catgirl.collar.sdht.events.CreateEntryEvent;
+import team.catgirl.collar.sdht.events.DeleteRecordEvent;
+import team.catgirl.collar.sdht.events.Publisher;
+import team.catgirl.collar.sdht.events.SyncRecordsEvent;
+import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.Optional;
 import java.util.Set;
@@ -12,12 +15,31 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public final class InMemoryDistributedHashTable implements DistributedHashTable {
+public final class InMemoryDistributedHashTable extends DistributedHashTable {
+
+    private static final Logger LOGGER = Logger.getLogger(InMemoryDistributedHashTable.class.getName());
 
     private static final int MAX_RECORDS = Short.MAX_VALUE;
 
     private final ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> namespacedData = new ConcurrentHashMap<>();
+
+    public InMemoryDistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, DistributedHashTableListener listener) {
+        super(publisher, owner, listener);
+    }
+
+    @Override
+    public void remove(UUID namespace) {
+        namespacedData.remove(namespace);
+    }
+
+    @Override
+    public void removeAll() {
+        namespacedData.clear();
+    }
 
     @Override
     public Set<Record> records() {
@@ -40,20 +62,21 @@ public final class InMemoryDistributedHashTable implements DistributedHashTable 
     }
 
     @Override
-    public Optional<Content> get(Record record) {
-        ConcurrentMap<UUID, Content> contentMap = namespacedData.get(record.key.namespace);
+    public Optional<Content> get(Key key) {
+        ConcurrentMap<UUID, Content> contentMap = namespacedData.get(key.namespace);
         if (contentMap == null) {
             return Optional.empty();
         }
-        Content content = contentMap.get(record.key.id);
-        return content == null || !content.isValid(record) ? Optional.empty() : Optional.of(content);
+        Content content = contentMap.get(key.id);
+        return content == null || !content.isValid() ? Optional.empty() : Optional.of(content);
     }
 
     @Override
-    public Optional<Content> putIfAbsent(Record record, Content content) {
-        if (!content.isValid(record) || !content.isValid()) {
+    public Optional<Content> put(Key key, Content content) {
+        if (!content.isValid()) {
             return Optional.empty();
         }
+        Record record = content.toRecord(key);
         if (namespacedData.size() > MAX_RECORDS) {
             throw new IllegalStateException("Maximum namespaces exceeds " + MAX_RECORDS);
         }
@@ -66,31 +89,75 @@ public final class InMemoryDistributedHashTable implements DistributedHashTable 
             if (!contentMap.containsKey(record.key.id)) {
                 computedContent.set(content);
             }
-            contentMap.computeIfAbsent(record.key.id, contentId -> content);
+            contentMap.computeIfAbsent(record.key.id, uuid -> {
+                computedContent.set(content);
+                return content;
+            });
             return contentMap;
         });
-        return computedContent.get() == null ? Optional.empty() : Optional.of(computedContent.get());
+        if (computedContent.get() != null) {
+            publisher.publish(new CreateEntryEvent(owner.get(), null, record, computedContent.get()));
+            return Optional.of(computedContent.get());
+        }
+        return Optional.empty();
     }
 
     @Override
-    public Optional<Content> remove(Record record) {
+    protected void add(Record record, Content content) {
+        if (!content.isValid(record)) {
+            LOGGER.log(Level.SEVERE, "Record " + record + " did not match the content");
+            return;
+        }
+        namespacedData.compute(record.key.namespace, (namespace, contentMap) -> {
+            contentMap = contentMap == null ? new ConcurrentHashMap<>() : contentMap;
+            contentMap.put(record.key.id, content);
+            return contentMap;
+        });
+        listener.onAdd(record.key, content);
+    }
+
+    @Override
+    public Optional<Content> delete(Key key) {
         AtomicReference<Content> removedContent = new AtomicReference<>();
-        namespacedData.compute(record.key.namespace, (namespaceId, contentMap) -> {
+        namespacedData.compute(key.namespace, (namespaceId, contentMap) -> {
             if (contentMap == null) {
                 return null;
             }
-            Content content = contentMap.get(record.key.id);
-            if (content != null && content.isValid(record)) {
-                Content removed = contentMap.remove(record.key.id);
+            Content content = contentMap.get(key.id);
+            if (content != null) {
+                Content removed = contentMap.remove(key.id);
                 removedContent.set(removed);
+                if (removed != null) {
+                    Record record = content.toRecord(key);
+                    publisher.publish(new DeleteRecordEvent(owner.get(), record));
+                }
             }
             return contentMap.isEmpty() ? null : contentMap;
         });
-        return removedContent.get() == null ? Optional.empty() : Optional.of(removedContent.get());
+        if (removedContent.get() != null) {
+            Record record = removedContent.get().toRecord(key);
+            publisher.publish(new DeleteRecordEvent(owner.get(), record));
+            return Optional.of(removedContent.get());
+        }
+        return Optional.empty();
     }
 
     @Override
-    public void removeAll() {
-        namespacedData.clear();
+    protected void remove(Record delete) {
+        AtomicReference<Content> removedContent = new AtomicReference<>();
+        namespacedData.compute(delete.key.namespace, (namespace, contentMap) -> {
+            if (contentMap == null) {
+                return null;
+            }
+            Content removed = contentMap.remove(delete.key.id);
+            removedContent.set(removed);
+            if (contentMap.isEmpty()) {
+                return null;
+            }
+            return contentMap;
+        });
+        if (removedContent.get() != null) {
+            listener.onRemove(delete.key, removedContent.get());
+        }
     }
 }

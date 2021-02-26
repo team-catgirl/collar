@@ -6,6 +6,7 @@ import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
+import team.catgirl.collar.client.sdht.SDHTApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -20,9 +21,14 @@ import java.util.stream.Collectors;
 public final class GroupsApi extends AbstractApi<GroupsListener> {
     private final ConcurrentMap<UUID, Group> groups = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, GroupInvitation> invitations = new ConcurrentHashMap<>();
+    private final SDHTApi sdhtApi;
 
-    public GroupsApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
+    public GroupsApi(Collar collar,
+                     Supplier<ClientIdentityStore> identityStoreSupplier,
+                     Consumer<ProtocolRequest> sender,
+                     SDHTApi sdhtApi) {
         super(collar, identityStoreSupplier, sender);
+        this.sdhtApi = sdhtApi;
     }
 
     /**
@@ -153,6 +159,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             if (groups.containsKey(response.group.id)) {
                 identityStore().processAcknowledgedGroupJoinedResponse(response);
             }
+            if (response.player.equals(collar.player())) {
+                sdhtApi.table.sync(response.group.id);
+            }
             fireListener("onGroupJoined", groupsListener -> {
                 groupsListener.onGroupJoined(collar, this, response.group, response.player);
             });
@@ -163,6 +172,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                     // Remove myself from the group
                     Group removed = groups.remove(response.groupId);
                     if (removed != null) {
+                        sdhtApi.table.remove(removed.id);
                         fireListener("onGroupLeft", groupsListener -> {
                             groupsListener.onGroupLeft(collar, this, removed, response.player);
                         });

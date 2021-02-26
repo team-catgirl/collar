@@ -1,10 +1,42 @@
 package team.catgirl.collar.sdht;
 
+import team.catgirl.collar.sdht.events.*;
+import team.catgirl.collar.security.ClientIdentity;
+
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public abstract class DistributedHashTable {
+
+    protected final Publisher publisher;
+    protected final Supplier<ClientIdentity> owner;
+    protected final DistributedHashTableListener listener;
+
+    public DistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, DistributedHashTableListener listener) {
+        this.publisher = publisher;
+        this.owner = owner;
+        this.listener = listener;
+    }
+
+    /**
+     * Sync's the hashtable with all members with the
+     */
+    public void sync(UUID namespace) {
+        publisher.publish(new SyncRecordsEvent(owner.get(), namespace));
+    }
+
+    /**
+     * Remove all records in the namespace from the local copy
+     * @param namespace to remove
+     */
+    public abstract void remove(UUID namespace);
+
+    /**
+     * Remove all records from the local copy
+     */
+    public abstract void removeAll();
 
     /**
      * Return all of the records in the DHT
@@ -20,29 +52,64 @@ public abstract class DistributedHashTable {
     public abstract Set<Record> records(UUID namespace);
 
     /**
-     * Get the content for the provided record
-     * @param record to get
+     * Get the content for the provided key
+     * @param key to get
      * @return content or if the record was not valid, empty
      */
-    public abstract Optional<Content> get(Record record);
+    public abstract Optional<Content> get(Key key);
 
     /**
      * Add the content to the hash table
-     * @param record to add
+     * @param key to add
      * @param content to add
      * @return content added
      */
-    public abstract Optional<Content> putIfAbsent(Record record, Content content);
+    public abstract Optional<Content> put(Key key, Content content);
 
     /**
      * Remove the content at key
-     * @param record addressing the content
+     * @param key addressing the content
      * @return content removed
      */
-    public abstract Optional<Content> remove(Record record);
+    public abstract Optional<Content> delete(Key key);
+
+    public void process(AbstractSDHTEvent e) {
+        if (e instanceof CreateEntryEvent) {
+            CreateEntryEvent event = (CreateEntryEvent) e;
+            add(event.record, event.content);
+        } else if (e instanceof DeleteRecordEvent) {
+            DeleteRecordEvent event = (DeleteRecordEvent) e;
+            remove(event.delete);
+        } else if (e instanceof SyncRecordsEvent) {
+            SyncRecordsEvent event = (SyncRecordsEvent) e;
+            Set<Record> records = records(event.namespace);
+            if (!records.isEmpty()) {
+                publisher.publish(new PublishRecordsEvent(owner.get(), records, event.sender));
+            }
+        } else if (e instanceof PublishRecordsEvent) {
+            PublishRecordsEvent event = (PublishRecordsEvent) e;
+            event.records.forEach(record -> publisher.publish(new SyncContentEvent(owner.get(), event.recipient, record)));
+        } else if (e instanceof SyncContentEvent) {
+            SyncContentEvent event = (SyncContentEvent) e;
+            Optional<Content> content = get(event.record.key);
+            if (content.isPresent()) {
+                publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, content.get()));
+            } else {
+                publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, null));
+            }
+        }
+    }
 
     /**
-     * Remove all content from the table
+     * Add the record and it's content to the local copy
+     * @param record to add
+     * @param content to add
      */
-    public abstract void removeAll();
+    protected abstract void add(Record record, Content content);
+
+    /**
+     * Remove the record from the local copy
+     * @param delete to delete
+     */
+    protected abstract void remove(Record delete);
 }

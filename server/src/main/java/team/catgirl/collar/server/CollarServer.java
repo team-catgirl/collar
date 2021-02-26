@@ -56,6 +56,7 @@ public class CollarServer {
         protocolHandlers.add(new TexturesProtocolHandler(services.identityStore.getIdentity(), services.sessions, services.textures));
         protocolHandlers.add(new IdentityProtocolHandler(services.sessions, services.identityStore.getIdentity()));
         protocolHandlers.add(new MessagingProtocolHandler(services.sessions, services.groups, services.identityStore.getIdentity()));
+        protocolHandlers.add(new SDHTProtocolHandler(services.groups, services.sessions, services.identityStore.getIdentity()));
     }
 
     @OnWebSocketConnect

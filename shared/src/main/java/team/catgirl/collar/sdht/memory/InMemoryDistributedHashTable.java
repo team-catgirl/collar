@@ -1,6 +1,10 @@
-package team.catgirl.collar.sdht;
+package team.catgirl.collar.sdht.memory;
 
 import com.google.common.collect.ImmutableSet;
+import team.catgirl.collar.sdht.Content;
+import team.catgirl.collar.sdht.DistributedHashTable;
+import team.catgirl.collar.sdht.Key;
+import team.catgirl.collar.sdht.Record;
 
 import java.util.Optional;
 import java.util.Set;

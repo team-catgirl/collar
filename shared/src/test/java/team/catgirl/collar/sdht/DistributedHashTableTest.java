@@ -4,9 +4,9 @@ import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import team.catgirl.collar.sdht.memory.InMemoryDistributedHashTable;
 import team.catgirl.collar.security.TokenGenerator;
 
-import java.util.Set;
 import java.util.UUID;
 
 public class DistributedHashTableTest {
@@ -22,7 +22,7 @@ public class DistributedHashTableTest {
         UUID namespace = UUID.randomUUID();
         byte[] bytes = TokenGenerator.byteToken(256);
         UUID author = UUID.randomUUID();
-        Content content = Content.from(bytes, author);
+        Content content = Content.from(bytes, String.class);
         UUID contentId = UUID.randomUUID();
         Record record = content.toRecord(new Key(namespace, contentId));
 

@@ -22,18 +22,15 @@ public final class Content {
     @JsonProperty("bytes")
     public final byte[] bytes;
 
-    /**
-     * For debugging purposes. Not to be relied on.
-     */
-    @JsonProperty("author")
-    public final UUID author;
+    @JsonProperty("type")
+    public final Class<?> type;
 
     private Content(@JsonProperty("checksum") byte[] checksum,
                     @JsonProperty("bytes") byte[] bytes,
-                    @JsonProperty("author") UUID author) {
+                    @JsonProperty("type") Class<?> type) {
         this.checksum = checksum;
         this.bytes = bytes;
-        this.author = author;
+        this.type = type;
     }
 
     /**
@@ -70,13 +67,13 @@ public final class Content {
     /**
      * Create content from bytes
      * @param bytes to store
-     * @param author of the content
+     * @param contentType type
      * @return content
      */
-    public static Content from(byte[] bytes, UUID author) {
+    public static Content from(byte[] bytes, Class<?> contentType) {
         assertSize(bytes);
         byte[] checksum = createChecksum(bytes);
-        return new Content(checksum, bytes, author);
+        return new Content(checksum, bytes, contentType);
     }
 
     private static byte[] createChecksum(byte[] bytes) {

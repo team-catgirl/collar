@@ -1,6 +1,7 @@
 package team.catgirl.collar.sdht;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.sdht.memory.InMemoryDistributedHashTable;
 
 import java.util.Objects;
 import java.util.UUID;

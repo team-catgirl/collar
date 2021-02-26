@@ -11,7 +11,6 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public class DistributedHashTableTest {
     private DistributedHashTable table;

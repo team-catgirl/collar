@@ -20,6 +20,8 @@ import team.catgirl.collar.client.api.identity.IdentityApi;
 import team.catgirl.collar.client.api.location.LocationApi;
 import team.catgirl.collar.client.api.messaging.MessagingApi;
 import team.catgirl.collar.client.api.textures.TexturesApi;
+import team.catgirl.collar.client.sdht.cipher.GroupContentCipher;
+import team.catgirl.collar.client.sdht.cipher.ContentCiphers;
 import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.sdht.SDHTApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
@@ -76,6 +78,7 @@ public final class Collar {
     private ResettableClientIdentityStore identityStore;
     private final Supplier<ClientIdentityStore> identityStoreSupplier;
     private final Ticks ticks;
+    private final ContentCiphers recordCiphers;
 
     private Collar(CollarConfiguration configuration) {
         this.configuration = configuration;
@@ -83,9 +86,11 @@ public final class Collar {
         this.identityStoreSupplier = () -> identityStore;
         Consumer<ProtocolRequest> sender = request -> this.sender.accept(request);
         this.ticks = configuration.ticks;
+        this.recordCiphers = new ContentCiphers();
         this.apis = new ArrayList<>();
-        this.sdhtApi = new SDHTApi(this, identityStoreSupplier, sender);
+        this.sdhtApi = new SDHTApi(this, identityStoreSupplier, sender, recordCiphers);
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender, sdhtApi);
+        this.recordCiphers.register(new GroupContentCipher(groupsApi, identityStoreSupplier));
         this.locationApi = new LocationApi(this,
                 identityStoreSupplier,
                 sender,

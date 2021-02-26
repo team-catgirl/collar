@@ -64,7 +64,7 @@ public final class GroupService {
             if (group != null) {
                 throw new IllegalStateException("Group with id " + req.groupId + " already exists");
             }
-            group = Group.newGroup(req.groupId, GroupType.PLAYER, player, Location.UNKNOWN, players);
+            group = Group.newGroup(req.groupId, GroupType.PARTY, player, Location.UNKNOWN, players);
             List<Member> members = group.members.values().stream()
                     .filter(member -> member.membershipRole.equals(MembershipRole.MEMBER))
                     .collect(Collectors.toList());

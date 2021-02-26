@@ -1,5 +1,6 @@
 package team.catgirl.collar.sdht;
 
+import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.sdht.events.*;
 import team.catgirl.collar.security.ClientIdentity;
 
@@ -12,16 +13,18 @@ public abstract class DistributedHashTable {
 
     protected final Publisher publisher;
     protected final Supplier<ClientIdentity> owner;
+    protected final ContentCipher cipher;
     protected final DistributedHashTableListener listener;
 
-    public DistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, DistributedHashTableListener listener) {
+    public DistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, ContentCipher cipher, DistributedHashTableListener listener) {
         this.publisher = publisher;
         this.owner = owner;
+        this.cipher = cipher;
         this.listener = listener;
     }
 
     /**
-     * Sync's the hashtable with all members with the
+     * Sync's the hashtable with all members with the namespace
      */
     public void sync(UUID namespace) {
         publisher.publish(new SyncRecordsEvent(owner.get(), namespace));
@@ -73,10 +76,15 @@ public abstract class DistributedHashTable {
      */
     public abstract Optional<Content> delete(Key key);
 
+    /**
+     * Process incoming state change events
+     * @param e event
+     */
     public void process(AbstractSDHTEvent e) {
         if (e instanceof CreateEntryEvent) {
             CreateEntryEvent event = (CreateEntryEvent) e;
-            add(event.record, event.content);
+            Content content = cipher.decrypt(event.sender, event.record.key.namespace, event.content);
+            add(event.record, content);
         } else if (e instanceof DeleteRecordEvent) {
             DeleteRecordEvent event = (DeleteRecordEvent) e;
             remove(event.delete);
@@ -93,7 +101,8 @@ public abstract class DistributedHashTable {
             SyncContentEvent event = (SyncContentEvent) e;
             Optional<Content> content = get(event.record.key);
             if (content.isPresent()) {
-                publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, content.get()));
+                byte[] bytes = cipher.crypt(owner.get(), event.record.key.namespace, content.get());
+                publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, bytes));
             } else {
                 publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, null));
             }

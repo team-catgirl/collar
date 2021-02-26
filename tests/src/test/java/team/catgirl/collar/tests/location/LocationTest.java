@@ -157,6 +157,61 @@ public class LocationTest extends CollarTest {
         waitForCondition("bob does not have a waypoint", () -> bobPlayer.collar.location().groupWaypoints(theGroup).isEmpty());
     }
 
+    @Test
+    public void newGroupMemberReceivesWaypoints() throws Exception {
+        GroupsTest.TestGroupsListener aliceListener = new GroupsTest.TestGroupsListener();
+        WaypointListener aliceWaypointListener = new WaypointListener();
+        alicePlayer.collar.groups().subscribe(aliceListener);
+        alicePlayer.collar.location().subscribe(aliceWaypointListener);
+        GroupsTest.TestGroupsListener bobListener = new GroupsTest.TestGroupsListener();
+        WaypointListener bobWaypointListener = new WaypointListener();
+        bobPlayer.collar.groups().subscribe(bobListener);
+        bobPlayer.collar.location().subscribe(bobWaypointListener);
+        GroupsTest.TestGroupsListener eveListener = new GroupsTest.TestGroupsListener();
+        WaypointListener eveWaypointListener = new WaypointListener();
+        evePlayer.collar.groups().subscribe(eveListener);
+        evePlayer.collar.location().subscribe(eveWaypointListener);
+
+        // Alice creates a new group with bob and eve
+        alicePlayer.collar.groups().create(List.of(bobPlayerId));
+
+        // Check that Eve and Bob received their invitations
+        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+        waitForCondition("Eve invite received", () -> eveListener.invitation == null);
+
+        // Accept the invitation
+        bobPlayer.collar.groups().accept(bobListener.invitation);
+
+        // Bob joins the group
+        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
+
+        Group theGroup = bobPlayer.collar.groups().all().get(0);
+        // Bob creates a waypoint
+        Location baseLocation = new Location(0d, 64d, 0d, Dimension.OVERWORLD);
+        bobPlayer.collar.location().addWaypoint(theGroup, "Our base", baseLocation);
+
+        waitForCondition("alice has the waypoint", () -> {
+            Waypoint waypoint = alicePlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(aliceWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            return waypoint != null;
+        });
+        waitForCondition("bob has the waypoint", () -> {
+            Waypoint waypoint = bobPlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(bobWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            return waypoint != null;
+        });
+
+        // Eve is invited to the group and accepts
+        alicePlayer.collar.groups().invite(theGroup, evePlayerId);
+        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
+        evePlayer.collar.groups().accept(eveListener.invitation);
+        waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
+
+        // Eve should have received the waypoint when her SDHT syncs with the groups namespace
+        waitForCondition("eve has the waypoint", () -> {
+            Waypoint waypoint = evePlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(eveWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            return waypoint != null;
+        });
+    }
+
     public static class Event {
         public final MinecraftPlayer player;
         public final Location location;

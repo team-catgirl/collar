@@ -7,10 +7,9 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.sdht.SDHTEventRequest;
 import team.catgirl.collar.protocol.sdht.SDHTEventResponse;
-import team.catgirl.collar.sdht.Content;
-import team.catgirl.collar.sdht.DistributedHashTable;
-import team.catgirl.collar.sdht.DistributedHashTableListener;
-import team.catgirl.collar.sdht.Key;
+import team.catgirl.collar.sdht.*;
+import team.catgirl.collar.sdht.cipher.ContentCipher;
+import team.catgirl.collar.sdht.events.Publisher;
 import team.catgirl.collar.sdht.memory.InMemoryDistributedHashTable;
 
 import java.util.function.Consumer;
@@ -25,11 +24,12 @@ public class SDHTApi extends AbstractApi<SDHTListener> {
 
     public final DistributedHashTable table;
 
-    public SDHTApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
+    public SDHTApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, ContentCipher cipher) {
         super(collar, identityStoreSupplier, sender);
-        table = new InMemoryDistributedHashTable(event -> {
+        Publisher publisher = event -> {
             sender.accept(new SDHTEventRequest(identity(), event));
-        }, () -> identityStoreSupplier.get().currentIdentity(), new DistributedHashTableListenerImpl(this));
+        };
+        table = new InMemoryDistributedHashTable(publisher, () -> identityStoreSupplier.get().currentIdentity(), cipher, new DistributedHashTableListenerImpl(this));
     }
 
     @Override
@@ -43,7 +43,11 @@ public class SDHTApi extends AbstractApi<SDHTListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof SDHTEventResponse) {
             SDHTEventResponse response = (SDHTEventResponse) resp;
-            table.process(response.event);
+            if (!response.event.sender.equals(identity())) {
+                table.process(response.event);
+            } else {
+                System.err.println("Why is this being sent back to ourselves??");
+            }
             return true;
         }
         return false;

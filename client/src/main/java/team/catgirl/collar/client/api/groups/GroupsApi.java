@@ -36,7 +36,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      */
     public List<Group> all() {
         synchronized (this) {
-            return groups.values().stream().filter(group -> group.type == GroupType.PLAYER).collect(Collectors.toList());
+            return groups.values().stream().filter(group -> group.type == GroupType.PARTY).collect(Collectors.toList());
         }
     }
 
@@ -200,7 +200,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             synchronized (this) {
                 GroupInviteResponse response = (GroupInviteResponse) resp;
                 GroupInvitation invitation = GroupInvitation.from(response);
-                if (response.groupType == GroupType.PLAYER) {
+                if (response.groupType == GroupType.PARTY) {
                     invitations.put(invitation.groupId, invitation);
                     fireListener("onGroupInvited", groupsListener -> {
                         groupsListener.onGroupInvited(collar, this, invitation);

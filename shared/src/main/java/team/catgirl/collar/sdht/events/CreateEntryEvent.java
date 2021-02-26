@@ -11,12 +11,12 @@ public final class CreateEntryEvent extends AbstractSDHTEvent {
     @JsonProperty("record")
     public final Record record;
     @JsonProperty("content")
-    public final Content content;
+    public final byte[] content;
 
     public CreateEntryEvent(@JsonProperty("sender") ClientIdentity sender,
                             @JsonProperty("recipient") ClientIdentity recipient,
                             @JsonProperty("record") Record record,
-                            @JsonProperty("content") Content content) {
+                            @JsonProperty("content") byte[] content) {
         super(sender);
         this.recipient = recipient;
         this.record = record;

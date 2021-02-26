@@ -69,7 +69,11 @@ public class SDHTProtocolHandler extends ProtocolHandler {
             } else if (e instanceof SyncContentEvent) {
                 SyncContentEvent event = (SyncContentEvent) e;
                 SDHTEventResponse response = new SDHTEventResponse(serverIdentity, event);
-                sender.accept(event.recipient, response);
+                if (!event.recipient.equals(req.identity)) {
+                    sender.accept(event.recipient, response);
+                } else {
+                    System.err.println("TODO: why are we sending this to ourselves???");
+                }
             }
             return true;
         }

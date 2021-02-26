@@ -3,10 +3,10 @@ package team.catgirl.collar.sdht.memory;
 import com.google.common.collect.ImmutableSet;
 import team.catgirl.collar.sdht.*;
 import team.catgirl.collar.sdht.Record;
+import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.sdht.events.CreateEntryEvent;
 import team.catgirl.collar.sdht.events.DeleteRecordEvent;
 import team.catgirl.collar.sdht.events.Publisher;
-import team.catgirl.collar.sdht.events.SyncRecordsEvent;
 import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.Optional;
@@ -27,8 +27,8 @@ public final class InMemoryDistributedHashTable extends DistributedHashTable {
 
     private final ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> namespacedData = new ConcurrentHashMap<>();
 
-    public InMemoryDistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, DistributedHashTableListener listener) {
-        super(publisher, owner, listener);
+    public InMemoryDistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, ContentCipher cipher, DistributedHashTableListener listener) {
+        super(publisher, owner, cipher, listener);
     }
 
     @Override
@@ -96,7 +96,7 @@ public final class InMemoryDistributedHashTable extends DistributedHashTable {
             return contentMap;
         });
         if (computedContent.get() != null) {
-            publisher.publish(new CreateEntryEvent(owner.get(), null, record, computedContent.get()));
+            publisher.publish(new CreateEntryEvent(owner.get(), null, record, this.cipher.crypt(owner.get(), key.namespace, computedContent.get())));
             return Optional.of(computedContent.get());
         }
         return Optional.empty();

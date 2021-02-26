@@ -1,8 +1,8 @@
 package team.catgirl.collar.sdht;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.utils.Hex;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -38,6 +38,6 @@ public final class Record {
 
     @Override
     public String toString() {
-        return key + ":" + new String(checksum, StandardCharsets.UTF_8);
+        return key + ":" + Hex.hexString(checksum);
     }
 }

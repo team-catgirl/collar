@@ -15,6 +15,9 @@ import team.catgirl.collar.utils.Utils;
 import java.io.*;
 import java.util.List;
 
+import static team.catgirl.collar.utils.IO.readBytes;
+import static team.catgirl.collar.utils.IO.writeBytes;
+
 public final class PreKeys {
 
     public static PreKeyBundle generate(SignalProtocolAddress address, SignalProtocolStore store) {
@@ -49,7 +52,7 @@ public final class PreKeys {
 
     public static byte[] preKeyBundleToBytes(PreKeyBundle bundle) throws IOException {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            try (ObjectOutputStream os = new ObjectOutputStream(bos)) {
+            try (DataOutputStream os = new DataOutputStream(bos)) {
                 os.writeInt(bundle.getRegistrationId());
                 os.writeInt(bundle.getDeviceId());
                 os.writeInt(bundle.getPreKeyId());
@@ -65,7 +68,7 @@ public final class PreKeys {
     }
 
     public static PreKeyBundle preKeyBundleFromBytes(byte[] bytes) throws IOException {
-        try (ObjectInputStream is = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
+        try (DataInputStream is = new DataInputStream(new ByteArrayInputStream(bytes))) {
             int registrationId = is.readInt();
             int deviceId = is.readInt();
             int preKeyId = is.readInt();
@@ -100,22 +103,6 @@ public final class PreKeys {
         }
         preKeys.forEach(preKeyRecord -> preKeyStore.storePreKey(preKeyRecord.getId(), preKeyRecord));
         signedPreKeyStore.storeSignedPreKey(signedPreKey.getId(), signedPreKey);
-    }
-
-    private static void writeBytes(ObjectOutputStream os, byte[] bytes) throws IOException {
-        os.write(bytes.length);
-        for (byte b : bytes) {
-            os.write(b);
-        }
-    }
-
-    private static byte[] readBytes(ObjectInputStream is) throws IOException {
-        int length = is.read();
-        byte[] bytes = new byte[length];
-        for (int i = 0; i < length; i++) {
-            bytes[i] = is.readByte();
-        }
-        return bytes;
     }
 
     private PreKeys() {}

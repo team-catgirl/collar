@@ -3,6 +3,7 @@ package team.catgirl.collar.api.waypoints;
 import team.catgirl.collar.api.location.Location;
 
 import java.io.*;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -66,5 +67,18 @@ public final class Waypoint {
     @Override
     public String toString() {
         return name + ":" + id + "@" + location.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Waypoint waypoint = (Waypoint) o;
+        return id.equals(waypoint.id) && name.equals(waypoint.name) && location.equals(waypoint.location);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, location);
     }
 }

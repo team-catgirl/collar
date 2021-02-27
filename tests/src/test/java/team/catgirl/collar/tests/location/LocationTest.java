@@ -121,7 +121,7 @@ public class LocationTest extends CollarTest {
         waitForCondition("alice connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
         waitForCondition("has waypoints", () -> listener.privateWaypoints != null);
 
-        Assert.assertTrue(listener.privateWaypoints.stream().anyMatch(waypoint -> waypoint.name.equals("My Base") && waypoint.location.equals(location)));
+        Assert.assertTrue(listener.privateWaypoints.stream().anyMatch(waypoint -> waypoint.name.equals("My base") && waypoint.location.equals(location)));
         Assert.assertTrue(listener.privateWaypoints.stream().anyMatch(waypoint -> waypoint.name.equals("Cute base") && waypoint.location.equals(location)));
     }
 

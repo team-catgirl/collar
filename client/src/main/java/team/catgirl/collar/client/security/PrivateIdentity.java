@@ -52,7 +52,7 @@ public final class PrivateIdentity {
         } else {
             KeyGenerator generator;
             try {
-                generator = KeyGenerator.getInstance("RSA");
+                generator = KeyGenerator.getInstance(ALGORITHM);
             } catch (NoSuchAlgorithmException e) {
                 throw new IllegalStateException("could not generate key", e);
             }

@@ -263,7 +263,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
                         .map(encryptedWaypoint -> identityStore().createCypher().decrypt(encryptedWaypoint.waypoint)).map(Waypoint::new)
                         .collect(Collectors.toMap(o -> o.id, o -> o));
                 privateWaypoints.putAll(waypoints);
-                fireListener("", listener -> listener.onPrivateWaypointsReceived(collar, this, privateWaypoints()));
+                fireListener("onPrivateWaypointsReceived", listener -> listener.onPrivateWaypointsReceived(collar, this, privateWaypoints()));
             }
         }
         return false;

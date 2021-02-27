@@ -16,8 +16,8 @@ import java.security.NoSuchAlgorithmException;
  * Identity used for storing and reading personal encrypted data on the server
  */
 public final class PrivateIdentity {
-    private static final String ALGORITHM = "RSA";
-    private static final String TRANSFORMATION = "RSA/ECB/PKCS1Padding";
+    private static final String ALGORITHM = "AES";
+    private static final String TRANSFORMATION = "AES";
 
     private final SecretKey secretKey;
     public final byte[] token;

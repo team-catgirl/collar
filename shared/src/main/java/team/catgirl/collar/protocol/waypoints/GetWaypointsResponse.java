@@ -8,11 +8,12 @@ import team.catgirl.collar.security.ServerIdentity;
 import java.util.List;
 
 public final class GetWaypointsResponse extends ProtocolResponse {
+    @JsonProperty("waypoints")
     public final List<EncryptedWaypoint> waypoints;
 
     public GetWaypointsResponse(
             @JsonProperty("identity") ServerIdentity identity,
-            @JsonProperty("identity") List<EncryptedWaypoint> waypoints) {
+            @JsonProperty("waypoints") List<EncryptedWaypoint> waypoints) {
         super(identity);
         this.waypoints = waypoints;
     }

@@ -89,7 +89,7 @@ public final class Collar {
         this.ticks = configuration.ticks;
         this.recordCiphers = new ContentCiphers();
         this.apis = new ArrayList<>();
-        this.sdhtApi = new SDHTApi(this, identityStoreSupplier, sender, recordCiphers);
+        this.sdhtApi = new SDHTApi(this, identityStoreSupplier, sender, recordCiphers, this.ticks);
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender, sdhtApi);
         this.recordCiphers.register(new GroupContentCipher(groupsApi, identityStoreSupplier));
         this.locationApi = new LocationApi(this,

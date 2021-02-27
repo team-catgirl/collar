@@ -2,7 +2,6 @@ package team.catgirl.collar.sdht.cipher;
 
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.DistributedHashTable;
-import team.catgirl.collar.sdht.Record;
 import team.catgirl.collar.security.ClientIdentity;
 
 import java.util.UUID;

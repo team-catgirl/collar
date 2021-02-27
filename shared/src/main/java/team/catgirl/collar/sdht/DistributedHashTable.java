@@ -3,10 +3,11 @@ package team.catgirl.collar.sdht;
 import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.sdht.events.*;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.utils.Utils;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Supplier;
 
 public abstract class DistributedHashTable {
@@ -15,6 +16,8 @@ public abstract class DistributedHashTable {
     protected final Supplier<ClientIdentity> owner;
     protected final ContentCipher cipher;
     protected final DistributedHashTableListener listener;
+    protected final ConcurrentHashMap<Record, List<ClientIdentity>> recordSources = new ConcurrentHashMap<>();
+    protected final Queue<Record> pendingRecords = new ConcurrentLinkedDeque<>();
 
     public DistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, ContentCipher cipher, DistributedHashTableListener listener) {
         this.publisher = publisher;
@@ -96,7 +99,14 @@ public abstract class DistributedHashTable {
             }
         } else if (e instanceof PublishRecordsEvent) {
             PublishRecordsEvent event = (PublishRecordsEvent) e;
-            event.records.forEach(record -> publisher.publish(new SyncContentEvent(owner.get(), event.sender, record)));
+            event.records.forEach(record -> {
+                recordSources.compute(record, (theRecord, clientIdentities) -> {
+                    clientIdentities = clientIdentities == null ? new ArrayList<>() : clientIdentities;
+                    clientIdentities.add(event.sender);
+                    return clientIdentities;
+                });
+                pendingRecords.offer(record);
+            });
         } else if (e instanceof SyncContentEvent) {
             SyncContentEvent event = (SyncContentEvent) e;
             Optional<Content> content = get(event.record.key);
@@ -107,6 +117,23 @@ public abstract class DistributedHashTable {
                 publisher.publish(new CreateEntryEvent(owner.get(), event.sender, event.record, null));
             }
         }
+    }
+
+    /**
+     * Processes a single Record that is pending to be downloaded
+     */
+    public void processPendingRecords() {
+        Record record = pendingRecords.poll();
+        if (record == null) {
+            return;
+        }
+        List<ClientIdentity> identities = recordSources.remove(record);
+        if (identities == null) {
+            return;
+        }
+        // Pick a random identity that has the record and ask it for the contents
+        ClientIdentity identity = identities.get(Utils.secureRandom().nextInt(identities.size()));
+        publisher.publish(new SyncContentEvent(owner.get(), identity, record));
     }
 
     /**

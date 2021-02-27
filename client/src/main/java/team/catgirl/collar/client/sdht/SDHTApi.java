@@ -2,6 +2,7 @@ package team.catgirl.collar.client.sdht;
 
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
+import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -20,16 +21,17 @@ import java.util.function.Supplier;
  * If you want access to this API, please file an issue in Github, do NOT use reflection to put shit in here
  * We are happy to make a nice future proof API for you to use it if you've got a good use case
  */
-public class SDHTApi extends AbstractApi<SDHTListener> {
+public class SDHTApi extends AbstractApi<SDHTListener> implements Ticks.TickListener {
 
     public final DistributedHashTable table;
 
-    public SDHTApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, ContentCipher cipher) {
+    public SDHTApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, ContentCipher cipher, Ticks ticks) {
         super(collar, identityStoreSupplier, sender);
         Publisher publisher = event -> {
             sender.accept(new SDHTEventRequest(identity(), event));
         };
         table = new InMemoryDistributedHashTable(publisher, () -> identityStoreSupplier.get().currentIdentity(), cipher, new DistributedHashTableListenerImpl(this));
+        ticks.subscribe(this);
     }
 
     @Override
@@ -45,12 +47,14 @@ public class SDHTApi extends AbstractApi<SDHTListener> {
             SDHTEventResponse response = (SDHTEventResponse) resp;
             if (!response.event.sender.equals(identity())) {
                 table.process(response.event);
-            } else {
-                System.err.println("Why is this being sent back to ourselves?? " + response.event.getClass().getSimpleName());
             }
-            return true;
         }
         return false;
+    }
+
+    @Override
+    public void onTick() {
+        table.processPendingRecords();
     }
 
     /**

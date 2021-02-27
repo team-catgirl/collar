@@ -46,7 +46,7 @@ public class SDHTApi extends AbstractApi<SDHTListener> {
             if (!response.event.sender.equals(identity())) {
                 table.process(response.event);
             } else {
-                System.err.println("Why is this being sent back to ourselves??");
+                System.err.println("Why is this being sent back to ourselves?? " + response.event.getClass().getSimpleName());
             }
             return true;
         }

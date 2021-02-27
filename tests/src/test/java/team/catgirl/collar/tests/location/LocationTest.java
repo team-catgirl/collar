@@ -191,11 +191,15 @@ public class LocationTest extends CollarTest {
         bobPlayer.collar.location().addWaypoint(theGroup, "Our base", baseLocation);
 
         waitForCondition("alice has the waypoint", () -> {
-            Waypoint waypoint = alicePlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(aliceWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            Waypoint waypoint = alicePlayer.collar.location().groupWaypoints(theGroup)
+                    .stream().filter(candidate -> candidate.equals(aliceWaypointListener.lastWaypointCreated))
+                    .findFirst().orElse(null);
             return waypoint != null;
         });
         waitForCondition("bob has the waypoint", () -> {
-            Waypoint waypoint = bobPlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(bobWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            Waypoint waypoint = bobPlayer.collar.location().groupWaypoints(theGroup).stream()
+                    .filter(candidate -> candidate.equals(bobWaypointListener.lastWaypointCreated))
+                    .findFirst().orElse(null);
             return waypoint != null;
         });
 
@@ -207,7 +211,9 @@ public class LocationTest extends CollarTest {
 
         // Eve should have received the waypoint when her SDHT syncs with the groups namespace
         waitForCondition("eve has the waypoint", () -> {
-            Waypoint waypoint = evePlayer.collar.location().groupWaypoints(theGroup).stream().filter(waypoint1 -> waypoint1.equals(eveWaypointListener.lastWaypointCreated)).findFirst().orElse(null);
+            Waypoint waypoint = evePlayer.collar.location().groupWaypoints(theGroup).stream()
+                    .filter(candidate -> candidate.equals(eveWaypointListener.lastWaypointCreated))
+                    .findFirst().orElse(null);
             return waypoint != null;
         });
     }

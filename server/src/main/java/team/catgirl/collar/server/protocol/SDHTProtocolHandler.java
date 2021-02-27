@@ -40,40 +40,32 @@ public class SDHTProtocolHandler extends ProtocolHandler {
             AbstractSDHTEvent e = request.event;
             if (e instanceof CreateEntryEvent) {
                 CreateEntryEvent event = (CreateEntryEvent) e;
-                findListeners(req.identity, event.record.key.namespace)
-                    .forEach(identity -> {
-                        CreateEntryEvent newEvent = new CreateEntryEvent(req.identity, null, event.record, event.content);
-                        sessions.getSession(identity).ifPresent(session -> {
-                            SDHTEventResponse response = new SDHTEventResponse(serverIdentity, newEvent);
-                            collar.send(session, response);
-                        });
-                    });
+                findListeners(req.identity, event.record.key.namespace).forEach(identity -> {
+                    CreateEntryEvent newEvent = new CreateEntryEvent(req.identity, null, event.record, event.content);
+                    SDHTEventResponse response = new SDHTEventResponse(serverIdentity, newEvent);
+                    sender.accept(identity, response);
+                });
                 return true;
             } else if (e instanceof DeleteRecordEvent) {
                 DeleteRecordEvent event = (DeleteRecordEvent) e;
-                findListeners(req.identity, event.delete.key.namespace)
-                    .forEach(identity -> {
-                        SDHTEventResponse response = new SDHTEventResponse(serverIdentity, event);
-                        sender.accept(identity, response);
-                    });
+                findListeners(req.identity, event.delete.key.namespace).forEach(identity -> {
+                    SDHTEventResponse response = new SDHTEventResponse(serverIdentity, event);
+                    sender.accept(identity, response);
+                });
             } else if (e instanceof PublishRecordsEvent) {
                 PublishRecordsEvent event = (PublishRecordsEvent) e;
                 SDHTEventResponse response = new SDHTEventResponse(serverIdentity, event);
-                sender.accept(event.sender, response);
+                sender.accept(event.recipient, response);
             } else if (e instanceof SyncRecordsEvent) {
                 SyncRecordsEvent event = (SyncRecordsEvent) e;
-                SDHTEventResponse response = new SDHTEventResponse(serverIdentity, event);
+                SDHTEventResponse response = new SDHTEventResponse(serverIdentity, new SyncRecordsEvent(req.identity, event.namespace));
                 findListeners(req.identity, event.namespace).forEach(identity -> {
                     sender.accept(identity, response);
                 });
             } else if (e instanceof SyncContentEvent) {
                 SyncContentEvent event = (SyncContentEvent) e;
-                SDHTEventResponse response = new SDHTEventResponse(serverIdentity, event);
-                if (!event.recipient.equals(req.identity)) {
-                    sender.accept(event.recipient, response);
-                } else {
-                    System.err.println("TODO: why are we sending this to ourselves???");
-                }
+                SDHTEventResponse response = new SDHTEventResponse(serverIdentity, new SyncContentEvent(req.identity, event.recipient, event.record));
+                sender.accept(event.recipient, response);
             }
             return true;
         }
@@ -88,7 +80,7 @@ public class SDHTProtocolHandler extends ProtocolHandler {
         }
         Set<ClientIdentity> listeners = new HashSet<>();
         for (Member member : group.members.values()) {
-            if (member.membershipState != MembershipState.ACCEPTED) {
+            if (member.membershipState != MembershipState.ACCEPTED && sendingPlayer.equals(member.player)) {
                 continue;
             }
             sessions.getIdentity(member.player).ifPresent(listeners::add);

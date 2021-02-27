@@ -11,7 +11,6 @@ import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.function.Consumer;
 
 /**
  * Identity used for storing and reading personal encrypted data on the server

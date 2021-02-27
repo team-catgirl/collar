@@ -8,18 +8,14 @@ import team.catgirl.collar.security.ClientIdentity;
 import java.util.UUID;
 
 public final class RemoveWaypointRequest extends ProtocolRequest {
-    @JsonProperty("group")
-    public final UUID group;
     @JsonProperty("waypointId")
     public final UUID waypointId;
 
     @JsonCreator
     public RemoveWaypointRequest(
             @JsonProperty("identity") ClientIdentity identity,
-            @JsonProperty("groupId") UUID group,
             @JsonProperty("waypointId") UUID waypointId) {
         super(identity);
-        this.group = group;
         this.waypointId = waypointId;
     }
 }

@@ -9,9 +9,6 @@ import team.catgirl.collar.security.ServerIdentity;
 import java.util.UUID;
 
 public final class CreateWaypointResponse extends ProtocolResponse {
-    @JsonProperty("group")
-    public final UUID group;
-
     @JsonProperty("sender")
     public final ClientIdentity sender;
 
@@ -24,12 +21,10 @@ public final class CreateWaypointResponse extends ProtocolResponse {
     @JsonCreator
     public CreateWaypointResponse(
             @JsonProperty("identity") ServerIdentity identity,
-            @JsonProperty("group") UUID group,
             @JsonProperty("sender") ClientIdentity sender,
             @JsonProperty("waypointId") UUID waypointId,
             @JsonProperty("waypoint") byte[] waypoint) {
         super(identity);
-        this.group = group;
         this.sender = sender;
         this.waypointId = waypointId;
         this.waypoint = waypoint;

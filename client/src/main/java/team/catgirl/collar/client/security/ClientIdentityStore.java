@@ -13,6 +13,15 @@ import java.util.UUID;
 
 public interface ClientIdentityStore {
     /**
+     * This token is stored by the server on first register and is used to check
+     * if the private identity of the client has changed. If it has changed, we
+     * the user has willingly generated a new token and forfeits any privately
+     * encrypted state on the server
+     * @return the players private identity token
+     */
+    byte[] privateIdentityToken();
+
+    /**
      * @return the players identity
      */
     ClientIdentity currentIdentity();

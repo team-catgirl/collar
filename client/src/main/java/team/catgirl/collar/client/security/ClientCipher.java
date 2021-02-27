@@ -11,11 +11,13 @@ import team.catgirl.collar.security.signal.AbstractCipher;
 
 public class ClientCipher extends AbstractCipher {
 
+    private final PrivateIdentity privateIdentity;
     private final SenderKeyStore senderKeyStore;
     private final ClientIdentity clientIdentity;
 
-    public ClientCipher(SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore, ClientIdentity clientIdentity) {
+    public ClientCipher(PrivateIdentity privateIdentity, SignalProtocolStore signalProtocolStore, SenderKeyStore senderKeyStore, ClientIdentity clientIdentity) {
         super(signalProtocolStore);
+        this.privateIdentity = privateIdentity;
         this.senderKeyStore = senderKeyStore;
         this.clientIdentity = clientIdentity;
     }
@@ -52,11 +54,11 @@ public class ClientCipher extends AbstractCipher {
 
     @Override
     public byte[] crypt(byte[] bytes) {
-        throw new IllegalStateException("not implemented");
+        return privateIdentity.encrypt(bytes);
     }
 
     @Override
     public byte[] decrypt(byte[] bytes) {
-        throw new IllegalStateException("not implemented");
+        return privateIdentity.decrypt(bytes);
     }
 }

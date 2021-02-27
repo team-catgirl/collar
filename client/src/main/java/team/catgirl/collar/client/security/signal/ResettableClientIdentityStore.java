@@ -23,6 +23,11 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
     }
 
     @Override
+    public byte[] privateIdentityToken() {
+        return currentIdentityStore.privateIdentityToken();
+    }
+
+    @Override
     public ClientIdentity currentIdentity() {
         return currentIdentityStore.currentIdentity();
     }

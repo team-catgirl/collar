@@ -25,6 +25,7 @@ import team.catgirl.collar.client.sdht.cipher.ContentCiphers;
 import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.client.sdht.SDHTApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
+import team.catgirl.collar.client.security.PrivateIdentity;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;

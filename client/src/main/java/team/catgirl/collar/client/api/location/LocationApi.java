@@ -186,7 +186,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
         Waypoint waypoint = privateWaypoints.computeIfAbsent(UUID.randomUUID(), uuid -> new Waypoint(uuid, name, location));
         byte[] bytes = waypoint.serialize();
         byte[] encryptedBytes = identityStore().createCypher().crypt(bytes);
-        sender.accept(new CreateWaypointRequest(identity(), null, waypoint.id, encryptedBytes));
+        sender.accept(new CreateWaypointRequest(identity(), waypoint.id, encryptedBytes));
     }
 
     /**
@@ -195,7 +195,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      */
     public void removeWaypoint(Waypoint waypoint) {
         privateWaypoints.remove(waypoint.id);
-        sender.accept(new RemoveWaypointRequest(identity(), null, waypoint.id));
+        sender.accept(new RemoveWaypointRequest(identity(), waypoint.id));
     }
 
     private void stopSharingForGroup(Group group) {
@@ -259,51 +259,22 @@ public class LocationApi extends AbstractApi<LocationListener> {
             return true;
         } else if (resp instanceof CreateWaypointResponse) {
             CreateWaypointResponse response = (CreateWaypointResponse) resp;
-            if (response.group == null) {
-                privateWaypoints.computeIfAbsent(response.waypointId, waypointId -> {
-                    byte[] decryptedBytes = identityStore().createCypher().decrypt(response.waypoint);
-                    return new Waypoint(decryptedBytes);
-                });
-            } else {
-                collar.groups().findGroupById(response.group).ifPresent(group -> {
-                    AtomicReference<Waypoint> createdWaypoint = new AtomicReference<>();
-                    groupWaypoints.compute(group.id, (waypointId, waypointMap) -> {
-                        waypointMap = waypointMap == null ? new ConcurrentHashMap<>() : waypointMap;
-                        waypointMap.computeIfAbsent(response.waypointId, theWaypointId -> {
-                            byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.waypoint);
-                            Waypoint waypoint =  new Waypoint(decryptedBytes);
-                            createdWaypoint.set(waypoint);
-                            return waypoint;
-                        });
-                        return waypointMap;
-                    });
-                    if (createdWaypoint.get() != null) {
-                        fireListener("onWaypointCreated", listener -> listener.onWaypointCreated(collar, this, group, createdWaypoint.get()));
-                    }
-                });
+            AtomicReference<Waypoint> createdWaypoint = new AtomicReference<>();
+            privateWaypoints.computeIfAbsent(response.waypointId, waypointId -> {
+                byte[] decryptedBytes = identityStore().createCypher().decrypt(response.waypoint);
+                Waypoint waypoint = new Waypoint(decryptedBytes);
+                createdWaypoint.set(waypoint);
+                return waypoint;
+            });
+            if (createdWaypoint.get() != null) {
+                fireListener("onWaypointCreated", listener -> listener.onWaypointCreated(collar, this, null, createdWaypoint.get()));
             }
             return true;
         } else if (resp instanceof RemoveWaypointResponse) {
             RemoveWaypointResponse response = (RemoveWaypointResponse) resp;
-            if (response.groupId == null) {
-                privateWaypoints.remove(response.waypointId);
-            } else {
-                collar.groups().findGroupById(response.groupId).ifPresent(group -> {
-                    AtomicReference<Waypoint> removedWaypoint = new AtomicReference<>();
-                    groupWaypoints.compute(response.groupId, (groupId, waypointMap) -> {
-                        if (waypointMap != null) {
-                            Waypoint waypoint = waypointMap.remove(response.waypointId);
-                            removedWaypoint.set(waypoint);
-                            if (waypointMap.isEmpty()) {
-                                return null;
-                            }
-                        }
-                        return waypointMap;
-                    });
-                    if (removedWaypoint.get() != null) {
-                        fireListener("onWaypointRemoved", listener -> listener.onWaypointRemoved(collar, this, group, removedWaypoint.get()));
-                    }
-                });
+            Waypoint removed = privateWaypoints.remove(response.waypointId);
+            if (removed != null) {
+                fireListener("onWaypointRemoved", listener -> listener.onWaypointRemoved(collar, this, null, removed));
             }
             return true;
         }

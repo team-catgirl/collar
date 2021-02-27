@@ -39,7 +39,7 @@ public interface LocationListener extends ApiListener {
     default void onWaypointRemoved(Collar collar, LocationApi locationApi, Group group, Waypoint waypoint) {};
 
     /**
-     *
+     * Fired when private waypoints are received from the server.
      * @param collar client
      * @param locationApi api
      * @param privateWaypoints received

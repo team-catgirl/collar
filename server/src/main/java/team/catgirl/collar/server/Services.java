@@ -15,6 +15,7 @@ import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.services.location.PlayerLocationService;
 import team.catgirl.collar.server.services.location.WaypointService;
 import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.storage.ProfileStorage;
 import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
@@ -27,6 +28,7 @@ public final class Services {
     public final SessionManager sessions;
     public final PasswordHashing passwordHashing;
     public final ProfileService profiles;
+    public final ProfileStorage profileStorage;
     public final DeviceService devices;
     public final TokenCrypter tokenCrypter;
     public final AuthenticationService auth;
@@ -45,6 +47,7 @@ public final class Services {
         this.sessions = new SessionManager(packetMapper, identityStore);
         this.passwordHashing = configuration.passwordHashing;
         this.profiles = new ProfileService(configuration.database, passwordHashing);
+        this.profileStorage = new ProfileStorage(configuration.database);
         this.devices = new DeviceService(configuration.database);
         this.tokenCrypter = configuration.tokenCrypter;
         this.auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter, configuration.email, urlProvider);
@@ -53,6 +56,6 @@ public final class Services {
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, sessions);
-        this.waypoints = new WaypointService(identityStore.getIdentity(), groups, sessions);
+        this.waypoints = new WaypointService(profileStorage, identityStore.getIdentity());
     }
 }

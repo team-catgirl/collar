@@ -1,31 +1,39 @@
 package team.catgirl.collar.server.services.location;
 
+import team.catgirl.collar.api.waypoints.EncryptedWaypoint;
+import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
+import team.catgirl.collar.protocol.waypoints.GetWaypointsRequest;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.server.protocol.BatchProtocolResponse;
-import team.catgirl.collar.server.services.groups.GroupService;
-import team.catgirl.collar.server.session.SessionManager;
+import team.catgirl.collar.server.services.profiles.storage.ProfileStorage;
+import team.catgirl.collar.server.services.profiles.storage.ProfileStorage.Blob;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Manages private waypoints
  */
 public final class WaypointService {
+    private final ProfileStorage storage;
     private final ServerIdentity serverIdentity;
-    private final GroupService groups;
-    private final SessionManager sessions;
 
-    public WaypointService(ServerIdentity serverIdentity, GroupService groups, SessionManager sessions) {
+    public WaypointService(ProfileStorage storage, ServerIdentity serverIdentity) {
+        this.storage = storage;
         this.serverIdentity = serverIdentity;
-        this.groups = groups;
-        this.sessions = sessions;
     }
 
-    public BatchProtocolResponse createWaypoint(CreateWaypointRequest req) {
-        throw new IllegalStateException("cannot create private waypoints yet");
+    public void createWaypoint(CreateWaypointRequest req) {
+        storage.store(req.identity.owner, req.waypointId, req.waypoint, 'W');
     }
 
-    public BatchProtocolResponse removeWaypoint(RemoveWaypointRequest req) {
-        throw new IllegalStateException("cannot remove private waypoints yet");
+    public void removeWaypoint(RemoveWaypointRequest req) {
+        storage.delete(req.identity.owner, req.waypointId);
+    }
+
+    public List<EncryptedWaypoint> getWaypoints(GetWaypointsRequest req) {
+        List<Blob> blobs = storage.find(req.identity.owner, 'W');
+        return blobs.stream().map(blob -> new EncryptedWaypoint(blob.key, blob.data)).collect(Collectors.toList());
     }
 }

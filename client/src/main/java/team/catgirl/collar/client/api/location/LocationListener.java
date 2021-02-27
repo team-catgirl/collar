@@ -8,6 +8,8 @@ import team.catgirl.collar.client.api.ApiListener;
 import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
+import java.util.Set;
+
 public interface LocationListener extends ApiListener {
     /**
      * Fired when a player location was updated
@@ -35,4 +37,12 @@ public interface LocationListener extends ApiListener {
      * @param waypoint that was removed
      */
     default void onWaypointRemoved(Collar collar, LocationApi locationApi, Group group, Waypoint waypoint) {};
+
+    /**
+     *
+     * @param collar client
+     * @param locationApi api
+     * @param privateWaypoints received
+     */
+    default void onPrivateWaypointsReceived(Collar collar, LocationApi locationApi, Set<Waypoint> privateWaypoints) {};
 }

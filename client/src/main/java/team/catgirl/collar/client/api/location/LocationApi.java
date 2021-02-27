@@ -19,12 +19,11 @@ import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.location.*;
 import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
-import team.catgirl.collar.protocol.waypoints.CreateWaypointResponse;
+import team.catgirl.collar.protocol.waypoints.GetWaypointsRequest;
+import team.catgirl.collar.protocol.waypoints.GetWaypointsResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
-import team.catgirl.collar.protocol.waypoints.RemoveWaypointResponse;
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.Key;
-import team.catgirl.collar.sdht.Record;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.io.IOException;
@@ -257,26 +256,15 @@ public class LocationApi extends AbstractApi<LocationListener> {
                 });
             }
             return true;
-        } else if (resp instanceof CreateWaypointResponse) {
-            CreateWaypointResponse response = (CreateWaypointResponse) resp;
-            AtomicReference<Waypoint> createdWaypoint = new AtomicReference<>();
-            privateWaypoints.computeIfAbsent(response.waypointId, waypointId -> {
-                byte[] decryptedBytes = identityStore().createCypher().decrypt(response.waypoint);
-                Waypoint waypoint = new Waypoint(decryptedBytes);
-                createdWaypoint.set(waypoint);
-                return waypoint;
-            });
-            if (createdWaypoint.get() != null) {
-                fireListener("onWaypointCreated", listener -> listener.onWaypointCreated(collar, this, null, createdWaypoint.get()));
+        } else if (resp instanceof GetWaypointsResponse) {
+            GetWaypointsResponse response = (GetWaypointsResponse) resp;
+            if (!response.waypoints.isEmpty()) {
+                Map<UUID, Waypoint> waypoints = response.waypoints.stream()
+                        .map(encryptedWaypoint -> identityStore().createCypher().decrypt(encryptedWaypoint.waypoint)).map(Waypoint::new)
+                        .collect(Collectors.toMap(o -> o.id, o -> o));
+                privateWaypoints.putAll(waypoints);
+                fireListener("", listener -> listener.onPrivateWaypointsReceived(collar, this, privateWaypoints()));
             }
-            return true;
-        } else if (resp instanceof RemoveWaypointResponse) {
-            RemoveWaypointResponse response = (RemoveWaypointResponse) resp;
-            Waypoint removed = privateWaypoints.remove(response.waypointId);
-            if (removed != null) {
-                fireListener("onWaypointRemoved", listener -> listener.onWaypointRemoved(collar, this, null, removed));
-            }
-            return true;
         }
         return false;
     }
@@ -285,6 +273,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
     public void onStateChanged(Collar.State state) {
         if (state == Collar.State.CONNECTED) {
             nearbyUpdater.start();
+            sender.accept(new GetWaypointsRequest(identity()));
         } else if (state == Collar.State.DISCONNECTED) {
             synchronized (this) {
                 playerLocations.clear();

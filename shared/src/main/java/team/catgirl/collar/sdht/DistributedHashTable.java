@@ -96,15 +96,15 @@ public abstract class DistributedHashTable {
             }
         } else if (e instanceof PublishRecordsEvent) {
             PublishRecordsEvent event = (PublishRecordsEvent) e;
-            event.records.forEach(record -> publisher.publish(new SyncContentEvent(owner.get(), event.recipient, record)));
+            event.records.forEach(record -> publisher.publish(new SyncContentEvent(owner.get(), event.sender, record)));
         } else if (e instanceof SyncContentEvent) {
             SyncContentEvent event = (SyncContentEvent) e;
             Optional<Content> content = get(event.record.key);
             if (content.isPresent()) {
                 byte[] bytes = cipher.crypt(owner.get(), event.record.key.namespace, content.get());
-                publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, bytes));
+                publisher.publish(new CreateEntryEvent(owner.get(), event.sender, event.record, bytes));
             } else {
-                publisher.publish(new CreateEntryEvent(owner.get(), event.recipient, event.record, null));
+                publisher.publish(new CreateEntryEvent(owner.get(), event.sender, event.record, null));
             }
         }
     }

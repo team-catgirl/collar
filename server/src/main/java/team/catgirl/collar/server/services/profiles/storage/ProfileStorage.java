@@ -27,31 +27,31 @@ public class ProfileStorage {
 
     public ProfileStorage(MongoDatabase db) {
         this.docs = db.getCollection("profile_storage");
-        Map<String, Object> index = Map.of(FIELD_OWNER, 1, FIELD_KEY, 1, FIELD_TYPE, 1);
+        Map<String, Object> index = Map.of(FIELD_OWNER, 1, FIELD_KEY, 1, FIELD_DATA, 1);
         this.docs.createIndex(new Document(index));
     }
 
-    public void store(UUID owner, UUID key, byte[] data, char w) {
-        Map<String, Object> state = Map.of(FIELD_OWNER, owner, FIELD_KEY, key, FIELD_DATA, new Binary(data), FIELD_TYPE, w);
-        UpdateResult result = docs.updateOne(and(eq(FIELD_OWNER, owner), eq(FIELD_KEY, key)), new Document(state), new UpdateOptions().upsert(true));
-        if (result.wasAcknowledged()) {
+    public void store(UUID owner, UUID key, byte[] data, String type) {
+        Map<String, Object> state = Map.of(FIELD_OWNER, owner, FIELD_KEY, key, FIELD_DATA, new Binary(data), FIELD_TYPE, type);
+        UpdateResult result = docs.updateOne(and(eq(FIELD_OWNER, owner), eq(FIELD_KEY, key)), new Document("$set", new Document(state)), new UpdateOptions().upsert(true));
+        if (!result.wasAcknowledged()) {
             throw new IllegalStateException("could not store data for owner " + owner + " key " + key);
         }
     }
 
     public void delete(UUID owner, UUID key) {
         DeleteResult result = docs.deleteOne(and(eq(FIELD_OWNER, owner), eq(FIELD_KEY, key)));
-        if (result.wasAcknowledged()) {
+        if (!result.wasAcknowledged()) {
             throw new IllegalStateException("could not delete data for owner " + owner + " key " + key);
         }
     }
 
-    public List<Blob> find(UUID owner, Character type) {
-        MongoCursor<Blob> iterator = docs.find(and(eq(FIELD_OWNER, owner), eq(FIELD_KEY, type))).map(document -> new Blob(
+    public List<Blob> find(UUID owner, String type) {
+        MongoCursor<Blob> iterator = docs.find(and(eq(FIELD_OWNER, owner), eq(FIELD_TYPE, type))).map(document -> new Blob(
                 document.get(FIELD_OWNER, UUID.class),
                 document.get(FIELD_KEY, UUID.class),
-                document.get(FIELD_TYPE, Character.class),
-                document.get(FIELD_TYPE, Binary.class).getData()
+                document.get(FIELD_TYPE, String.class),
+                document.get(FIELD_DATA, Binary.class).getData()
         )).iterator();
         List<Blob> blobs = new ArrayList<>();
         while (iterator.hasNext()) {
@@ -63,10 +63,10 @@ public class ProfileStorage {
     public static final class Blob {
         public final UUID owner;
         public final UUID key;
-        public final Character type;
+        public final String type;
         public final byte[] data;
 
-        public Blob(UUID owner, UUID key, Character type, byte[] data) {
+        public Blob(UUID owner, UUID key, String type, byte[] data) {
             this.owner = owner;
             this.key = key;
             this.type = type;

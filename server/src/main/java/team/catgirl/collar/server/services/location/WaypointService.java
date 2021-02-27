@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * Manages private waypoints
  */
 public final class WaypointService {
-    private static final char WAYPOINT_BLOB_TYPE = 'W';
+    private static final String WAYPOINT_BLOB_TYPE = "W";
 
     private final ProfileStorage storage;
 

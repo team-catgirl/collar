@@ -56,6 +56,6 @@ public final class Services {
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, sessions);
-        this.waypoints = new WaypointService(profileStorage, identityStore.getIdentity());
+        this.waypoints = new WaypointService(profileStorage);
     }
 }

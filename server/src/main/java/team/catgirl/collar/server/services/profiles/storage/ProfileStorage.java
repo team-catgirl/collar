@@ -27,6 +27,8 @@ public class ProfileStorage {
 
     public ProfileStorage(MongoDatabase db) {
         this.docs = db.getCollection("profile_storage");
+        Map<String, Object> index = Map.of(FIELD_OWNER, 1, FIELD_KEY, 1, FIELD_TYPE, 1);
+        this.docs.createIndex(new Document(index));
     }
 
     public void store(UUID owner, UUID key, byte[] data, char w) {
@@ -45,14 +47,12 @@ public class ProfileStorage {
     }
 
     public List<Blob> find(UUID owner, Character type) {
-        MongoCursor<Blob> iterator = docs.find(and(eq(FIELD_OWNER, owner), eq(FIELD_KEY, type))).map(document -> {
-            return new Blob(
-                    document.get(FIELD_OWNER, UUID.class),
-                    document.get(FIELD_KEY, UUID.class),
-                    document.get(FIELD_TYPE, Character.class),
-                    document.get(FIELD_TYPE, Binary.class).getData()
-            );
-        }).iterator();
+        MongoCursor<Blob> iterator = docs.find(and(eq(FIELD_OWNER, owner), eq(FIELD_KEY, type))).map(document -> new Blob(
+                document.get(FIELD_OWNER, UUID.class),
+                document.get(FIELD_KEY, UUID.class),
+                document.get(FIELD_TYPE, Character.class),
+                document.get(FIELD_TYPE, Binary.class).getData()
+        )).iterator();
         List<Blob> blobs = new ArrayList<>();
         while (iterator.hasNext()) {
             blobs.add(iterator.next());

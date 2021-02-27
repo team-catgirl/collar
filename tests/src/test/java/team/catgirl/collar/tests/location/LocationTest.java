@@ -18,6 +18,7 @@ import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -92,7 +93,40 @@ public class LocationTest extends CollarTest {
     }
 
     @Test
-    public void waypointsCreateAndDelete() {
+    public void privateWaypointsCreateAndDelete() {
+        Assert.assertTrue(alicePlayer.collar.location().privateWaypoints().isEmpty());
+        Location location = new Location(-3000d, 64d, -3000d, Dimension.OVERWORLD);
+        alicePlayer.collar.location().addWaypoint("My base", location);
+        Assert.assertFalse(alicePlayer.collar.location().privateWaypoints().isEmpty());
+        Waypoint waypoint = alicePlayer.collar.location().privateWaypoints().iterator().next();
+        Assert.assertEquals("My base", waypoint.name);
+        Assert.assertEquals(location, waypoint.location);
+        alicePlayer.collar.location().removeWaypoint(waypoint);
+        Assert.assertTrue(alicePlayer.collar.location().privateWaypoints().isEmpty());
+    }
+
+    @Test
+    public void privateWaypointsArriveOnConnect() {
+        PrivateWaypointListener listener = new PrivateWaypointListener();
+        alicePlayer.collar.location().subscribe(listener);
+        Assert.assertTrue(alicePlayer.collar.location().privateWaypoints().isEmpty());
+        Location location = new Location(-3000d, 64d, -3000d, Dimension.OVERWORLD);
+        alicePlayer.collar.location().addWaypoint("My base", location);
+        alicePlayer.collar.location().addWaypoint("Cute base", location);
+        Assert.assertEquals(2, alicePlayer.collar.location().privateWaypoints().size());
+
+        alicePlayer.collar.disconnect();
+        waitForCondition("alice disconnected", () -> alicePlayer.collar.getState() == Collar.State.DISCONNECTED);
+        alicePlayer.collar.connect();
+        waitForCondition("alice connected", () -> alicePlayer.collar.getState() == Collar.State.CONNECTED, 25, TimeUnit.SECONDS);
+        waitForCondition("has waypoints", () -> listener.privateWaypoints != null);
+
+        Assert.assertTrue(listener.privateWaypoints.stream().anyMatch(waypoint -> waypoint.name.equals("My Base") && waypoint.location.equals(location)));
+        Assert.assertTrue(listener.privateWaypoints.stream().anyMatch(waypoint -> waypoint.name.equals("Cute base") && waypoint.location.equals(location)));
+    }
+
+    @Test
+    public void groupWaypointsCreateAndDelete() {
 
         GroupsTest.TestGroupsListener aliceListener = new GroupsTest.TestGroupsListener();
         WaypointListener aliceWaypointListener = new WaypointListener();
@@ -265,6 +299,15 @@ public class LocationTest extends CollarTest {
         @Override
         public void onGroupInvited(Collar collar, GroupsApi groupsApi, GroupInvitation invitation) {
             groupsApi.accept(invitation);
+        }
+    }
+
+    public static class PrivateWaypointListener implements LocationListener {
+        public Set<Waypoint> privateWaypoints;
+
+        @Override
+        public void onPrivateWaypointsReceived(Collar collar, LocationApi locationApi, Set<Waypoint> privateWaypoints) {
+            this.privateWaypoints = privateWaypoints;
         }
     }
 }

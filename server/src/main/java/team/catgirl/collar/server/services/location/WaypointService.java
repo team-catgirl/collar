@@ -16,16 +16,16 @@ import java.util.stream.Collectors;
  * Manages private waypoints
  */
 public final class WaypointService {
-    private final ProfileStorage storage;
-    private final ServerIdentity serverIdentity;
+    private static final char WAYPOINT_BLOB_TYPE = 'W';
 
-    public WaypointService(ProfileStorage storage, ServerIdentity serverIdentity) {
+    private final ProfileStorage storage;
+
+    public WaypointService(ProfileStorage storage) {
         this.storage = storage;
-        this.serverIdentity = serverIdentity;
     }
 
     public void createWaypoint(CreateWaypointRequest req) {
-        storage.store(req.identity.owner, req.waypointId, req.waypoint, 'W');
+        storage.store(req.identity.owner, req.waypointId, req.waypoint, WAYPOINT_BLOB_TYPE);
     }
 
     public void removeWaypoint(RemoveWaypointRequest req) {
@@ -33,7 +33,7 @@ public final class WaypointService {
     }
 
     public List<EncryptedWaypoint> getWaypoints(GetWaypointsRequest req) {
-        List<Blob> blobs = storage.find(req.identity.owner, 'W');
+        List<Blob> blobs = storage.find(req.identity.owner, WAYPOINT_BLOB_TYPE);
         return blobs.stream().map(blob -> new EncryptedWaypoint(blob.key, blob.data)).collect(Collectors.toList());
     }
 }

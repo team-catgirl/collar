@@ -421,6 +421,7 @@ public final class Collar {
                     configuration.listener.onMinecraftAccountVerificationFailed(collar, response.minecraftSession);
                 } else if (resp instanceof PrivateIdentityMismatchResponse) {
                     PrivateIdentityMismatchResponse response = (PrivateIdentityMismatchResponse) resp;
+                    LOGGER.log(Level.INFO, "SessionFailedResponse with private identity mismatch");
                     configuration.listener.onPrivateIdentityMismatch(collar, response.url);
                 } else {
                     LOGGER.log(Level.INFO, "SessionFailedResponse with general server failure");

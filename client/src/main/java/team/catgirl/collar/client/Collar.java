@@ -39,6 +39,7 @@ import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse.PrivateIdentityMismatchResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -384,7 +385,7 @@ public final class Collar {
                 if (identityStore == null) {
                     identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
                 }
-                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
+                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get(), identityStore.privateIdentityToken());
                 sendRequest(webSocket, request);
                 keepAlive.stop();
                 keepAlive.start(identity);
@@ -415,9 +416,12 @@ public final class Collar {
             } else if (resp instanceof SessionFailedResponse) {
                 LOGGER.log(Level.INFO, "SessionFailedResponse received");
                 if (resp instanceof MojangVerificationFailedResponse) {
-                    MojangVerificationFailedResponse response = (MojangVerificationFailedResponse)resp;
+                    MojangVerificationFailedResponse response = (MojangVerificationFailedResponse) resp;
                     LOGGER.log(Level.INFO, "SessionFailedResponse with mojang session verification failure");
                     configuration.listener.onMinecraftAccountVerificationFailed(collar, response.minecraftSession);
+                } else if (resp instanceof PrivateIdentityMismatchResponse) {
+                    PrivateIdentityMismatchResponse response = (PrivateIdentityMismatchResponse) resp;
+                    configuration.listener.onPrivateIdentityMismatch(collar, response.url);
                 } else {
                     LOGGER.log(Level.INFO, "SessionFailedResponse with general server failure");
                 }

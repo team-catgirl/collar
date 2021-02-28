@@ -41,6 +41,11 @@ public class CollarWebAppUrlProvider implements AppUrlProvider {
     }
 
     @Override
+    public String resetPrivateIdentity() {
+        return builder.withPath("/reset").toString();
+    }
+
+    @Override
     public String deviceVerificationUrl(String token) {
         return builder.withPath("/device/accept/" + token).toString();
     }

@@ -5,6 +5,7 @@ import spark.ModelAndView;
 import spark.Request;
 import spark.Response;
 import team.catgirl.collar.api.http.*;
+import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ForbiddenException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
@@ -22,7 +23,9 @@ import team.catgirl.collar.server.services.authentication.VerificationToken;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.devices.DeviceService.TrustDeviceResponse;
 import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
 import team.catgirl.collar.server.services.textures.TextureService.GetTextureContentRequest;
 import team.catgirl.collar.utils.Utils;
 
@@ -133,6 +136,17 @@ public class WebServer {
                         String id = request.params("id");
                         UUID uuid = UUID.fromString(id);
                         return services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(uuid)).profile.toPublic();
+                    });
+                    post("/reset", (request, response) -> {
+                        LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), LoginRequest.class);
+                        RequestContext context = RequestContext.from(request);
+                        LoginResponse loginResp = services.auth.login(context, req);
+                        if (!loginResp.profile.id.equals(context.owner)) {
+                            throw new BadRequestException("user mismatch");
+                        }
+                        services.profileStorage.delete(context.owner);
+                        services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(new byte[0]));
+                        return new Object();
                     });
                     get("/devices", (request, response) -> {
                         return services.devices.findDevices(RequestContext.from(request), services.jsonMapper.readValue(request.bodyAsBytes(), DeviceService.FindDevicesRequest.class));

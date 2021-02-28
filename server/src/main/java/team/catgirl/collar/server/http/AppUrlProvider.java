@@ -24,6 +24,12 @@ public interface AppUrlProvider {
     String signupUrl();
 
     /**
+     * URL to reset the private identity token and delete encrypted blobs
+     * @return url
+     */
+    String resetPrivateIdentity();
+
+    /**
      * URL for verifying the device
      * @param token to link identity and device
      * @return url
@@ -36,5 +42,9 @@ public interface AppUrlProvider {
      */
     String emailVerificationUrl(String token);
 
+    /**
+     * @param token of password reset
+     * @return url
+     */
     String resetPassword(String token);
 }

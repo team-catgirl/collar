@@ -22,9 +22,27 @@ public abstract class SessionFailedResponse extends ProtocolResponse {
         public final MinecraftSession minecraftSession;
 
         @JsonCreator
-        public MojangVerificationFailedResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("minecraftSession") MinecraftSession minecraftSession) {
+        public MojangVerificationFailedResponse(@JsonProperty("identity") ServerIdentity identity,
+                                                @JsonProperty("minecraftSession") MinecraftSession minecraftSession) {
             super(identity);
             this.minecraftSession = minecraftSession;
+        }
+    }
+
+    /**
+     * Fired when there is a mismatch between the stored private identity token and the token supplied by the client
+     * on the {@link StartSessionRequest}
+     * The user will need to login to collar and delete their data before proceeding
+     */
+    public static final class PrivateIdentityMismatchResponse extends SessionFailedResponse {
+        @JsonProperty("url")
+        public final String url;
+
+        @JsonCreator
+        public PrivateIdentityMismatchResponse(@JsonProperty("identity") ServerIdentity identity,
+                                               @JsonProperty("url") String url) {
+            super(identity);
+            this.url = url;
         }
     }
 

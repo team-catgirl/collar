@@ -25,6 +25,11 @@ public class DefaultAppUrlProvider implements AppUrlProvider {
     }
 
     @Override
+    public String resetPrivateIdentity() {
+        return this.baseUrl.withPath("/app/reset/").toString();
+    }
+
+    @Override
     public String deviceVerificationUrl(String token) {
         return this.baseUrl.withPath("/app/devices/trust/" + token).toString();
     }

@@ -13,6 +13,7 @@ import team.catgirl.collar.protocol.identity.IdentifyResponse;
 import team.catgirl.collar.protocol.keepalive.KeepAliveRequest;
 import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse.PrivateIdentityMismatchResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -26,13 +27,17 @@ import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.*;
+import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
@@ -112,12 +117,17 @@ public class CollarServer {
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;
-            if (services.minecraftSessionVerifier.verify(request.session)) {
-                services.sessions.identify(session, req.identity, request.session.toPlayer());
-                sendPlain(session, new StartSessionResponse(serverIdentity));
+            if (processPrivateIdentityToken(request)) {
+                sendPlain(session, new PrivateIdentityMismatchResponse(serverIdentity, services.urlProvider.resetPrivateIdentity()));
+                services.sessions.stopSession(session, "Private identity mismatch", null, sessionStopped);
             } else {
-                sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
-                services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
+                if (services.minecraftSessionVerifier.verify(request.session)) {
+                    services.sessions.identify(session, req.identity, request.session.toPlayer());
+                    sendPlain(session, new StartSessionResponse(serverIdentity));
+                } else {
+                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
+                    services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
+                }
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
@@ -138,6 +148,20 @@ public class CollarServer {
                 }
             }
         }
+    }
+
+    /**
+     * @param request session starting
+     * @return identity token is OK
+     */
+    private boolean processPrivateIdentityToken(StartSessionRequest request) {
+        RequestContext context = RequestContext.from(request.identity);
+        Profile profile = services.profiles.getProfile(context, GetProfileRequest.byId(request.identity.id())).profile;
+        if (profile.privateIdentityToken == null || profile.privateIdentityToken.length == 0) {
+            services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(request.privateIdentityToken));
+            return true;
+        }
+        return Arrays.equals(profile.privateIdentityToken, request.privateIdentityToken);
     }
 
     private BiConsumer<ClientIdentity, ProtocolResponse> createSender() {

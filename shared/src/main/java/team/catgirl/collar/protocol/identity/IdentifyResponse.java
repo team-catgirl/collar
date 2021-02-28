@@ -11,7 +11,8 @@ public final class IdentifyResponse extends ProtocolResponse {
     public final PublicProfile profile;
 
     @JsonCreator
-    public IdentifyResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("profile") PublicProfile profile) {
+    public IdentifyResponse(@JsonProperty("identity") ServerIdentity identity,
+                            @JsonProperty("profile") PublicProfile profile) {
         super(identity);
         this.profile = profile;
     }

@@ -352,7 +352,8 @@ public final class Collar {
                 LOGGER.log(Level.INFO, "Existing installation. Loading the store and identifying with server " + serverIdentity);
                 IdentityKey publicKey = store.getIdentityKeyPair().getPublicKey();
                 ClientIdentity clientIdentity = new ClientIdentity(finalOwner, new PublicKey(publicKey.serialize()), null);
-                IdentifyRequest request = new IdentifyRequest(clientIdentity);
+                PrivateIdentity privateIdentity = PrivateIdentity.getOrCreate(configuration.homeDirectory);
+                IdentifyRequest request = new IdentifyRequest(clientIdentity, privateIdentity.token);
                 sendRequest(webSocket, request);
             }));
         }
@@ -385,7 +386,7 @@ public final class Collar {
                 if (identityStore == null) {
                     identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
                 }
-                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get(), identityStore.privateIdentityToken());
+                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
                 sendRequest(webSocket, request);
                 keepAlive.stop();
                 keepAlive.start(identity);
@@ -409,7 +410,7 @@ public final class Collar {
                 }
                 identityStore.trustIdentity(response.identity, response.preKeyBundle);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
-                sendRequest(webSocket, new IdentifyRequest(identity));
+                sendRequest(webSocket, new IdentifyRequest(identity, identityStore.privateIdentityToken()));
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));

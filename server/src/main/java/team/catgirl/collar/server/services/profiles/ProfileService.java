@@ -109,16 +109,16 @@ public class ProfileService {
         } else if (req.hashedPassword != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_HASHED_PASSWORD, req.hashedPassword)));
         } else if (req.privateIdentityToken != null) {
-            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, req.privateIdentityToken)));
+            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, new Binary(req.privateIdentityToken))));
         } else {
             throw new BadRequestException("bad request");
         }
         if (result.wasAcknowledged()) {
-            Document first = docs.find(eq(FIELD_PROFILE_ID, req.profile)).first();
-            if (first == null) {
+            Document document = docs.find(eq("_id", result.getUpsertedId().asObjectId().getValue())).first();
+            if (document == null) {
                 throw new NotFoundException("could not find profile");
             }
-            return new UpdateProfileResponse(map(first));
+            return new UpdateProfileResponse(map(document));
         } else {
             throw new ServerErrorException("could not update profile");
         }

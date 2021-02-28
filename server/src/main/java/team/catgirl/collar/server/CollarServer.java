@@ -97,17 +97,21 @@ public class CollarServer {
                 String url = services.urlProvider.deviceVerificationUrl(token);
                 sendPlain(session, new RegisterDeviceResponse(serverIdentity, url, token));
             } else {
-                PublicProfile profile;
+                Profile profile;
                 try {
-                    profile = services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(req.identity.id())).profile.toPublic();
+                    profile = services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(req.identity.id())).profile;
                 } catch (NotFoundException e) {
                     LOGGER.log(Level.SEVERE, "Profile " + request.identity.id() + " does not exist but the client thinks it should.");
                     sendPlain(session, new IsUntrustedRelationshipResponse(serverIdentity));
                     services.sessions.stopSession(session, "Identity " + request.identity.id() + " was not found", null, null);
                     return;
                 }
-                LOGGER.log(Level.INFO, "Profile found for " + req.identity.id());
-                sendPlain(session, new IdentifyResponse(serverIdentity, profile));
+                if (processPrivateIdentityToken(profile, request)) {
+                    LOGGER.log(Level.INFO, "Profile found for " + req.identity.id());
+                    sendPlain(session, new IdentifyResponse(serverIdentity, profile.toPublic()));
+                } else {
+                    sendPlain(session, new PrivateIdentityMismatchResponse(serverIdentity, services.urlProvider.resetPrivateIdentity()));
+                }
             }
         } else if (req instanceof SendPreKeysRequest) {
             SendPreKeysRequest request = (SendPreKeysRequest) req;
@@ -117,17 +121,12 @@ public class CollarServer {
         } else if (req instanceof StartSessionRequest) {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;
-            if (processPrivateIdentityToken(request)) {
-                sendPlain(session, new PrivateIdentityMismatchResponse(serverIdentity, services.urlProvider.resetPrivateIdentity()));
-                services.sessions.stopSession(session, "Private identity mismatch", null, sessionStopped);
+            if (services.minecraftSessionVerifier.verify(request.session)) {
+                services.sessions.identify(session, req.identity, request.session.toPlayer());
+                sendPlain(session, new StartSessionResponse(serverIdentity));
             } else {
-                if (services.minecraftSessionVerifier.verify(request.session)) {
-                    services.sessions.identify(session, req.identity, request.session.toPlayer());
-                    sendPlain(session, new StartSessionResponse(serverIdentity));
-                } else {
-                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
-                    services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
-                }
+                sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
+                services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
             }
         } else if (req instanceof CheckTrustRelationshipRequest) {
             LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
@@ -150,18 +149,12 @@ public class CollarServer {
         }
     }
 
-    /**
-     * @param request session starting
-     * @return identity token is OK
-     */
-    private boolean processPrivateIdentityToken(StartSessionRequest request) {
-        RequestContext context = RequestContext.from(request.identity);
-        Profile profile = services.profiles.getProfile(context, GetProfileRequest.byId(request.identity.id())).profile;
+    private boolean processPrivateIdentityToken(Profile profile, IdentifyRequest req) {
         if (profile.privateIdentityToken == null || profile.privateIdentityToken.length == 0) {
-            services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(request.privateIdentityToken));
+            services.profiles.updateProfile(RequestContext.SERVER, UpdateProfileRequest.privateIdentityToken(req.privateIdentityToken));
             return true;
         }
-        return Arrays.equals(profile.privateIdentityToken, request.privateIdentityToken);
+        return Arrays.equals(profile.privateIdentityToken, req.privateIdentityToken);
     }
 
     private BiConsumer<ClientIdentity, ProtocolResponse> createSender() {

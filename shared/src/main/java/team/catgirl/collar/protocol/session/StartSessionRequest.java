@@ -9,15 +9,11 @@ import team.catgirl.collar.security.mojang.MinecraftSession;
 public final class StartSessionRequest extends ProtocolRequest {
     @JsonProperty("session")
     public final MinecraftSession session;
-    @JsonProperty("privateIdentityToken")
-    public final byte[] privateIdentityToken;
 
     @JsonCreator
     public StartSessionRequest(@JsonProperty("identity") ClientIdentity identity,
-                               @JsonProperty("session") MinecraftSession session,
-                               @JsonProperty("privateIdentityToken") byte[] privateIdentityToken) {
+                               @JsonProperty("session") MinecraftSession session) {
         super(identity);
         this.session = session;
-        this.privateIdentityToken = privateIdentityToken;
     }
 }

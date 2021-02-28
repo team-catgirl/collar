@@ -18,21 +18,28 @@ public final class Profile {
     public final String hashedPassword;
     @JsonProperty("emailVerified")
     public final Boolean emailVerified;
+    @JsonProperty("privateIdentityToken")
+    public final byte[] privateIdentityToken;
 
-    public Profile(UUID id, String email, String name, String hashedPassword, Boolean emailVerified) {
+    public Profile(UUID id, String email, String name, String hashedPassword, Boolean emailVerified, byte[] privateIdentityToken) {
         this.id = id;
         this.email = email;
         this.name = name;
         this.hashedPassword = hashedPassword;
         this.emailVerified = emailVerified;
+        this.privateIdentityToken = privateIdentityToken;
     }
 
     @JsonCreator
-    public Profile(@JsonProperty("id") UUID id, @JsonProperty("email") String email, @JsonProperty("name") String name, @JsonProperty("name") Boolean emailVerified) {
+    public Profile(@JsonProperty("id") UUID id,
+                   @JsonProperty("email") String email,
+                   @JsonProperty("name") String name,
+                   @JsonProperty("name") Boolean emailVerified) {
         this.id = id;
         this.email = email;
         this.name = name;
         this.emailVerified = emailVerified;
+        this.privateIdentityToken = null;
         this.hashedPassword = null;
     }
 

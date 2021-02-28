@@ -9,6 +9,7 @@ import com.mongodb.client.result.UpdateResult;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.bson.BsonObjectId;
 import org.bson.Document;
+import org.bson.types.Binary;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
@@ -31,6 +32,7 @@ public class ProfileService {
     private static final String FIELD_NAME = "name";
     private static final String FIELD_HASHED_PASSWORD = "hashedPassword";
     private static final String FIELD_EMAIL_VERIFIED = "emailVerified";
+    private static final String FIELD_PRIVATE_IDENTITY_TOKEN = "privateIdentityToken";
 
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
@@ -106,6 +108,8 @@ public class ProfileService {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_EMAIL_VERIFIED, req.emailVerified)));
         } else if (req.hashedPassword != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_HASHED_PASSWORD, req.hashedPassword)));
+        } else if (req.privateIdentityToken != null) {
+            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, req.privateIdentityToken)));
         } else {
             throw new BadRequestException("bad request");
         }
@@ -172,7 +176,8 @@ public class ProfileService {
         String name = doc.getString(FIELD_NAME);
         String hashedPassword = doc.getString(FIELD_HASHED_PASSWORD);
         boolean emailVerified = doc.getBoolean(FIELD_EMAIL_VERIFIED, false);
-        return new Profile(profileId, email, name, hashedPassword, emailVerified);
+        Binary privateIdentityToken = doc.get(FIELD_PRIVATE_IDENTITY_TOKEN, Binary.class);
+        return new Profile(profileId, email, name, hashedPassword, emailVerified, privateIdentityToken != null ? privateIdentityToken.getData() : null);
     }
 
     public static final class UpdateProfileRequest {
@@ -182,29 +187,29 @@ public class ProfileService {
         public final Boolean emailVerified;
         @JsonProperty("hashedPassword")
         public final String hashedPassword;
+        @JsonProperty("privateIdentityToken")
+        public final byte[] privateIdentityToken;
 
         public UpdateProfileRequest(@JsonProperty("profile") UUID profile,
                                     @JsonProperty("emailVerified") Boolean emailVerified,
-                                    @JsonProperty("hashedPassword") String hashedPassword) {
+                                    @JsonProperty("hashedPassword") String hashedPassword,
+                                    @JsonProperty("privateIdentityToken") byte[] privateIdentityToken) {
             this.profile = profile;
             this.emailVerified = emailVerified;
             this.hashedPassword = hashedPassword;
+            this.privateIdentityToken = privateIdentityToken;
         }
 
         public static UpdateProfileRequest emailVerified(UUID profile) {
-            return new UpdateProfileRequest(profile, true, null);
+            return new UpdateProfileRequest(profile, true, null, null);
         }
 
         public static UpdateProfileRequest hashedPassword(UUID profile, String newPassword) {
-            return new UpdateProfileRequest(profile, null, newPassword);
+            return new UpdateProfileRequest(profile, null, newPassword, null);
         }
 
-        public static UpdateProfileRequest removeWaypoint(UUID waypointId) {
-            return null;
-        }
-
-        public static UpdateProfileRequest addWaypoint(UUID waypointId, byte[] waypoint) {
-            return null;
+        public static UpdateProfileRequest privateIdentityToken(byte[] privateIdentityToken) {
+            return new UpdateProfileRequest(null, null, null, privateIdentityToken);
         }
     }
 

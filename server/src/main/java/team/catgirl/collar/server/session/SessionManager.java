@@ -137,7 +137,7 @@ public final class SessionManager {
         return sessions.values().stream()
                 .filter(sessionState -> sessionState.minecraftPlayer.inServerWith(player))
                 .filter(sessionState -> players.contains(sessionState.minecraftPlayer.id))
-                .map(sessionState -> new Player(sessionState.minecraftPlayer.id, sessionState.minecraftPlayer))
+                .map(SessionState::toPlayer)
                 .collect(Collectors.toList());
     }
 
@@ -158,7 +158,7 @@ public final class SessionManager {
         return sessions.values().stream()
                 .filter(sessionState -> sessionState.identity.equals(identity))
                 .findFirst()
-                .map(sessionState -> new Player(sessionState.minecraftPlayer.id, sessionState.minecraftPlayer));
+                .map(SessionState::toPlayer);
     }
 
     public Optional<Session> getSession(ClientIdentity identity) {

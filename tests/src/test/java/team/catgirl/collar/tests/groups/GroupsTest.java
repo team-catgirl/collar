@@ -5,11 +5,8 @@ import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.Member;
-import team.catgirl.collar.api.location.Dimension;
-import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.api.messaging.TextMessage;
-import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.groups.GroupInvitation;
 import team.catgirl.collar.client.api.groups.GroupsApi;
@@ -61,7 +58,7 @@ public class GroupsTest extends CollarTest {
         Group theGroup = alicePlayer.collar.groups().all().get(0);
 
         // Find eve
-        Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.equals(evePlayer.collar.player())).findFirst().orElseThrow();
+        Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.minecraftPlayer.equals(evePlayer.collar.player())).findFirst().orElseThrow();
 
         waitForCondition("eve is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsPlayer(evePlayer.collar.player()));
         waitForCondition("eve is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsPlayer(evePlayer.collar.player()));

@@ -336,13 +336,13 @@ public final class GroupService {
      * @param members members to send requests to. If null, defaults to the full member list.
      */
     private BatchProtocolResponse createGroupMembershipRequests(ClientIdentity requester, Group group, List<Member> members) {
-        MinecraftPlayer sender = sessions.findMinecraftPlayer(requester).orElse(null);
+        Player sender = sessions.findPlayer(requester).orElse(null);
         Collection<Member> memberList = members == null ? group.members.values() : members;
         Map<ProtocolResponse, ClientIdentity> responses = memberList.stream()
-                .filter(member -> member.membershipState == MembershipState.PENDING)
+                .filter(member -> member.player == null || member.membershipState == MembershipState.PENDING)
                 .map(member -> member.player)
                 .collect(Collectors.toMap(
-                        o -> new GroupInviteResponse(serverIdentity, group.id, group.type, sender, new ArrayList<>(group.members.keySet().stream().map(player -> player.minecraftPlayer).collect(Collectors.toList()))),
+                        o -> new GroupInviteResponse(serverIdentity, group.id, group.type, sender.minecraftPlayer, new ArrayList<>(group.members.keySet().stream().map(player -> player.minecraftPlayer).collect(Collectors.toList()))),
                         player -> sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("cannot find identity for " + player)))
                 );
         return new BatchProtocolResponse(serverIdentity, responses);

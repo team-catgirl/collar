@@ -1,6 +1,7 @@
 package team.catgirl.collar.utils;
 
 import java.io.*;
+import java.nio.file.Files;
 
 public final class IO {
     /**
@@ -29,6 +30,32 @@ public final class IO {
             bytes[i] = is.readByte();
         }
         return bytes;
+    }
+
+    /**
+     * Write all bytes to file
+     * @param file to write to
+     * @param bytes to write
+     */
+    public static void writeBytesToFile(File file, byte[] bytes) {
+        try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+            fileOutputStream.write(bytes);
+        } catch (IOException e) {
+            throw new IllegalStateException("could not write bytes to file " + file);
+        }
+    }
+
+    /**
+     * Read all the bytes from a file
+     * @param file to read from
+     * @return bytes
+     */
+    public static byte[] readBytesFromFile(File file) {
+        try {
+            return Files.readAllBytes(file.toPath());
+        } catch (IOException e) {
+            throw new IllegalStateException("could not read all bytes from file " + file);
+        }
     }
 
     public IO() {}

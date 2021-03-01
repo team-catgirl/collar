@@ -1,14 +1,13 @@
 package team.catgirl.collar.client.security;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.client.HomeDirectory;
 import team.catgirl.collar.security.TokenGenerator;
+import team.catgirl.collar.utils.IO;
 import team.catgirl.collar.utils.Utils;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -16,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
  * Identity used for storing and reading personal encrypted data on the server
  */
 public final class PrivateIdentity {
+    private static final int VERSION = 1;
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES";
 
@@ -25,6 +25,35 @@ public final class PrivateIdentity {
     private PrivateIdentity(SecretKey secretKey, byte[] token) {
         this.secretKey = secretKey;
         this.token = token;
+    }
+
+    private PrivateIdentity(byte[] bytes) {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
+            try (DataInputStream dataStream = new DataInputStream(inputStream)) {
+                int version = dataStream.readInt();
+                if (VERSION != version) {
+                    throw new IllegalStateException("invalid version " + version);
+                }
+                byte[] keyBytes = IO.readBytes(dataStream);
+                this.secretKey = new SecretKeySpec(keyBytes, 0, keyBytes.length, ALGORITHM);
+                this.token = IO.readBytes(dataStream);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("could not read identity.cif");
+        }
+    }
+
+    private byte[] serialize() {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            try (DataOutputStream dataStream = new DataOutputStream(outputStream)) {
+                dataStream.writeInt(VERSION);
+                IO.writeBytes(dataStream, secretKey.getEncoded());
+                IO.writeBytes(dataStream, token);
+            }
+            return outputStream.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("could not serialize identity.cif");
+        }
     }
 
     /**
@@ -40,14 +69,8 @@ public final class PrivateIdentity {
             throw new IllegalStateException("could not get the home directory for profiles", e);
         }
         if (file.exists()) {
-            State state;
-            try {
-                state = Utils.messagePackMapper().readValue(file, State.class);
-            } catch (IOException e) {
-                throw new IllegalStateException("could not read identity.cif", e);
-            }
-            SecretKey key = new SecretKeySpec(state.secretKey, 0, state.secretKey.length, ALGORITHM);
-            return new PrivateIdentity(key, state.token);
+            byte[] bytes = IO.readBytesFromFile(file);
+            return new PrivateIdentity(bytes);
         } else {
             KeyGenerator generator;
             try {
@@ -58,12 +81,8 @@ public final class PrivateIdentity {
             generator.init(256, Utils.secureRandom());
             byte[] token = TokenGenerator.byteToken(128);
             PrivateIdentity privateIdentity = new PrivateIdentity(generator.generateKey(), token);
-            State state = new State(privateIdentity.secretKey.getEncoded(), privateIdentity.encrypt(token));
-            try {
-                Utils.messagePackMapper().writeValue(file, state);
-            } catch (IOException e) {
-                throw new IllegalStateException("could not write identity.cif", e);
-            }
+            byte[] serialized = privateIdentity.serialize();
+            IO.writeBytesToFile(file, serialized);
             return privateIdentity;
         }
     }
@@ -103,19 +122,6 @@ public final class PrivateIdentity {
             return cipher.doFinal(bytes);
         } catch (IllegalBlockSizeException | BadPaddingException e) {
             throw new IllegalStateException("failed to decrypt", e);
-        }
-    }
-
-    private static class State {
-        @JsonProperty("secretKey")
-        public final byte[] secretKey;
-        @JsonProperty("token")
-        public final byte[] token;
-
-        public State(@JsonProperty("secretKey") byte[] secretKey,
-                     @JsonProperty("token") byte[] token) {
-            this.secretKey = secretKey;
-            this.token = token;
         }
     }
 }

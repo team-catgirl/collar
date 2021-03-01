@@ -8,10 +8,11 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.jetbrains.annotations.NotNull;
-import team.catgirl.collar.api.groups.Group;
-import team.catgirl.collar.api.groups.GroupType;
+import team.catgirl.collar.api.groups.*;
+import team.catgirl.collar.api.session.Player;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -21,8 +22,13 @@ import static com.mongodb.client.model.Filters.eq;
 public final class GroupStore {
 
     private static final String FIELD_ID = "id";
+    private static final String FIELD_NAME = "name";
     private static final String FIELD_TYPE = "type";
     private static final String FIELD_SERVER = "server";
+    private static final String FIELD_MEMBERS = "members";
+    private static final String FIELD_MEMBER_ROLE = "role";
+    private static final String FIELD_MEMBER_STATE = "state";
+    private static final String FIELD_MEMBER_PROFILE_ID = "profileId";
 
     private final MongoCollection<Document> docs;
 
@@ -87,16 +93,41 @@ public final class GroupStore {
         return result.getDeletedCount();
     }
 
-    @NotNull
     static Group mapFromDocument(Document doc) {
-        return null;
+        Map<Player, Member> members = doc.getList(FIELD_MEMBERS, Document.class, new ArrayList<>()).stream()
+                .map(GroupStore::mapMemberFrom)
+                .collect(Collectors.toMap(member -> member.player, member -> member));
+        UUID groupId = doc.get(FIELD_ID, UUID.class);
+        GroupType groupType = GroupType.valueOf(doc.getString(FIELD_TYPE));
+        String name = doc.getString(FIELD_NAME);
+        String server = doc.getString(FIELD_SERVER);
+        return new Group(groupId, name, groupType, server, members);
     }
 
     static Document mapToDocument(Group group) {
         Map<String, Object> doc = new HashMap<>();
         doc.put(FIELD_ID, group.id);
+        doc.put(FIELD_NAME, group.name);
         doc.put(FIELD_TYPE, group.type.name());
         doc.put(FIELD_SERVER, group.server);
-        return null;
+        doc.put(FIELD_MEMBERS, mapToMembersList(group.members.values()));
+        return new Document(doc);
+    }
+
+    private static List<Document> mapToMembersList(Collection<Member> values) {
+        return values.stream()
+                .map(member -> new Document(mapMember(member)))
+                .collect(Collectors.toList());
+    }
+
+    private static Member mapMemberFrom(Document document) {
+        Player player = new Player(document.get(FIELD_MEMBER_PROFILE_ID, UUID.class), null);
+        MembershipRole role = MembershipRole.valueOf(document.getString(FIELD_MEMBER_ROLE));
+        MembershipState state = MembershipState.valueOf(document.getString(FIELD_MEMBER_STATE));
+        return new Member(player, role, state);
+    }
+
+    private static Map<String, Object> mapMember(Member member) {
+        return Map.of(FIELD_MEMBER_ROLE, member.membershipRole, FIELD_MEMBER_STATE, member.membershipState, FIELD_MEMBER_PROFILE_ID, member.player.profile);
     }
 }

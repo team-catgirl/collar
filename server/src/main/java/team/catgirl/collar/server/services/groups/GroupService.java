@@ -64,7 +64,7 @@ public final class GroupService {
             if (group != null) {
                 throw new IllegalStateException("Group with id " + req.groupId + " already exists");
             }
-            group = Group.newGroup(req.groupId, req.type, player, players);
+            group = Group.newGroup(req.groupId, req.name, req.type, player, players);
             List<Member> members = group.members.values().stream()
                     .filter(member -> member.membershipRole.equals(MembershipRole.MEMBER))
                     .collect(Collectors.toList());
@@ -238,14 +238,13 @@ public final class GroupService {
 
     public BatchProtocolResponse updateNearbyGroups(NearbyGroups.Result result) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-
         result.add.forEach((uuid, nearbyGroup) -> {
             String server = nearbyGroup.players.stream().findFirst().orElseThrow(() -> new IllegalStateException("could not find any players")).minecraftPlayer.server;
             groupsById.compute(uuid, (uuid1, group) -> {
                 if (group != null) {
                     throw new IllegalStateException("group " + uuid + " already exists");
                 }
-                group = new Group(uuid, GroupType.NEARBY, server, Map.of());
+                group = new Group(uuid, null, GroupType.NEARBY, server, Map.of());
                 Map<Group, List<Member>> groupToMembers = new HashMap<>();
                 group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
                 for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {

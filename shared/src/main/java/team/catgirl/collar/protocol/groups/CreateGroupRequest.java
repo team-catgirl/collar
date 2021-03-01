@@ -15,6 +15,8 @@ import java.util.UUID;
 public final class CreateGroupRequest extends ProtocolRequest {
     @JsonProperty("groupId")
     public final UUID groupId;
+    @JsonProperty("name")
+    public final String name;
     @JsonProperty("type")
     public final GroupType type;
     @JsonProperty("players")
@@ -23,10 +25,12 @@ public final class CreateGroupRequest extends ProtocolRequest {
     @JsonCreator
     public CreateGroupRequest(@JsonProperty("identity") ClientIdentity identity,
                               @JsonProperty("groupId") UUID groupId,
+                              @JsonProperty("name") String name,
                               @JsonProperty("type") GroupType type,
                               @JsonProperty("players") List<UUID> players) {
         super(identity);
         this.groupId = groupId;
+        this.name = name;
         this.type = type;
         this.players = players;
     }

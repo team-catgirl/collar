@@ -71,8 +71,8 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * Create a group with other players
      * @param players players
      */
-    public void create(GroupType type, List<UUID> players) {
-        sender.accept(new CreateGroupRequest(collar.identity(), UUID.randomUUID(), type, players));
+    public void create(String name, GroupType type, List<UUID> players) {
+        sender.accept(new CreateGroupRequest(collar.identity(), UUID.randomUUID(), name, type, players));
     }
 
     /**

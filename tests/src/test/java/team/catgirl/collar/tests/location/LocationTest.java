@@ -45,10 +45,10 @@ public class LocationTest extends CollarTest {
         evePlayer.collar.location().subscribe(eveLocationListener);
 
         // Put alice and bob in a group
-        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId));
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId));
 
         // Put eve in her own group
-        evePlayer.collar.groups().create(GroupType.PARTY, List.of());
+        evePlayer.collar.groups().create("not cute group", GroupType.PARTY, List.of());
 
         waitForCondition("Alice joined group", () -> aliceGroupListener.group != null);
         waitForCondition("Bob joined group", () -> bobGroupListener.group != null);
@@ -143,7 +143,7 @@ public class LocationTest extends CollarTest {
         evePlayer.collar.location().subscribe(eveWaypointListener);
 
         // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
 
         // Check that Eve and Bob received their invitations
         waitForCondition("Eve invite received", () -> eveListener.invitation != null);
@@ -208,7 +208,7 @@ public class LocationTest extends CollarTest {
         evePlayer.collar.location().subscribe(eveWaypointListener);
 
         // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId));
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId));
 
         // Check that Eve and Bob received their invitations
         waitForCondition("Bob invite received", () -> bobListener.invitation != null);

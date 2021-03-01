@@ -12,6 +12,8 @@ public final class Group {
 
     @JsonProperty("id")
     public final UUID id;
+    @JsonProperty("name")
+    public final String name;
     @JsonProperty("type")
     public final GroupType type;
     @JsonProperty("server")
@@ -20,20 +22,22 @@ public final class Group {
     public final Map<Player, Member> members;
 
     public Group(@JsonProperty("id") UUID id,
+                 @JsonProperty("name") String name,
                  @JsonProperty("type") GroupType type,
                  @JsonProperty("server") String server,
                  @JsonProperty("members") Map<Player, Member> members) {
         this.id = id;
+        this.name = name;
         this.type = type;
         this.server = server;
         this.members = members;
     }
 
-    public static Group newGroup(UUID id, GroupType type, Player owner, List<Player> members) {
+    public static Group newGroup(UUID id, String name, GroupType type, Player owner, List<Player> members) {
         ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder()
                 .put(owner, new Member(owner, MembershipRole.OWNER, MembershipState.ACCEPTED));
         members.forEach(player -> state.put(player, new Member(player, MembershipRole.MEMBER, MembershipState.PENDING)));
-        return new Group(id, type, owner.minecraftPlayer.server, state.build());
+        return new Group(id, name, type, owner.minecraftPlayer.server, state.build());
     }
 
     public boolean containsPlayer(Player player) {
@@ -54,19 +58,19 @@ public final class Group {
         if (newMembershipState != MembershipState.DECLINED) {
             state = state.put(player, member.updateMembershipState(newMembershipState));
         }
-        return new Group(id, type, server, state.build());
+        return new Group(id, name, type, server, state.build());
     }
 
     public Group removeMember(Player player) {
         List<Map.Entry<Player, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList());
         ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder().putAll(members);
-        return new Group(id, type, server, state.build());
+        return new Group(id, name, type, server, state.build());
     }
 
     public Group removeMember(MinecraftPlayer player) {
         List<Map.Entry<Player, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().minecraftPlayer.equals(player)).collect(Collectors.toList());
         ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder().putAll(members);
-        return new Group(id, type, server, state.build());
+        return new Group(id, name, type, server, state.build());
     }
 
     public Group addMembers(List<Player> players, MembershipRole role, MembershipState membershipState, BiConsumer<Group, List<Member>> newMemberConsumer) {
@@ -80,7 +84,7 @@ public final class Group {
                 newMembers.add(newMember);
             }
         });
-        Group group = new Group(id, type, server, state.build());
+        Group group = new Group(id, name, type, server, state.build());
         newMemberConsumer.accept(group, newMembers);
         return group;
     }

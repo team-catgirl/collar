@@ -45,7 +45,7 @@ public class GroupsTest extends CollarTest {
     public void createGroupAndPerformMembershipActions() {
 
         // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
 
         // Check that Eve and Bob received their invitations
         waitForCondition("Eve invite received", () -> eveListener.invitation != null);
@@ -106,7 +106,7 @@ public class GroupsTest extends CollarTest {
         evePlayer.collar.messaging().subscribe(eveMessages);
 
         // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
 
         // Check that Eve and Bob received their invitations
         waitForCondition("Eve invite received", () -> eveListener.invitation != null);

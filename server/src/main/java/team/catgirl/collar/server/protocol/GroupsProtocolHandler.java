@@ -58,9 +58,16 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     }
 
     @Override
+    public void onSessionStarted(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
+        super.onSessionStarted(identity, player, sender);
+        sender.accept(null, groups.playerIsOnline(identity, player));
+    }
+
+    @Override
     public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
+        super.onSessionStopping(identity, player, sender);
         if (player != null) {
-            sender.accept(null, groups.removeUserFromAllGroups(player));
+            sender.accept(null, groups.playerIsOffline(identity, player));
         }
     }
 }

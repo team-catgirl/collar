@@ -31,6 +31,7 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrust
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.*;
 import team.catgirl.collar.server.services.profiles.Profile;
@@ -56,6 +57,7 @@ public class CollarServer {
     private static final Logger LOGGER = Logger.getLogger(CollarServer.class.getName());
 
     private final List<ProtocolHandler> protocolHandlers;
+    private final BiConsumer<ClientIdentity, Player> sessionStarted;
     private final BiConsumer<ClientIdentity, Player> sessionStopped;
     private final ConcurrentMap<Session, Bucket> buckets = new ConcurrentHashMap<>();
     private final Services services;
@@ -63,6 +65,7 @@ public class CollarServer {
     public CollarServer(Services services) {
         this.services = services;
         this.protocolHandlers = new ArrayList<>();
+        this.sessionStarted = (identity, player) -> protocolHandlers.forEach(protocolHandler -> protocolHandler.onSessionStarted(identity, player, this::send));
         this.sessionStopped = (identity, player) -> protocolHandlers.forEach(protocolHandler -> protocolHandler.onSessionStopping(identity, player, this::send));
 
         protocolHandlers.add(new GroupsProtocolHandler(services.groups));
@@ -146,8 +149,10 @@ public class CollarServer {
             LOGGER.log(Level.INFO, "Starting session with " + req.identity);
             StartSessionRequest request = (StartSessionRequest)req;
             if (services.minecraftSessionVerifier.verify(request.session)) {
-                services.sessions.identify(session, req.identity, request.session.toPlayer());
+                MinecraftPlayer minecraftPlayer = request.session.toPlayer();
+                services.sessions.identify(session, req.identity, minecraftPlayer);
                 sendPlain(session, new StartSessionResponse(serverIdentity));
+                sessionStarted.accept(req.identity, new Player(req.identity.id(), minecraftPlayer));
             } else {
                 sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
                 services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);

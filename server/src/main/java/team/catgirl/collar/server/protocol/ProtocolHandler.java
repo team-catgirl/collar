@@ -23,10 +23,18 @@ public abstract class ProtocolHandler {
     public abstract boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender);
 
     /**
+     * Fired when the session has started and all the session information is available
+     * @param identity for which the session was started
+     * @param player for which the session was started
+     * @param sender to send responses to clients
+     */
+    public void onSessionStarted(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {};
+
+    /**
      * Fired before the session is stopped and all session state information is removed from {@link team.catgirl.collar.server.session.SessionManager}
      * @param identity for which the session is being stopped
      * @param player for which the sesssion is being stopped
      * @param sender to send responses to clients
      */
-    public abstract void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender);
+    public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {};
 }

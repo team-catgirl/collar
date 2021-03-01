@@ -4,6 +4,7 @@ import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.groups.MembershipRole;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.sdht.SDHTApi;
@@ -200,14 +201,34 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             synchronized (this) {
                 GroupInviteResponse response = (GroupInviteResponse) resp;
                 GroupInvitation invitation = GroupInvitation.from(response);
-                if (response.groupType == GroupType.PARTY) {
-                    invitations.put(invitation.groupId, invitation);
-                    fireListener("onGroupInvited", groupsListener -> {
-                        groupsListener.onGroupInvited(collar, this, invitation);
+                switch (response.groupType) {
+                    case GROUP:
+                    case PARTY:
+                        invitations.put(invitation.groupId, invitation);
+                        fireListener("onGroupInvited", groupsListener -> {
+                            groupsListener.onGroupInvited(collar, this, invitation);
+                        });
+                        break;
+                    case NEARBY:
+                        // Auto-accept invitations from location typed groups
+                        accept(invitation);
+                        break;
+                    default:
+                        throw new IllegalStateException("unknown group type" + response.groupType);
+                }
+            }
+            return true;
+        } else if (resp instanceof GroupMemberOfflineResponse) {
+            synchronized (this) {
+                GroupMemberOfflineResponse response = (GroupMemberOfflineResponse) resp;
+                Group group = groups.get(response.groupId);
+                if (group != null) {
+                    Player player = new Player(response.sender.id(), null);
+                    Group updatedGroup = group.updatePlayer(player);
+                    groups.put(updatedGroup.id, updatedGroup);
+                    fireListener("onGroupLeft", groupsListener -> {
+                        groupsListener.onGroupMemberOffline(collar, this, updatedGroup, player);
                     });
-                } else if (response.groupType == GroupType.NEARBY) {
-                    // Auto-accept invitations from location typed groups
-                    accept(invitation);
                 }
             }
             return true;

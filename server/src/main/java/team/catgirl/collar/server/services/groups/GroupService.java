@@ -37,6 +37,8 @@ public final class GroupService {
         this.store = store;
         this.serverIdentity = serverIdentity;
         this.sessions = sessions;
+        // add all groups in storage in the groups map
+        store.findGroups().forEach(group -> groupsById.put(group.id, group));
     }
 
     /**
@@ -72,6 +74,62 @@ public final class GroupService {
             response.concat(createGroupMembershipRequests(req.identity, group, members));
             response.add(req.identity, new CreateGroupResponse(serverIdentity, group));
             return updateState(group);
+        });
+        return response;
+    }
+
+    /**
+     * Set the player as online
+     * @param identity of the joining player
+     * @param player the joining player
+     * @return responses to send
+     */
+    public ProtocolResponse playerIsOnline(ClientIdentity identity, Player player) {
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        groupsById.values().stream().filter(group -> group.type == GroupType.GROUP && group.containsPlayer(player)).map(group -> group.id).forEach(groupId -> {
+            groupsById.compute(groupId, (uuid, group) -> {
+                if (group == null) {
+                    return null;
+                }
+                group = group.updatePlayer(player);
+                // Send a response back to the player to say that they have rejoined the group after being offline
+                response.add(identity, new JoinGroupResponse(serverIdentity, group.id, identity, player.minecraftPlayer, null));
+                // Let everyone else in the group know that this identity has come online
+                Group finalGroup = group;
+                BatchProtocolResponse updates = createMemberMessages(
+                        group,
+                        member -> member.membershipState.equals(MembershipState.ACCEPTED),
+                        ((memberIdentity, memberPlayer, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup.id, identity, memberPlayer, null)));
+                response.concat(updates);
+                return updateState(group);
+            });
+        });
+        return response;
+    }
+
+    /**
+     * Set the player as offline
+     * @param identity of the joining player
+     * @param player the joining player
+     * @return responses to send
+     */
+    public ProtocolResponse playerIsOffline(ClientIdentity identity, Player player) {
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        groupsById.values().stream().filter(group -> group.type == GroupType.GROUP && group.containsPlayer(player)).map(group -> group.id).forEach(groupId -> {
+            groupsById.compute(groupId, (uuid, group) -> {
+                if (group == null) {
+                    return null;
+                }
+                group = group.updatePlayer(player);
+                // Let everyone else in the group know that this identity has gone offline
+                Group finalGroup = group;
+                BatchProtocolResponse updates = createMemberMessages(
+                        group,
+                        member -> member.membershipState.equals(MembershipState.ACCEPTED),
+                        ((memberIdentity, memberPlayer, updatedMember) -> new GroupMemberOfflineResponse(serverIdentity, finalGroup.id, identity)));
+                response.concat(updates);
+                return updateState(group);
+            });
         });
         return response;
     }
@@ -285,7 +343,7 @@ public final class GroupService {
                 .map(member -> member.player)
                 .collect(Collectors.toMap(
                         o -> new GroupInviteResponse(serverIdentity, group.id, group.type, sender, new ArrayList<>(group.members.keySet().stream().map(player -> player.minecraftPlayer).collect(Collectors.toList()))),
-                        minecraftPlayer -> sessions.getIdentity(minecraftPlayer).orElseThrow(() -> new IllegalStateException("cannot find identity for " + minecraftPlayer)))
+                        player -> sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("cannot find identity for " + player)))
                 );
         return new BatchProtocolResponse(serverIdentity, responses);
     }
@@ -320,7 +378,7 @@ public final class GroupService {
         for (Map.Entry<Player, Member> memberEntry : group.members.entrySet()) {
             Player player = memberEntry.getKey();
             Member member = memberEntry.getValue();
-            if (!filter.test(member)) {
+            if (!filter.test(member) && player.minecraftPlayer != null) {
                 continue;
             }
             sessions.getIdentity(player).ifPresent(clientIdentity -> {

@@ -49,6 +49,17 @@ public final class Group {
         return members.values().stream().anyMatch(member -> member.player.minecraftPlayer.equals(player));
     }
 
+    public Group updatePlayer(Player player) {
+        Member memberToUpdate = members.get(player);
+        if (memberToUpdate == null) {
+            throw new IllegalStateException(player + " is not a member of group " + id);
+        }
+        List<Map.Entry<Player, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList());
+        ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder().putAll(members);
+        state.put(player, new Member(player, memberToUpdate.membershipRole, memberToUpdate.membershipState));
+        return new Group(id, name, type, server, state.build());
+    }
+
     public Group updateMembershipState(Player player, MembershipState newMembershipState) {
         Member member = members.get(player);
         if (member == null) {
@@ -89,5 +100,4 @@ public final class Group {
         newMemberConsumer.accept(group, newMembers);
         return group;
     }
-
 }

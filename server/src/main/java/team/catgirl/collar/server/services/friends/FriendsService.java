@@ -91,7 +91,7 @@ public final class FriendsService {
         UUID owner = document.get(FIELD_OWNER, UUID.class);
         UUID friend = document.get(FIELD_FRIEND, UUID.class);
         return sessions.getSessionStateByOwner(friend)
-                .map(sessionState -> new Friend(owner, friend, Status.ONLINE, Set.of(sessionState.player.id)))
+                .map(sessionState -> new Friend(owner, friend, Status.ONLINE, Set.of(sessionState.minecraftPlayer.id)))
                 .orElse(new Friend(friend, owner, Status.OFFLINE, Set.of()));
     }
 

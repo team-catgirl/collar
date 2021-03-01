@@ -1,8 +1,7 @@
 package team.catgirl.collar.server.services.location;
 
 import com.google.common.collect.Sets;
-import team.catgirl.collar.api.groups.Player;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.api.session.Player;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

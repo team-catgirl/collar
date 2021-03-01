@@ -2,7 +2,7 @@ package team.catgirl.collar.server.services.location;
 
 import org.junit.Assert;
 import org.junit.Test;
-import team.catgirl.collar.api.groups.Player;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.Set;

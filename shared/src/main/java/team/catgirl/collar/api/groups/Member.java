@@ -2,9 +2,7 @@ package team.catgirl.collar.api.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.location.Location;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
-
-import java.util.UUID;
+import team.catgirl.collar.api.session.Player;
 
 public class Member {
     @JsonProperty("player")

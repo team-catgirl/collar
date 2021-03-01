@@ -3,7 +3,7 @@ package team.catgirl.collar.server.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.jetty.websocket.api.Session;
-import team.catgirl.collar.api.groups.Player;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.profiles.PublicProfile;

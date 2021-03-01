@@ -9,9 +9,8 @@ import io.github.bucket4j.Refill;
 import io.github.bucket4j.grid.RecoveryStrategy;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import team.catgirl.collar.api.groups.Player;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
-import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -32,11 +31,9 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrust
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.*;
 import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
 

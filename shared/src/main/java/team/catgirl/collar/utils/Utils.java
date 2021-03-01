@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import okhttp3.OkHttpClient;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.StringTokenizer;
 import java.util.UUID;
 
 public final class Utils {
@@ -20,18 +22,20 @@ public final class Utils {
 
     static {
         SimpleModule keys = new SimpleModule();
-        keys.addKeyDeserializer(MinecraftPlayer.class, new KeyDeserializer() {
+        keys.addKeyDeserializer(Player.class, new KeyDeserializer() {
             @Override
             public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
-                String id = key.substring(0, key.lastIndexOf(":"));
-                String server = key.substring(key.lastIndexOf(":") + 1);
-                return new MinecraftPlayer(UUID.fromString(id), server);
+                StringTokenizer tokenizer = new StringTokenizer(key, ":");
+                String profileId = tokenizer.nextToken();
+                String minecraftId = tokenizer.nextToken();
+                String minecraftServer = tokenizer.nextToken();
+                return new Player(UUID.fromString(profileId), new MinecraftPlayer(UUID.fromString(minecraftId), minecraftServer));
             }
         });
-        keys.addKeySerializer(MinecraftPlayer.class, new JsonSerializer<MinecraftPlayer>() {
+        keys.addKeySerializer(Player.class, new JsonSerializer<Player>() {
             @Override
-            public void serialize(MinecraftPlayer value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                gen.writeFieldName(value.id.toString() + ":" + value.server);
+            public void serialize(Player value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                gen.writeFieldName(value.profile + ":" + value.minecraftPlayer.id + ":" + value.minecraftPlayer.id);
             }
         });
 

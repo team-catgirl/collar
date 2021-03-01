@@ -1,7 +1,6 @@
 package team.catgirl.collar.server.services.location;
 
-import team.catgirl.collar.api.groups.Player;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.api.session.Player;
 
 import java.util.*;
 

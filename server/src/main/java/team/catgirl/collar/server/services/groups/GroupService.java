@@ -2,6 +2,7 @@ package team.catgirl.collar.server.services.groups;
 
 import com.google.common.collect.ImmutableList;
 import team.catgirl.collar.api.groups.*;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.messaging.SendMessageRequest;

@@ -2,6 +2,7 @@ package team.catgirl.collar.api.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.*;

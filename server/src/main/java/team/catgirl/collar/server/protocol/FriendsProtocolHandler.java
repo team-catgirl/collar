@@ -3,7 +3,7 @@ package team.catgirl.collar.server.protocol;
 import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.api.friends.Friend;
 import team.catgirl.collar.api.friends.Status;
-import team.catgirl.collar.api.groups.Player;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.friends.*;

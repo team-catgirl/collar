@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.protocol;
 
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
@@ -9,12 +10,10 @@ import team.catgirl.collar.protocol.identity.GetIdentityRequest;
 import team.catgirl.collar.protocol.identity.GetIdentityResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public class IdentityProtocolHandler extends ProtocolHandler {
 
@@ -45,5 +44,5 @@ public class IdentityProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {}
+    public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {}
 }

@@ -1,14 +1,13 @@
 package team.catgirl.collar.server.protocol;
 
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * Extensible protocol packet listener and sender
@@ -29,5 +28,5 @@ public abstract class ProtocolHandler {
      * @param player for which the sesssion is being stopped
      * @param sender to send responses to clients
      */
-    public abstract void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender);
+    public abstract void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender);
 }

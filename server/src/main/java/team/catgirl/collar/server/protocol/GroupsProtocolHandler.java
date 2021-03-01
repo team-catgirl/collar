@@ -1,18 +1,15 @@
 package team.catgirl.collar.server.protocol;
 
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
-import team.catgirl.collar.protocol.waypoints.CreateWaypointRequest;
-import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.security.ClientIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.services.groups.GroupService;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -61,7 +58,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {
+    public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
         if (player != null) {
             sender.accept(null, groups.removeUserFromAllGroups(player));
         }

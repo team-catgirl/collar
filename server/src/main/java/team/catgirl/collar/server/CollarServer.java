@@ -9,6 +9,7 @@ import io.github.bucket4j.Refill;
 import io.github.bucket4j.grid.RecoveryStrategy;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.protocol.PacketIO;
@@ -58,7 +59,7 @@ public class CollarServer {
     private static final Logger LOGGER = Logger.getLogger(CollarServer.class.getName());
 
     private final List<ProtocolHandler> protocolHandlers;
-    private final BiConsumer<ClientIdentity, MinecraftPlayer> sessionStopped;
+    private final BiConsumer<ClientIdentity, Player> sessionStopped;
     private final ConcurrentMap<Session, Bucket> buckets = new ConcurrentHashMap<>();
     private final Services services;
 
@@ -77,7 +78,7 @@ public class CollarServer {
     }
 
     @OnWebSocketConnect
-    public void connected(Session session) throws IOException {
+    public void connected(Session session) {
         LOGGER.log(Level.INFO, "New socket connected");
         buckets.computeIfAbsent(session, theSession -> Bucket4j.builder()
                 .addLimit(Bandwidth.simple(18000, Duration.ofSeconds(3600)))

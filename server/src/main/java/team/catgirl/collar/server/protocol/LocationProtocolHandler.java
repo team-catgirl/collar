@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.protocol;
 
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.api.waypoints.EncryptedWaypoint;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -14,7 +15,6 @@ import team.catgirl.collar.protocol.waypoints.GetWaypointsResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.services.location.PlayerLocationService;
 import team.catgirl.collar.server.services.location.WaypointService;
@@ -73,7 +73,7 @@ public class LocationProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {
+    public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
         BatchProtocolResponse resp = playerLocations.stopSharing(player);
         sender.accept(null, resp);
         playerLocations.removePlayerState(player);

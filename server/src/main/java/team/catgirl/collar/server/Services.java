@@ -12,6 +12,7 @@ import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.friends.FriendsService;
 import team.catgirl.collar.server.services.groups.GroupService;
+import team.catgirl.collar.server.services.groups.GroupStore;
 import team.catgirl.collar.server.services.location.PlayerLocationService;
 import team.catgirl.collar.server.services.location.WaypointService;
 import team.catgirl.collar.server.services.profiles.ProfileService;
@@ -52,7 +53,7 @@ public final class Services {
         this.tokenCrypter = configuration.tokenCrypter;
         this.auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter, configuration.email, urlProvider);
         this.minecraftSessionVerifier = configuration.minecraftSessionVerifier;
-        this.groups = new GroupService(identityStore.getIdentity(), sessions);
+        this.groups = new GroupService(new GroupStore(configuration.database), identityStore.getIdentity(), sessions);
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, sessions);

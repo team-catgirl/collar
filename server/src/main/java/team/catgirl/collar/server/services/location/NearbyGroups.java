@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.services.location;
 
 import com.google.common.collect.Sets;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.*;
@@ -13,9 +14,9 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class NearbyGroups {
 
-    private final ConcurrentMap<MinecraftPlayer, Set<String>> playerHashes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Player, Set<String>> playerHashes = new ConcurrentHashMap<>();
     private final ConcurrentMap<NearbyGroup, UUID> nearbyGroups = new ConcurrentHashMap<>();
-    private final ConcurrentMap<MinecraftPlayer, Set<NearbyGroup>> playerToGroups = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Player, Set<NearbyGroup>> playerToGroups = new ConcurrentHashMap<>();
 
     /**
      * Calculates any nearby groups for the minecraft player and anyone in the calculated group
@@ -24,11 +25,11 @@ public final class NearbyGroups {
      * @param hashes the players hashes
      * @return result delta
      */
-    public Result updateNearbyGroups(MinecraftPlayer player, Set<String> hashes) {
+    public Result updateNearbyGroups(Player player, Set<String> hashes) {
         playerHashes.compute(player, (thePlayer, strings) -> hashes);
         Map<UUID, NearbyGroup> add = new HashMap<>();
         Map<UUID, NearbyGroup> remove = new HashMap<>();
-        playerHashes.keySet().stream().filter(anotherPlayer -> anotherPlayer.inServerWith(player) && !anotherPlayer.equals(player)).forEach(anotherPlayer -> {
+        playerHashes.keySet().stream().filter(anotherPlayer -> anotherPlayer.minecraftPlayer.inServerWith(player.minecraftPlayer) && !anotherPlayer.minecraftPlayer.equals(player.minecraftPlayer)).forEach(anotherPlayer -> {
             Set<String> otherPlayersHashes = playerHashes.get(anotherPlayer);
             NearbyGroup group = new NearbyGroup(Set.of(player, anotherPlayer));
             if (Sets.difference(hashes, otherPlayersHashes).isEmpty()) {
@@ -61,10 +62,9 @@ public final class NearbyGroups {
 
     /**
      * Returns the groups to leave
-     * @param player
-     * @return
+     * @param player to remove
      */
-    public void removePlayerState(MinecraftPlayer player) {
+    public void removePlayerState(Player player) {
         playerHashes.remove(player);
         Set<NearbyGroup> groups = playerToGroups.remove(player);
         if (groups != null) {

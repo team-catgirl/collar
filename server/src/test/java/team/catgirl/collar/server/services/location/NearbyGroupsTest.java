@@ -2,6 +2,7 @@ package team.catgirl.collar.server.services.location;
 
 import org.junit.Assert;
 import org.junit.Test;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.Set;
@@ -10,9 +11,9 @@ import java.util.UUID;
 public class NearbyGroupsTest {
     @Test
     public void calculateGroup() {
-        MinecraftPlayer alice = new MinecraftPlayer(UUID.randomUUID(), "cute");
-        MinecraftPlayer bob = new MinecraftPlayer(UUID.randomUUID(), "cute");
-        MinecraftPlayer eve = new MinecraftPlayer(UUID.randomUUID(), "cute");
+        Player alice = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute"));
+        Player bob = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute"));
+        Player eve = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute"));
 
         NearbyGroups groups = new NearbyGroups();
         NearbyGroups.Result result = groups.updateNearbyGroups(alice, Set.of("alice", "bob"));

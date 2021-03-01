@@ -71,8 +71,8 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * Create a group with other players
      * @param players players
      */
-    public void create(List<UUID> players) {
-        sender.accept(new CreateGroupRequest(collar.identity(), UUID.randomUUID(), players));
+    public void create(GroupType type, List<UUID> players) {
+        sender.accept(new CreateGroupRequest(collar.identity(), UUID.randomUUID(), type, players));
     }
 
     /**
@@ -117,7 +117,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param member the member to remove
      */
     public void removeMember(Group group, Member member) {
-        sender.accept(new EjectGroupMemberRequest(identity(), group.id, member.player.id));
+        sender.accept(new EjectGroupMemberRequest(identity(), group.id, member.player.minecraftPlayer.id));
     }
 
     @Override

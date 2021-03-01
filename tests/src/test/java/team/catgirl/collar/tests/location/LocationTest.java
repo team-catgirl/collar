@@ -3,6 +3,7 @@ package team.catgirl.collar.tests.location;
 import org.junit.Assert;
 import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.api.waypoints.Waypoint;
@@ -44,10 +45,10 @@ public class LocationTest extends CollarTest {
         evePlayer.collar.location().subscribe(eveLocationListener);
 
         // Put alice and bob in a group
-        alicePlayer.collar.groups().create(List.of(bobPlayerId));
+        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId));
 
         // Put eve in her own group
-        evePlayer.collar.groups().create(List.of());
+        evePlayer.collar.groups().create(GroupType.PARTY, List.of());
 
         waitForCondition("Alice joined group", () -> aliceGroupListener.group != null);
         waitForCondition("Bob joined group", () -> bobGroupListener.group != null);
@@ -142,7 +143,7 @@ public class LocationTest extends CollarTest {
         evePlayer.collar.location().subscribe(eveWaypointListener);
 
         // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(List.of(bobPlayerId, evePlayerId));
+        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
 
         // Check that Eve and Bob received their invitations
         waitForCondition("Eve invite received", () -> eveListener.invitation != null);
@@ -207,7 +208,7 @@ public class LocationTest extends CollarTest {
         evePlayer.collar.location().subscribe(eveWaypointListener);
 
         // Alice creates a new group with bob and eve
-        alicePlayer.collar.groups().create(List.of(bobPlayerId));
+        alicePlayer.collar.groups().create(GroupType.PARTY, List.of(bobPlayerId));
 
         // Check that Eve and Bob received their invitations
         waitForCondition("Bob invite received", () -> bobListener.invitation != null);

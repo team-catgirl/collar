@@ -4,6 +4,7 @@ import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Member;
 import team.catgirl.collar.api.groups.MembershipState;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.sdht.SDHTEventRequest;
@@ -74,7 +75,7 @@ public class SDHTProtocolHandler extends ProtocolHandler {
 
     private Set<ClientIdentity> findListeners(ClientIdentity sender, UUID namespace) {
         Group group = groups.findGroup(namespace).orElseThrow(() -> new IllegalStateException("could not find group " + namespace));
-        MinecraftPlayer sendingPlayer = sessions.findPlayer(sender).orElseThrow(() -> new IllegalStateException("could not find sender " + sender));
+        Player sendingPlayer = sessions.findPlayer(sender).orElseThrow(() -> new IllegalStateException("could not find sender " + sender));
         if (!group.containsPlayer(sendingPlayer)) {
             throw new IllegalStateException("sender is not a member of group " + namespace);
         }
@@ -83,11 +84,11 @@ public class SDHTProtocolHandler extends ProtocolHandler {
             if (member.membershipState != MembershipState.ACCEPTED && sendingPlayer.equals(member.player)) {
                 continue;
             }
-            sessions.getIdentity(member.player).ifPresent(listeners::add);
+            sessions.getIdentity(member.player.profile).ifPresent(listeners::add);
         }
         return listeners;
     }
 
     @Override
-    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) { }
+    public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) { }
 }

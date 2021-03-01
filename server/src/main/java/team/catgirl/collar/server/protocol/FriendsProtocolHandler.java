@@ -1,15 +1,14 @@
 package team.catgirl.collar.server.protocol;
 
 import org.eclipse.jetty.websocket.api.Session;
-import org.jetbrains.annotations.NotNull;
 import team.catgirl.collar.api.friends.Friend;
 import team.catgirl.collar.api.friends.Status;
+import team.catgirl.collar.api.groups.Player;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.friends.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.services.friends.FriendsService;
@@ -23,7 +22,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -82,7 +80,7 @@ public class FriendsProtocolHandler extends ProtocolHandler {
     }
 
     @Override
-    public void onSessionStopping(ClientIdentity identity, MinecraftPlayer player, BiConsumer<Session, ProtocolResponse> sender) {
+    public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
         // Broadcast to the players friends that the player is now offline
         friends.getFriends(RequestContext.from(identity), new GetFriendsRequest(null, identity.owner)).friends.forEach(friend -> {
             sessions.getSessionStateByOwner(friend.owner).ifPresentOrElse(sessionState -> {

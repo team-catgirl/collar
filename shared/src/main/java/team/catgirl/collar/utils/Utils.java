@@ -24,7 +24,7 @@ public final class Utils {
         SimpleModule keys = new SimpleModule();
         keys.addKeyDeserializer(Player.class, new KeyDeserializer() {
             @Override
-            public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
+            public Object deserializeKey(String key, DeserializationContext ctxt) {
                 StringTokenizer tokenizer = new StringTokenizer(key, ":");
                 String profileId = tokenizer.nextToken();
                 String minecraftId = tokenizer.nextToken();

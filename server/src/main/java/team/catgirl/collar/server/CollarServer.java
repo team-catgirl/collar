@@ -151,7 +151,7 @@ public class CollarServer {
 
     private boolean processPrivateIdentityToken(Profile profile, IdentifyRequest req) {
         if (profile.privateIdentityToken == null || profile.privateIdentityToken.length == 0) {
-            services.profiles.updateProfile(RequestContext.SERVER, UpdateProfileRequest.privateIdentityToken(req.privateIdentityToken));
+            services.profiles.updateProfile(RequestContext.SERVER, UpdateProfileRequest.privateIdentityToken(profile.id, req.privateIdentityToken));
             return true;
         }
         return Arrays.equals(profile.privateIdentityToken, req.privateIdentityToken);

@@ -145,7 +145,7 @@ public class WebServer {
                             throw new BadRequestException("user mismatch");
                         }
                         services.profileStorage.delete(context.owner);
-                        services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(new byte[0]));
+                        services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(loginResp.profile.id, new byte[0]));
                         return new Object();
                     });
                     get("/devices", (request, response) -> {

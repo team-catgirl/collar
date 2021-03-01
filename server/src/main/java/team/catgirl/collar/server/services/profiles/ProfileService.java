@@ -114,11 +114,11 @@ public class ProfileService {
             throw new BadRequestException("bad request");
         }
         if (result.wasAcknowledged()) {
-            Document document = docs.find(eq("_id", result.getUpsertedId().asObjectId().getValue())).first();
-            if (document == null) {
+            Document first = docs.find(eq(FIELD_PROFILE_ID, req.profile)).first();
+            if (first == null) {
                 throw new NotFoundException("could not find profile");
             }
-            return new UpdateProfileResponse(map(document));
+            return new UpdateProfileResponse(map(first));
         } else {
             throw new ServerErrorException("could not update profile");
         }
@@ -208,8 +208,8 @@ public class ProfileService {
             return new UpdateProfileRequest(profile, null, newPassword, null);
         }
 
-        public static UpdateProfileRequest privateIdentityToken(byte[] privateIdentityToken) {
-            return new UpdateProfileRequest(null, null, null, privateIdentityToken);
+        public static UpdateProfileRequest privateIdentityToken(UUID profile, byte[] privateIdentityToken) {
+            return new UpdateProfileRequest(profile, null, null, privateIdentityToken);
         }
     }
 

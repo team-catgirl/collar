@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -39,15 +40,15 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     private static final Logger LOGGER = Logger.getLogger(SignalClientIdentityStore.class.getName());
 
     private final UUID owner;
-    private final PrivateIdentity privateIdentity;
+    private final Supplier<PrivateIdentity> privateIdentitySupplier;
     private final ClientSignalProtocolStore store;
     private final State state;
     private final File file;
     private final ReentrantReadWriteLock lock;
 
-    public SignalClientIdentityStore(UUID owner, PrivateIdentity privateIdentity, ClientSignalProtocolStore store, State state, File file) {
+    public SignalClientIdentityStore(UUID owner, Supplier<PrivateIdentity> privateIdentitySupplier, ClientSignalProtocolStore store, State state, File file) {
         this.owner = owner;
-        this.privateIdentity = privateIdentity;
+        this.privateIdentitySupplier = privateIdentitySupplier;
         this.store = store;
         this.state = state;
         this.file = file;
@@ -56,7 +57,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public byte[] privateIdentityToken() {
-        return privateIdentity.token;
+        return privateIdentitySupplier.get().token;
     }
 
     @Override
@@ -94,7 +95,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public Cipher createCypher() {
-        return new ClientCipher(privateIdentity, store, store, currentIdentity());
+        return new ClientCipher(privateIdentitySupplier.get(), store, store, currentIdentity());
     }
 
     @Override
@@ -262,7 +263,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     public static SignalClientIdentityStore from(UUID profileId, HomeDirectory homeDirectory, Consumer<SignalProtocolStore> onInstall, Consumer<ClientSignalProtocolStore> onReady) {
-        PrivateIdentity privateIdentity = PrivateIdentity.getOrCreate(homeDirectory);
+        Supplier<PrivateIdentity> privateIdentitySupplier = () -> PrivateIdentity.getOrCreate(homeDirectory);
         ClientSignalProtocolStore store;
         try {
             store = ClientSignalProtocolStore.from(homeDirectory);
@@ -283,7 +284,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             } catch (IOException e) {
                 throw new IllegalStateException("Could not read profile store", e);
             }
-            clientIdentityStore = new SignalClientIdentityStore(profileId, privateIdentity, store, state, file);
+            clientIdentityStore = new SignalClientIdentityStore(profileId, privateIdentitySupplier, store, state, file);
             onReady.accept(store);
         } else {
             // Generate the new identity, its prekeys, etc
@@ -307,7 +308,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             }
             // fire the on install consumer
             onInstall.accept(store);
-            clientIdentityStore = new SignalClientIdentityStore(profileId, privateIdentity, store, state, file);
+            clientIdentityStore = new SignalClientIdentityStore(profileId, privateIdentitySupplier, store, state, file);
         }
         return clientIdentityStore;
     }

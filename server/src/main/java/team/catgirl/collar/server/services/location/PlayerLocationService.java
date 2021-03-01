@@ -52,7 +52,7 @@ public class PlayerLocationService {
     }
 
     public BatchProtocolResponse stopSharing(Player player) {
-        ClientIdentity identity = sessions.getIdentity(player.profile).orElseThrow(() -> new IllegalStateException("could not find session for " + player));
+        ClientIdentity identity = sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("could not find session for " + player));
         BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
         List<BatchProtocolResponse> allResponses = playersSharing.asMap().entrySet().stream()
                 .filter(candidate -> candidate.getValue().contains(player))
@@ -112,7 +112,7 @@ public class PlayerLocationService {
                     continue;
                 }
                 uniquePlayers.add(memberPlayer);
-                ClientIdentity identity = sessions.getIdentity(memberPlayer.profile).orElseThrow(() -> new IllegalStateException("Could not find identity for player " + player));
+                ClientIdentity identity = sessions.getIdentity(memberPlayer).orElseThrow(() -> new IllegalStateException("Could not find identity for player " + player));
                 responses.add(identity, resp);
             }
         }

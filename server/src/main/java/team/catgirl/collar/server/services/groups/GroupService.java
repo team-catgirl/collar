@@ -187,7 +187,7 @@ public final class GroupService {
                 if (memberToRemove.isEmpty()) {
                     return group;
                 }
-                Optional<ClientIdentity> identityToRemove = sessions.getIdentity(memberToRemove.get().player.profile);
+                Optional<ClientIdentity> identityToRemove = sessions.getIdentity(memberToRemove.get().player);
                 if (identityToRemove.isEmpty()) {
                     return group;
                 }
@@ -262,7 +262,7 @@ public final class GroupService {
                     throw new IllegalStateException("group " + uuid + " does not exist");
                 }
                 for (Player player : nearbyGroup.players) {
-                    sessions.getIdentity(player.profile).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player.minecraftPlayer)));
+                    sessions.getIdentity(player).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player.minecraftPlayer)));
                     group = group.removeMember(player);
                 }
                 return updateState(group);
@@ -285,7 +285,7 @@ public final class GroupService {
                 .map(member -> member.player)
                 .collect(Collectors.toMap(
                         o -> new GroupInviteResponse(serverIdentity, group.id, group.type, sender, new ArrayList<>(group.members.keySet().stream().map(player -> player.minecraftPlayer).collect(Collectors.toList()))),
-                        minecraftPlayer -> sessions.getIdentity(minecraftPlayer.profile).orElseThrow(() -> new IllegalStateException("cannot find identity for " + minecraftPlayer)))
+                        minecraftPlayer -> sessions.getIdentity(minecraftPlayer).orElseThrow(() -> new IllegalStateException("cannot find identity for " + minecraftPlayer)))
                 );
         return new BatchProtocolResponse(serverIdentity, responses);
     }
@@ -323,7 +323,7 @@ public final class GroupService {
             if (!filter.test(member)) {
                 continue;
             }
-            sessions.getIdentity(player.profile).ifPresent(clientIdentity -> {
+            sessions.getIdentity(player).ifPresent(clientIdentity -> {
                 ProtocolResponse resp = messageCreator.create(clientIdentity, player.minecraftPlayer, member);
                 responses.put(resp, clientIdentity);
             });

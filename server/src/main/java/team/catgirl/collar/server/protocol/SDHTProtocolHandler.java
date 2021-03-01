@@ -83,7 +83,7 @@ public class SDHTProtocolHandler extends ProtocolHandler {
             if (member.membershipState != MembershipState.ACCEPTED && sendingPlayer.equals(member.player)) {
                 continue;
             }
-            sessions.getIdentity(member.player.profile).ifPresent(listeners::add);
+            sessions.getIdentity(member.player).ifPresent(listeners::add);
         }
         return listeners;
     }

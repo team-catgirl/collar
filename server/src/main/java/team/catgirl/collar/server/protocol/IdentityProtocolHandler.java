@@ -29,7 +29,7 @@ public class IdentityProtocolHandler extends ProtocolHandler {
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof GetIdentityRequest) {
             GetIdentityRequest request = (GetIdentityRequest) req;
-            sessions.getIdentity(request.player).ifPresentOrElse(identity -> {
+            sessions.getIdentityByMinecraftPlayerId(request.player).ifPresentOrElse(identity -> {
                 sender.accept(request.identity, new GetIdentityResponse(serverIdentity, request.id, identity));
             }, () -> {
                 sender.accept(request.identity, new GetIdentityResponse(serverIdentity, request.id, null));

@@ -33,4 +33,9 @@ public final class Player {
     public int hashCode() {
         return Objects.hash(profile, minecraftPlayer);
     }
+
+    @Override
+    public String toString() {
+        return profile + ":" + minecraftPlayer;
+    }
 }

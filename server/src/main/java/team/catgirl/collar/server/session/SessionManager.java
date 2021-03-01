@@ -190,7 +190,13 @@ public final class SessionManager {
                 .findFirst();
     }
 
-    public Optional<ClientIdentity> getIdentity(UUID playerId) {
+    public Optional<ClientIdentity> getIdentity(Player player) {
+        return sessions.values().stream().filter(sessionState -> sessionState.identity.owner.equals(player.profile))
+                .findAny()
+                .map(sessionState -> sessionState.identity);
+    }
+
+    public Optional<ClientIdentity> getIdentityByMinecraftPlayerId(UUID playerId) {
         return sessions.values().stream().filter(sessionState -> sessionState.player.id.equals(playerId))
                 .findAny()
                 .map(sessionState -> sessionState.identity);

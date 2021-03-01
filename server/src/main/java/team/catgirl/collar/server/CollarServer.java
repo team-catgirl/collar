@@ -1,5 +1,12 @@
 package team.catgirl.collar.server;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.LoadingCache;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.Bucket4j;
+import io.github.bucket4j.Refill;
+import io.github.bucket4j.grid.RecoveryStrategy;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
@@ -36,9 +43,12 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,6 +59,7 @@ public class CollarServer {
 
     private final List<ProtocolHandler> protocolHandlers;
     private final BiConsumer<ClientIdentity, MinecraftPlayer> sessionStopped;
+    private final ConcurrentMap<Session, Bucket> buckets = new ConcurrentHashMap<>();
     private final Services services;
 
     public CollarServer(Services services) {
@@ -68,12 +79,17 @@ public class CollarServer {
     @OnWebSocketConnect
     public void connected(Session session) throws IOException {
         LOGGER.log(Level.INFO, "New socket connected");
+        buckets.computeIfAbsent(session, theSession -> Bucket4j.builder()
+                .addLimit(Bandwidth.simple(18000, Duration.ofSeconds(3600)))
+                .addLimit(Bandwidth.simple(50, Duration.ofSeconds(1)))
+                .build());
     }
 
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason) {
         LOGGER.log(Level.INFO, "Session closed " + statusCode + " " + reason);
         services.sessions.stopSession(session, reason, null, sessionStopped);
+        buckets.remove(session);
     }
 
     @OnWebSocketError
@@ -84,6 +100,15 @@ public class CollarServer {
 
     @OnWebSocketMessage
     public void message(Session session, InputStream is) throws IOException {
+        Bucket bucket = buckets.get(session);
+        if (bucket.tryConsume(1)) {
+            processMessage(session, is);
+        } else {
+            services.sessions.stopSession(session, "Too many requests sent", null, sessionStopped);
+        }
+    }
+
+    private void processMessage(Session session, InputStream is) {
         ProtocolRequest req = read(session, is);
         LOGGER.log(Level.INFO, req.getClass().getSimpleName() + " from " + req.identity);
         ServerIdentity serverIdentity = services.identityStore.getIdentity();

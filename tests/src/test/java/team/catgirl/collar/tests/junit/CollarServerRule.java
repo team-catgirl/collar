@@ -65,7 +65,9 @@ public final class CollarServerRule implements TestRule {
 
     private void stopServerAndDropDatabase(MongoDatabase db) {
         Spark.stop();
-        db.drop();
+        if (db != null) {
+            db.drop();
+        }
     }
 
     public boolean isServerStarted() {

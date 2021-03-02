@@ -45,7 +45,7 @@ public final class CollarServerRule implements TestRule {
                         try {
                             Thread.sleep(100);
                         } catch (InterruptedException ignored) {
-                            stopServerAndDropDatabase(db);
+                            stopServerAndDropDatabase(null);
                         }
                     }
                 });
@@ -56,6 +56,7 @@ public final class CollarServerRule implements TestRule {
                 try {
                     base.evaluate();
                 } finally {
+                    serverThread.interrupt();
                     stopServerAndDropDatabase(db);
                 }
             }
@@ -63,7 +64,6 @@ public final class CollarServerRule implements TestRule {
     }
 
     private void stopServerAndDropDatabase(MongoDatabase db) {
-        serverThread.interrupt();
         Spark.stop();
         db.drop();
     }

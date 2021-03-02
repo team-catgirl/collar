@@ -1,15 +1,11 @@
 package team.catgirl.collar.tests.messaging;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.messaging.TextMessage;
-import team.catgirl.collar.client.Collar;
-import team.catgirl.collar.tests.groups.GroupsTest;
 import team.catgirl.collar.tests.groups.GroupsTest.MessagingListenerImpl;
 import team.catgirl.collar.tests.groups.GroupsTest.TestGroupsListener;
 import team.catgirl.collar.tests.junit.CollarTest;

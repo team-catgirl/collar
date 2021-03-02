@@ -74,15 +74,13 @@ public final class Group {
     }
 
     public Group removeMember(Player player) {
-        List<Map.Entry<Player, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList());
-        ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder().putAll(members);
-        return new Group(id, name, type, server, state.build());
+        Map<Player, Member> members = this.members.values().stream().filter(member -> !member.player.equals(player)).collect(Collectors.toMap(member -> member.player, member -> member));
+        return new Group(id, name, type, server, ImmutableMap.copyOf(members));
     }
 
     public Group removeMember(MinecraftPlayer player) {
-        List<Map.Entry<Player, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().minecraftPlayer.equals(player)).collect(Collectors.toList());
-        ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder().putAll(members);
-        return new Group(id, name, type, server, state.build());
+        Map<Player, Member> members = this.members.values().stream().filter(member -> !member.player.minecraftPlayer.equals(player)).collect(Collectors.toMap(member -> member.player, member -> member));
+        return new Group(id, name, type, server, ImmutableMap.copyOf(members));
     }
 
     public Group addMembers(List<Player> players, MembershipRole role, MembershipState membershipState, BiConsumer<Group, List<Member>> newMemberConsumer) {

@@ -265,7 +265,7 @@ public final class GroupService {
                 sessions.getIdentity(player).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player.minecraftPlayer)));
                 group = group.removeMember(player);
             }
-            updateState(group);
+            store.delete(group.id);
         }));
         return response;
     }

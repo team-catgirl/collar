@@ -44,7 +44,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
     /**
      * @return groups of players the current player is near
      */
-    public List<Group> locationGroups() {
+    public List<Group> nearbyGroups() {
         synchronized (this) {
             return groups.values().stream().filter(group -> group.type == GroupType.NEARBY).collect(Collectors.toList());
         }

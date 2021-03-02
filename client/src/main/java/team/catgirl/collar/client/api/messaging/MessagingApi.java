@@ -5,7 +5,6 @@ import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
-import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.identity.IdentityApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
@@ -88,7 +87,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
      * @param message to send
      */
     public void sendNearbyMessage(Message message) {
-        collar.groups().locationGroups().forEach(group -> sendGroupMessage(group, message));
+        collar.groups().nearbyGroups().forEach(group -> sendGroupMessage(group, message));
     }
 
     @Override

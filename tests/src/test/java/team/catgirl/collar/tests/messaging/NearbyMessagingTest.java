@@ -38,11 +38,11 @@ public class NearbyMessagingTest extends CollarTest {
         evePlayer.collar.messaging().subscribe(eveMessages);
         evePlayer.collar.groups().subscribe(eveGroups);
 
-        waitForCondition("Alice joined group", () -> !alicePlayer.collar.groups().locationGroups().isEmpty());
-        waitForCondition("Bob joined group", () -> !bobPlayer.collar.groups().locationGroups().isEmpty());
+        waitForCondition("Alice joined nearby group", () -> !alicePlayer.collar.groups().nearbyGroups().isEmpty());
+        waitForCondition("Bob joined nearby group", () -> !bobPlayer.collar.groups().nearbyGroups().isEmpty());
 
-        Group aliceGroup = alicePlayer.collar.groups().locationGroups().get(0);
-        Group bobGroup = bobPlayer.collar.groups().locationGroups().get(0);
+        Group aliceGroup = alicePlayer.collar.groups().nearbyGroups().get(0);
+        Group bobGroup = bobPlayer.collar.groups().nearbyGroups().get(0);
 
         Assert.assertEquals(aliceGroup.id, bobGroup.id);
 

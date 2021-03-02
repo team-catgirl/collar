@@ -202,6 +202,12 @@ public final class SessionManager {
                 .map(sessionState -> sessionState.identity);
     }
 
+    public Optional<Player> findPlayerByProfile(UUID profile) {
+        return sessions.values().stream().filter(sessionState -> sessionState.identity.owner.equals(profile))
+                .findFirst()
+                .map(SessionState::toPlayer);
+    }
+
     public static final class SessionState {
         public final Session session;
         public final ClientIdentity identity;

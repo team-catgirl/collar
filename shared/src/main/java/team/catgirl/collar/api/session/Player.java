@@ -26,12 +26,12 @@ public final class Player {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Player player = (Player) o;
-        return profile.equals(player.profile) && Objects.equals(minecraftPlayer, player.minecraftPlayer);
+        return profile.equals(player.profile);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(profile, minecraftPlayer);
+        return Objects.hash(profile);
     }
 
     @Override

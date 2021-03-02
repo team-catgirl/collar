@@ -98,4 +98,9 @@ public final class Group {
         newMemberConsumer.accept(group, newMembers);
         return group;
     }
+
+    public MembershipRole getRole(Player sendingPlayer) {
+        return members.values().stream().filter(member -> sendingPlayer.profile.equals(member.player.profile))
+                .findFirst().map(member -> member.membershipRole).orElse(null);
+    }
 }

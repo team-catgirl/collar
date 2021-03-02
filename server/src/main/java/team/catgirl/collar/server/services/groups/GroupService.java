@@ -63,7 +63,7 @@ public final class GroupService {
                 .collect(Collectors.toList());
         response.concat(createGroupMembershipRequests(req.identity, group, members));
         response.add(req.identity, new CreateGroupResponse(serverIdentity, group));
-        updateState(group);
+        store.upsert(group);
         return response;
     }
 
@@ -123,6 +123,8 @@ public final class GroupService {
         store.findGroup(req.groupId).ifPresent(group -> {
             MembershipState state = req.state;
             group = group.updateMembershipState(sendingPlayer, state);
+            MembershipRole role = group.getRole(sendingPlayer);
+            store.updateMember(group.id, sendingPlayer.profile, role, state);
             // Send a response back to the player accepting membership, with the distribution keys
             response.add(req.identity, new JoinGroupResponse(serverIdentity, group.id, req.identity, sendingPlayer.minecraftPlayer, req.keys));
             // Let everyone else in the group know that this identity has accepted
@@ -149,24 +151,9 @@ public final class GroupService {
             Group finalGroup = group;
             response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, req.identity, sender.minecraftPlayer)));
             group = group.removeMember(sender);
+            store.removeMember(group.id, sender.profile);
             updateState(group);
         });
-        return response;
-    }
-
-    /**
-     * Removes player from all groups
-     * @param playerToRemove to remove
-     */
-    public BatchProtocolResponse removeUserFromAllGroups(Player playerToRemove) {
-        BatchProtocolResponse response = new BatchProtocolResponse(null);
-        store.findGroupsContaining(playerToRemove).forEach(group -> {
-            group = group.updateMembershipState(playerToRemove, MembershipState.DECLINED);
-            Group finalGroup = group;
-            response.concat(createMemberMessages(group, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, player)));
-            updateState(finalGroup);
-        });
-        LOGGER.log(Level.INFO, "Removed user " + playerToRemove + " from all groups");
         return response;
     }
 
@@ -190,6 +177,7 @@ public final class GroupService {
             Map<Group, List<Member>> groupToMembers = new HashMap<>();
             List<Player> players = sessions.findPlayers(req.identity, req.players);
             group = group.addMembers(players, MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
+            store.addMembers(group.id, players, MembershipRole.MEMBER, MembershipState.PENDING);
             for (Map.Entry<Group, List<Member>> entry : groupToMembers.entrySet()) {
                 response.concat(createGroupMembershipRequests(req.identity, entry.getKey(), entry.getValue()));
             }
@@ -210,13 +198,15 @@ public final class GroupService {
             if (memberToRemove.isEmpty()) {
                 return;
             }
-            Optional<ClientIdentity> identityToRemove = sessions.getIdentity(memberToRemove.get().player);
+            Player playerToRemove = memberToRemove.get().player;
+            Optional<ClientIdentity> identityToRemove = sessions.getIdentity(playerToRemove);
             if (identityToRemove.isEmpty()) {
                 return;
             }
             Group finalGroup = group;
-            response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), memberToRemove.get().player.minecraftPlayer)));
-            group = group.removeMember(memberToRemove.get().player);
+            response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), playerToRemove.minecraftPlayer)));
+            group = group.removeMember(playerToRemove);
+            store.removeMember(group.id, playerToRemove.profile);
             updateState(group);
         });
         return response;
@@ -304,9 +294,7 @@ public final class GroupService {
     private void updateState(Group group) {
         if (group != null && group.members.isEmpty()) {
             LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
-            store.delete(group);
-        } else if (group != null) {
-            store.upsert(group);
+            store.delete(group.id);
         }
     }
 

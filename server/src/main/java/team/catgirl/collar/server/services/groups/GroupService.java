@@ -15,8 +15,6 @@ import team.catgirl.collar.server.services.location.NearbyGroups;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,25 +28,18 @@ public final class GroupService {
     private final ServerIdentity serverIdentity;
     private final SessionManager sessions;
 
-    private final ConcurrentMap<UUID, Group> groupsById = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, UUID> nearbyHashToGroupId = new ConcurrentHashMap<>();
-
     public GroupService(GroupStore store, ServerIdentity serverIdentity, SessionManager sessions) {
         this.store = store;
         this.serverIdentity = serverIdentity;
         this.sessions = sessions;
-        // add all groups in storage in the groups map
-        store.findGroups().forEach(group -> groupsById.put(group.id, group));
     }
 
     /**
      * @param groupIds to find
      * @return the list of matching groups
      */
-    public List<Group> findGroups(List<UUID> groupIds) {
-        return groupsById.entrySet().stream()
-                .filter(entry -> groupIds.contains(entry.getKey()))
-                .map(Map.Entry::getValue).collect(Collectors.toList());
+    public Set<Group> findGroups(Set<UUID> groupIds) {
+        return store.findGroups(groupIds).collect(Collectors.toSet());
     }
 
     /**
@@ -60,21 +51,19 @@ public final class GroupService {
         if (req.type == GroupType.NEARBY) {
             throw new IllegalStateException("clients cannot create nearby groups");
         }
+        if (store.findGroup(req.groupId).isPresent()) {
+            throw new IllegalStateException("Group " + req.groupId + " already exists");
+        }
         List<Player> players = sessions.findPlayers(req.identity, req.players);
         Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.compute(req.groupId, (uuid, group) -> {
-            if (group != null) {
-                throw new IllegalStateException("Group with id " + req.groupId + " already exists");
-            }
-            group = Group.newGroup(req.groupId, req.name, req.type, player, players);
-            List<Member> members = group.members.values().stream()
-                    .filter(member -> member.membershipRole.equals(MembershipRole.MEMBER))
-                    .collect(Collectors.toList());
-            response.concat(createGroupMembershipRequests(req.identity, group, members));
-            response.add(req.identity, new CreateGroupResponse(serverIdentity, group));
-            return updateState(group);
-        });
+        Group group = Group.newGroup(req.groupId, req.name, req.type, player, players);
+        List<Member> members = group.members.values().stream()
+                .filter(member -> member.membershipRole.equals(MembershipRole.MEMBER))
+                .collect(Collectors.toList());
+        response.concat(createGroupMembershipRequests(req.identity, group, members));
+        response.add(req.identity, new CreateGroupResponse(serverIdentity, group));
+        updateState(group);
         return response;
     }
 
@@ -86,23 +75,17 @@ public final class GroupService {
      */
     public ProtocolResponse playerIsOnline(ClientIdentity identity, Player player) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.values().stream().filter(group -> group.type == GroupType.GROUP && group.containsPlayer(player)).map(group -> group.id).forEach(groupId -> {
-            groupsById.compute(groupId, (uuid, group) -> {
-                if (group == null) {
-                    return null;
-                }
-                group = group.updatePlayer(player);
-                // Send a response back to the player to say that they have rejoined the group after being offline
-                response.add(identity, new JoinGroupResponse(serverIdentity, group.id, identity, player.minecraftPlayer, null));
-                // Let everyone else in the group know that this identity has come online
-                Group finalGroup = group;
-                BatchProtocolResponse updates = createMemberMessages(
-                        group,
-                        member -> member.membershipState.equals(MembershipState.ACCEPTED),
-                        ((memberIdentity, memberPlayer, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup.id, identity, memberPlayer, null)));
-                response.concat(updates);
-                return updateState(group);
-            });
+        store.findGroupsContaining(player).forEach(group -> {
+            group = group.updatePlayer(player);
+            response.add(identity, new JoinGroupResponse(serverIdentity, group.id, identity, player.minecraftPlayer, null));
+            // Let everyone else in the group know that this identity has come online
+            Group finalGroup = group;
+            BatchProtocolResponse updates = createMemberMessages(
+                    group,
+                    member -> member.membershipState.equals(MembershipState.ACCEPTED),
+                    ((memberIdentity, memberPlayer, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup.id, identity, memberPlayer, null)));
+            response.concat(updates);
+            updateState(group);
         });
         return response;
     }
@@ -115,21 +98,16 @@ public final class GroupService {
      */
     public ProtocolResponse playerIsOffline(ClientIdentity identity, Player player) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.values().stream().filter(group -> group.type == GroupType.GROUP && group.containsPlayer(player)).map(group -> group.id).forEach(groupId -> {
-            groupsById.compute(groupId, (uuid, group) -> {
-                if (group == null) {
-                    return null;
-                }
-                group = group.updatePlayer(player);
-                // Let everyone else in the group know that this identity has gone offline
-                Group finalGroup = group;
-                BatchProtocolResponse updates = createMemberMessages(
-                        group,
-                        member -> member.membershipState.equals(MembershipState.ACCEPTED),
-                        ((memberIdentity, memberPlayer, updatedMember) -> new GroupMemberOfflineResponse(serverIdentity, finalGroup.id, identity)));
-                response.concat(updates);
-                return updateState(group);
-            });
+        store.findGroupsContaining(player).forEach(group -> {
+            group = group.updatePlayer(player);
+            // Let everyone else in the group know that this identity has gone offline
+            Group finalGroup = group;
+            BatchProtocolResponse updates = createMemberMessages(
+                    group,
+                    member -> member.membershipState.equals(MembershipState.ACCEPTED),
+                    ((memberIdentity, memberPlayer, updatedMember) -> new GroupMemberOfflineResponse(serverIdentity, finalGroup.id, identity)));
+            response.concat(updates);
+            updateState(group);
         });
         return response;
     }
@@ -142,10 +120,7 @@ public final class GroupService {
     public BatchProtocolResponse acceptMembership(JoinGroupRequest req) {
         Player sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.compute(req.groupId, (uuid, group) -> {
-            if (group == null) {
-                return null;
-            }
+        store.findGroup(req.groupId).ifPresent(group -> {
             MembershipState state = req.state;
             group = group.updateMembershipState(sendingPlayer, state);
             // Send a response back to the player accepting membership, with the distribution keys
@@ -157,7 +132,7 @@ public final class GroupService {
                     member -> member.membershipState.equals(MembershipState.ACCEPTED),
                     ((identity, player, updatedMember) -> new JoinGroupResponse(serverIdentity, finalGroup.id, req.identity, player, req.keys)));
             response.concat(updates);
-            return updateState(group);
+            updateState(group);
         });
         return response;
     }
@@ -170,16 +145,12 @@ public final class GroupService {
     public BatchProtocolResponse leaveGroup(LeaveGroupRequest req) {
         Player sender = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.compute(req.groupId, (uuid, group) -> {
-            if (group == null) {
-                return null;
-            }
+        store.findGroup(req.groupId).ifPresent(group -> {
             Group finalGroup = group;
             response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, req.identity, sender.minecraftPlayer)));
             group = group.removeMember(sender);
-            return updateState(group);
+            updateState(group);
         });
-        LOGGER.log(Level.INFO, "Group count " + groupsById.size());
         return response;
     }
 
@@ -188,16 +159,13 @@ public final class GroupService {
      * @param playerToRemove to remove
      */
     public BatchProtocolResponse removeUserFromAllGroups(Player playerToRemove) {
-        List<Group> groups = findGroupsForPlayer(playerToRemove);
         BatchProtocolResponse response = new BatchProtocolResponse(null);
-        for (Group group : groups) {
-            groupsById.compute(group.id, (uuid, group1) -> {
-                group1 = group.updateMembershipState(playerToRemove, MembershipState.DECLINED);
-                Group finalGroup = group1;
-                response.concat(createMemberMessages(group1, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, player)));
-                return updateState(finalGroup);
-            });
-        }
+        store.findGroupsContaining(playerToRemove).forEach(group -> {
+            group = group.updateMembershipState(playerToRemove, MembershipState.DECLINED);
+            Group finalGroup = group;
+            response.concat(createMemberMessages(group, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identity, player)));
+            updateState(finalGroup);
+        });
         LOGGER.log(Level.INFO, "Removed user " + playerToRemove + " from all groups");
         return response;
     }
@@ -208,52 +176,48 @@ public final class GroupService {
      */
     public BatchProtocolResponse invite(GroupInviteRequest req) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.compute(req.groupId, (uuid, group) -> {
-            if (group != null) {
-                Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
-                Member requester = group.members.get(player);
-                if (requester == null) {
-                    LOGGER.log(Level.INFO, player + " is not a member of the group "  + group.id);
-                    return group;
-                }
-                if (requester.membershipRole != MembershipRole.OWNER) {
-                    LOGGER.log(Level.INFO, player + " is not OWNER member of the group "  + group.id);
-                    return group;
-                }
-                Map<Group, List<Member>> groupToMembers = new HashMap<>();
-                List<Player> players = sessions.findPlayers(req.identity, req.players);
-                group = group.addMembers(players, MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
-                for (Map.Entry<Group, List<Member>> entry : groupToMembers.entrySet()) {
-                    response.concat(createGroupMembershipRequests(req.identity, entry.getKey(), entry.getValue()));
-                }
+        store.findGroup(req.groupId).ifPresent(group -> {
+            Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
+            Member requester = group.members.get(player);
+            if (requester == null) {
+                LOGGER.log(Level.INFO, player + " is not a member of the group "  + group.id);
+                return;
             }
-            return updateState(group);
+            if (requester.membershipRole != MembershipRole.OWNER) {
+                LOGGER.log(Level.INFO, player + " is not OWNER member of the group "  + group.id);
+                return;
+            }
+            Map<Group, List<Member>> groupToMembers = new HashMap<>();
+            List<Player> players = sessions.findPlayers(req.identity, req.players);
+            group = group.addMembers(players, MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
+            for (Map.Entry<Group, List<Member>> entry : groupToMembers.entrySet()) {
+                response.concat(createGroupMembershipRequests(req.identity, entry.getKey(), entry.getValue()));
+            }
+            updateState(group);
         });
         return response;
     }
 
     public ProtocolResponse ejectMember(EjectGroupMemberRequest req) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.compute(req.groupId, (uuid, group) -> {
-            if (group != null) {
-                Player sender = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
-                Optional<Member> playerMemberRecord = group.members.values().stream().filter(member -> member.player.equals(sender) && member.membershipRole.equals(MembershipRole.OWNER)).findFirst();
-                if (playerMemberRecord.isEmpty()) {
-                    return group;
-                }
-                Optional<Member> memberToRemove = group.members.values().stream().filter(member -> member.player.minecraftPlayer.id.equals(req.player)).findFirst();
-                if (memberToRemove.isEmpty()) {
-                    return group;
-                }
-                Optional<ClientIdentity> identityToRemove = sessions.getIdentity(memberToRemove.get().player);
-                if (identityToRemove.isEmpty()) {
-                    return group;
-                }
-                Group finalGroup = group;
-                response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), memberToRemove.get().player.minecraftPlayer)));
-                group = group.removeMember(memberToRemove.get().player);
+        store.findGroup(req.groupId).ifPresent(group -> {
+            Player sender = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
+            Optional<Member> playerMemberRecord = group.members.values().stream().filter(member -> member.player.equals(sender) && member.membershipRole.equals(MembershipRole.OWNER)).findFirst();
+            if (playerMemberRecord.isEmpty()) {
+                return;
             }
-            return updateState(group);
+            Optional<Member> memberToRemove = group.members.values().stream().filter(member -> member.player.minecraftPlayer.id.equals(req.player)).findFirst();
+            if (memberToRemove.isEmpty()) {
+                return;
+            }
+            Optional<ClientIdentity> identityToRemove = sessions.getIdentity(memberToRemove.get().player);
+            if (identityToRemove.isEmpty()) {
+                return;
+            }
+            Group finalGroup = group;
+            response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), memberToRemove.get().player.minecraftPlayer)));
+            group = group.removeMember(memberToRemove.get().player);
+            updateState(group);
         });
         return response;
     }
@@ -265,17 +229,14 @@ public final class GroupService {
      */
     public ProtocolResponse createMessages(SendMessageRequest req) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        groupsById.compute(req.group, (uuid, group) -> {
-            if (group != null) {
-                Player sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
-                BatchProtocolResponse updates = createMemberMessages(
-                        group,
-                        member -> member.membershipState.equals(MembershipState.ACCEPTED) && !member.player.equals(sendingPlayer),
-                        (identity, player, member) -> new SendMessageResponse(serverIdentity, req.identity, group.id, player, req.message)
-                );
-                response.concat(updates);
-            }
-            return group;
+        store.findGroup(req.group).ifPresent(group -> {
+            Player sendingPlayer = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("cannot find player for " + req.identity.id()));
+            BatchProtocolResponse updates = createMemberMessages(
+                    group,
+                    member -> member.membershipState.equals(MembershipState.ACCEPTED) && !member.player.equals(sendingPlayer),
+                    (identity, player, member) -> new SendMessageResponse(serverIdentity, req.identity, group.id, player, req.message)
+            );
+            response.concat(updates);
         });
         return response;
     }
@@ -286,46 +247,38 @@ public final class GroupService {
      * @return AcknowledgedGroupJoinedResponse back to the client who joined
      */
     public ProtocolResponse acknowledgeJoin(AcknowledgedGroupJoinedRequest req) {
-        // Make sure the sender is a member of the group
-        Group group = groupsById.get(req.group);
-        Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException(req.identity + " could not be found in the session"));
-        if (!group.containsPlayer(player)) {
-            throw new IllegalStateException(player + " is not a member of group " + group.id);
-        }
-        return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, player.minecraftPlayer, group, req.keys));
+        return store.findGroup(req.group).map(group -> {
+            Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException(req.identity + " could not be found in the session"));
+            if (!group.containsPlayer(player)) {
+                throw new IllegalStateException(player + " is not a member of group " + group.id);
+            }
+            return BatchProtocolResponse.one(req.recipient, new AcknowledgedGroupJoinedResponse(serverIdentity, req.identity, player.minecraftPlayer, group, req.keys));
+        }).orElse(new BatchProtocolResponse(serverIdentity));
     }
 
     public BatchProtocolResponse updateNearbyGroups(NearbyGroups.Result result) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         result.add.forEach((uuid, nearbyGroup) -> {
             String server = nearbyGroup.players.stream().findFirst().orElseThrow(() -> new IllegalStateException("could not find any players")).minecraftPlayer.server;
-            groupsById.compute(uuid, (uuid1, group) -> {
-                if (group != null) {
-                    throw new IllegalStateException("group " + uuid + " already exists");
-                }
+            store.findGroup(uuid).ifPresent(group -> {
                 group = new Group(uuid, null, GroupType.NEARBY, server, Map.of());
                 Map<Group, List<Member>> groupToMembers = new HashMap<>();
                 group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
                 for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {
                     response.concat(createGroupMembershipRequests(null, memberEntry.getKey(), memberEntry.getValue()));
                 }
-                return updateState(group);
+                updateState(group);
             });
         });
 
         // TODO: delay group removal by 1 minute
-        result.remove.forEach((uuid, nearbyGroup) -> {
-            groupsById.compute(uuid, (uuid1, group) -> {
-                if (group == null) {
-                    throw new IllegalStateException("group " + uuid + " does not exist");
-                }
-                for (Player player : nearbyGroup.players) {
-                    sessions.getIdentity(player).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player.minecraftPlayer)));
-                    group = group.removeMember(player);
-                }
-                return updateState(group);
-            });
-        });
+        result.remove.forEach((uuid, nearbyGroup) -> store.findGroup(uuid).ifPresent(group -> {
+            for (Player player : nearbyGroup.players) {
+                sessions.getIdentity(player).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player.minecraftPlayer)));
+                group = group.removeMember(player);
+            }
+            updateState(group);
+        }));
         return response;
     }
 
@@ -348,29 +301,13 @@ public final class GroupService {
         return new BatchProtocolResponse(serverIdentity, responses);
     }
 
-    /**
-     * Removes groups with no members from within {@link ConcurrentMap#compute}
-     * @param group to check
-     * @return group if still valid or null
-     */
-    private Group updateState(Group group) {
+    private void updateState(Group group) {
         if (group != null && group.members.isEmpty()) {
             LOGGER.log(Level.INFO, "Removed group " + group.id + " as it has no members.");
-            // Remove any nearby hashes associated with this group
-            nearbyHashToGroupId.entrySet().stream().filter(entry -> entry.getValue().equals(group.id))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .ifPresent(nearbyHashToGroupId::remove);
-            if (group.type == GroupType.GROUP) {
-                store.delete(group);
-            }
-            return null;
+            store.delete(group);
         } else if (group != null) {
-            if (group.type == GroupType.GROUP) {
-                store.upsert(group);
-            }
+            store.upsert(group);
         }
-        return group;
     }
 
     public BatchProtocolResponse createMemberMessages(Group group, Predicate<Member> filter, MessageCreator messageCreator) {
@@ -389,13 +326,8 @@ public final class GroupService {
         return new BatchProtocolResponse(serverIdentity, responses);
     }
 
-    private List<Group> findGroupsForPlayer(Player player) {
-        return groupsById.values().stream().filter(group -> group.members.containsKey(player)).collect(Collectors.toList());
-    }
-
     public Optional<Group> findGroup(UUID groupId) {
-        Group group = groupsById.get(groupId);
-        return group == null ? Optional.empty() : Optional.of(group);
+        return store.findGroup(groupId);
     }
 
     public interface MessageCreator {

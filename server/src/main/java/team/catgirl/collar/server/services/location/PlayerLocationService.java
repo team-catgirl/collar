@@ -12,10 +12,7 @@ import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.session.SessionManager;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -94,10 +91,10 @@ public class PlayerLocationService {
     private BatchProtocolResponse createLocationResponses(Player player, LocationUpdatedResponse resp) {
         BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
         // Find all the groups the requesting player is a member of
-        List<UUID> sharingWithGroups = playersSharing.entries().stream().filter(entry -> player.equals(entry.getValue()))
+        Set<UUID> sharingWithGroups = playersSharing.entries().stream().filter(entry -> player.equals(entry.getValue()))
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-        List<Group> memberGroups = groups.findGroups(sharingWithGroups);
+                .collect(Collectors.toSet());
+        Set<Group> memberGroups = groups.findGroups(sharingWithGroups);
         // Keep track of players we have sent to, so we do not send them duplicate messages (e.g. if they share membership of 2 or more groups)
         HashSet<Player> uniquePlayers = new HashSet<>();
         for (Group group : memberGroups) {

@@ -3,6 +3,7 @@ package team.catgirl.collar.server.services.groups;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -16,8 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 
 public final class GroupStore {
 
@@ -42,7 +42,7 @@ public final class GroupStore {
      */
     public void upsert(Group group) {
         Document document = mapToDocument(group);
-        UpdateResult result = docs.updateOne(eq(FIELD_ID, group.id), document, new UpdateOptions().upsert(true));
+        UpdateResult result = docs.replaceOne(eq(FIELD_ID, group.id), document, new ReplaceOptions().upsert(true));
         if (!result.wasAcknowledged()) {
             throw new IllegalStateException("group " + group.id + " could not be upserted");
         }
@@ -53,17 +53,18 @@ public final class GroupStore {
      * @param groupId to get
      * @return group
      */
-    public Optional<Group> getGroup(String groupId) {
+    public Optional<Group> findGroup(UUID groupId) {
         Document first = docs.find(eq(FIELD_ID, groupId)).first();
         return first == null ? Optional.empty() : Optional.of(mapFromDocument(first));
     }
 
-    /**
-     * Stream all groups from store
-     * @return group stream
-     */
-    public Stream<Group> findGroups() {
-        MongoCursor<Group> iterator = docs.find().map(GroupStore::mapFromDocument).batchSize(100).iterator();
+    public Stream<Group> findGroups(Set<UUID> uuids) {
+        MongoCursor<Group> iterator = docs.find(in(FIELD_ID, uuids)).map(GroupStore::mapFromDocument).batchSize(100).iterator();
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
+    }
+
+    public Stream<Group> findGroupsContaining(Player player) {
+        MongoCursor<Group> iterator = docs.find(eq(FIELD_MEMBERS + "." + FIELD_MEMBER_PROFILE_ID, player.profile)).map(GroupStore::mapFromDocument).batchSize(100).iterator();
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
     }
 
@@ -128,6 +129,9 @@ public final class GroupStore {
     }
 
     private static Map<String, Object> mapMember(Member member) {
-        return Map.of(FIELD_MEMBER_ROLE, member.membershipRole, FIELD_MEMBER_STATE, member.membershipState, FIELD_MEMBER_PROFILE_ID, member.player.profile);
+        return Map.of(
+                FIELD_MEMBER_ROLE, member.membershipRole.name(),
+                FIELD_MEMBER_STATE, member.membershipState.name(),
+                FIELD_MEMBER_PROFILE_ID, member.player.profile);
     }
 }

@@ -35,6 +35,7 @@ public final class CollarServerRule implements TestRule {
         MongoDatabase db = Mongo.getTestingDatabase();
         return new Statement() {
             @Override public void evaluate() throws Throwable {
+                stopServer();
                 serverThread = new Thread(() -> {
                     webServer = new WebServer(Configuration.testConfiguration(db));
                     webServer.start(services -> {
@@ -44,9 +45,7 @@ public final class CollarServerRule implements TestRule {
                     while (true) {
                         try {
                             Thread.sleep(100);
-                        } catch (InterruptedException ignored) {
-                            stopServerAndDropDatabase(null);
-                        }
+                        } catch (InterruptedException ignored) {}
                     }
                 });
                 serverThread.start();
@@ -57,17 +56,16 @@ public final class CollarServerRule implements TestRule {
                     base.evaluate();
                 } finally {
                     serverThread.interrupt();
-                    stopServerAndDropDatabase(db);
+                    stopServer();
+                    db.drop();
                 }
             }
         };
     }
 
-    private void stopServerAndDropDatabase(MongoDatabase db) {
+    private void stopServer() {
         Spark.stop();
-        if (db != null) {
-            db.drop();
-        }
+        Spark.awaitStop();
     }
 
     public boolean isServerStarted() {

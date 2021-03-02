@@ -2,6 +2,7 @@ package team.catgirl.collar.client.api.textures;
 
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.utils.Utils;
@@ -18,7 +19,6 @@ import java.util.logging.Logger;
 
 /**
  * Client representation of a remote Texture
- * Use {@link TexturesApi#requestPlayerTexture(UUID, TextureType)} to be handed one through {@link TexturesListener}
  */
 public final class Texture {
 

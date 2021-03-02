@@ -25,7 +25,7 @@ public class Member {
         return new Member(player, membershipRole, membershipState);
     }
 
-    public Member updatePosition(Location location) {
-        return new Member(player, membershipRole, membershipState);
+    public Member updateMembershipRole(MembershipRole newMembershipRole) {
+        return new Member(player, newMembershipRole, membershipState);
     }
 }

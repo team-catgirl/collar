@@ -50,6 +50,9 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
         } else if (req instanceof DeleteGroupRequest) {
             DeleteGroupRequest request = (DeleteGroupRequest) req;
             resp = groups.delete(request);
+        } else if (req instanceof TransferGroupOwnershipRequest) {
+            TransferGroupOwnershipRequest request = (TransferGroupOwnershipRequest) req;
+            resp = groups.transferOwnership(request);
         } else {
             resp = null;
         }
@@ -70,7 +73,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
     public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
         super.onSessionStopping(identity, player, sender);
         if (player != null) {
-            sender.accept(null, groups.playerIsOffline(identity, player));
+            sender.accept(null, groups.playerIsOffline(player));
         }
     }
 }

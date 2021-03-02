@@ -17,8 +17,13 @@ import team.catgirl.collar.server.services.textures.TextureService.Texture;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.function.BiConsumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TexturesProtocolHandler extends ProtocolHandler {
+
+    private static final Logger LOGGER = Logger.getLogger(TexturesProtocolHandler.class.getName());
+
     private final ServerIdentity serverIdentity;
     private final SessionManager sessions;
     private final TextureService textures;
@@ -33,15 +38,23 @@ public class TexturesProtocolHandler extends ProtocolHandler {
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
         if (req instanceof GetTextureRequest) {
             GetTextureRequest request = (GetTextureRequest) req;
-            // TODO: find player and return both its player and identity object? probably tons more performant...
-            sessions.findMinecraftPlayer(req.identity, request.player).ifPresent(player -> {
-                sessions.getIdentity(player).ifPresent(identity -> {
+            if (request.player != null) {
+                sessions.getSessionStateByOwner(request.player).ifPresent(sessionState -> {
                     try {
-                        Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(identity.owner, request.type)).texture;
-                        sender.accept(request.identity, new GetTextureResponse(serverIdentity, texture.id, player, texture.url, texture.type));
-                    } catch (NotFoundException ignored) {}
+                        Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(sessionState.identity.owner, request.group, request.type)).texture;
+                        sender.accept(request.identity, new GetTextureResponse(serverIdentity, texture.id, null, sessionState.minecraftPlayer, texture.url, texture.type));
+                    } catch (NotFoundException ignored) {
+                        LOGGER.log(Level.INFO, "Could not find texture " + request.type + " for player " + request.player);
+                    }
                 });
-            });
+            } else if (request.group != null) {
+                try {
+                    Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(null, request.group, request.type)).texture;
+                    sender.accept(request.identity, new GetTextureResponse(serverIdentity, texture.id, texture.group, null, texture.url, texture.type));
+                } catch (NotFoundException ignored) {
+                    LOGGER.log(Level.INFO, "Could not find texture " + request.type + " for group " + request.group);
+                }
+            }
             return true;
         }
         return false;

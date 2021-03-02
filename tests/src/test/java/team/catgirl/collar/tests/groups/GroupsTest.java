@@ -5,8 +5,10 @@ import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.Member;
+import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.api.messaging.TextMessage;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.groups.GroupInvitation;
 import team.catgirl.collar.client.api.groups.GroupsApi;
@@ -17,6 +19,7 @@ import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
 
@@ -89,6 +92,41 @@ public class GroupsTest extends CollarTest {
         waitForCondition("bob is no longer a member", () -> bobPlayer.collar.groups().all().isEmpty());
         waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().isEmpty());
         waitForCondition("alice is no longer a member", () -> alicePlayer.collar.groups().all().isEmpty());
+    }
+
+    @Test
+    public void transferGroup() {
+
+        // Alice creates a new group with bob and eve
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
+
+        // Check that Eve and Bob received their invitations
+        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
+        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+
+        // Accept the invitation
+        bobPlayer.collar.groups().accept(bobListener.invitation);
+        evePlayer.collar.groups().accept(eveListener.invitation);
+
+        waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
+        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
+
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
+        Player bob = new Player(bobProfile.get().id, bobPlayer.collar.player());
+
+        alicePlayer.collar.groups().transferOwnership(theGroup, bob);
+
+        waitForCondition("alice is member", () -> {
+            Group group = alicePlayer.collar.groups().findGroupById(theGroup.id).orElse(null);
+            if (group == null) return false;
+            Player alice = new Player(aliceProfile.get().id, alicePlayer.collar.player());
+            return group.getRole(alice) == MembershipRole.MEMBER;
+        }, 20, TimeUnit.SECONDS);
+
+        waitForCondition("bob is owner", () -> {
+            Group group = bobPlayer.collar.groups().findGroupById(theGroup.id).orElse(null);
+            return group != null && group.getRole(bob) == MembershipRole.OWNER;
+        }, 20, TimeUnit.SECONDS);
     }
 
     @Test

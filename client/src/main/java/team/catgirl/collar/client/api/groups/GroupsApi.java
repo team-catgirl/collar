@@ -1,5 +1,6 @@
 package team.catgirl.collar.client.api.groups;
 
+import team.catgirl.collar.api.friends.Status;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.Member;
@@ -7,6 +8,7 @@ import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
+import team.catgirl.collar.client.api.textures.Texture;
 import team.catgirl.collar.client.sdht.SDHTApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
@@ -129,6 +131,15 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         sender.accept(new DeleteGroupRequest(identity(), group.id));
     }
 
+    /**
+     * Transfer ownership of the group to another player
+     * @param group to transfer
+     * @param player to transfer to
+     */
+    public void transferOwnership(Group group, Player player) {
+        sender.accept(new TransferGroupOwnershipRequest(identity(), group.id, player.profile));
+    }
+
     @Override
     public void onStateChanged(Collar.State state) {
         if (state == Collar.State.DISCONNECTED) {
@@ -226,17 +237,25 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 }
             }
             return true;
-        } else if (resp instanceof GroupMemberOfflineResponse) {
+        } else if (resp instanceof UpdateGroupMemberResponse) {
             synchronized (this) {
-                GroupMemberOfflineResponse response = (GroupMemberOfflineResponse) resp;
+                UpdateGroupMemberResponse response = (UpdateGroupMemberResponse) resp;
                 Group group = groups.get(response.groupId);
                 if (group != null) {
-                    Player player = new Player(response.sender.id(), null);
-                    Group updatedGroup = group.updatePlayer(player);
-                    groups.put(updatedGroup.id, updatedGroup);
-                    fireListener("onGroupLeft", groupsListener -> {
-                        groupsListener.onGroupMemberOffline(collar, this, updatedGroup, player);
-                    });
+                    Group updatedGroup;
+                    if (response.status == Status.OFFLINE) {
+                        updatedGroup = group.updatePlayer(response.player);
+                    } else if (response.role != null) {
+                        updatedGroup = group.updateMembershipRole(response.player, response.role);
+                    } else {
+                        updatedGroup = null;
+                    }
+                    if (updatedGroup != null) {
+                        groups.put(updatedGroup.id, updatedGroup);
+                        fireListener("onGroupMemberUpdated", groupsListener -> {
+                            groupsListener.onGroupMemberUpdated(collar, this, updatedGroup, response.player);
+                        });
+                    }
                 }
             }
             return true;

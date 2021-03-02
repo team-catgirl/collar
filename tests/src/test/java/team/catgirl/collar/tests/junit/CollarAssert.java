@@ -24,7 +24,7 @@ public final class CollarAssert {
     }
 
     public static void waitForCondition(String name, Supplier<Boolean> condition) {
-        waitForCondition(name, condition, 15, TimeUnit.SECONDS);
+        waitForCondition(name, condition, 15, TimeUnit.MINUTES);
     }
 
     public CollarAssert() {}

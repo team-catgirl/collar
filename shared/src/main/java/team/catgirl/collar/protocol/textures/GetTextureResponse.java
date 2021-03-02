@@ -14,6 +14,8 @@ import java.util.UUID;
 public final class GetTextureResponse extends ProtocolResponse {
     @JsonProperty("textureId")
     public final UUID textureId;
+    @JsonProperty("group")
+    public final UUID group;
     @JsonProperty("player")
     public final MinecraftPlayer player;
     @JsonProperty("texturePath")
@@ -23,11 +25,13 @@ public final class GetTextureResponse extends ProtocolResponse {
 
     public GetTextureResponse(@JsonProperty("identity") ServerIdentity identity,
                               @JsonProperty("textureId") UUID textureId,
+                              @JsonProperty("group") UUID group,
                               @JsonProperty("player") MinecraftPlayer player,
                               @JsonProperty("texturePath") String texturePath,
                               @JsonProperty("type") TextureType type) {
         super(identity);
         this.textureId = textureId;
+        this.group = group;
         this.player = player;
         this.texturePath = texturePath;
         this.type = type;

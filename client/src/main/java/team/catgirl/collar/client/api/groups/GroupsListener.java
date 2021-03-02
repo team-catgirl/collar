@@ -12,5 +12,5 @@ public interface GroupsListener extends ApiListener {
     default void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {};
     default void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {};
     default void onGroupInvited(Collar collar, GroupsApi groupsApi, GroupInvitation invitation) {};
-    default void onGroupMemberOffline(Collar collar, GroupsApi groupsApi, Group group, Player player) {};
+    default void onGroupMemberUpdated(Collar collar, GroupsApi groupsApi, Group group, Player player) {};
 }

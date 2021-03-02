@@ -60,6 +60,17 @@ public final class Group {
         return new Group(id, name, type, server, state.build());
     }
 
+    public Group updateMembershipRole(Player player, MembershipRole newMembershipRole) {
+        Member member = members.get(player);
+        if (member == null) {
+            return this;
+        }
+        List<Map.Entry<Player, Member>> members = this.members.entrySet().stream().filter(entry -> !entry.getKey().equals(player)).collect(Collectors.toList());
+        ImmutableMap.Builder<Player, Member> state = ImmutableMap.<Player, Member>builder().putAll(members);
+        state = state.put(player, member.updateMembershipRole(newMembershipRole));
+        return new Group(id, name, type, server, state.build());
+    }
+
     public Group updateMembershipState(Player player, MembershipState newMembershipState) {
         Member member = members.get(player);
         if (member == null) {

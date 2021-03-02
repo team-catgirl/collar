@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.services.groups;
 
 import com.google.common.collect.ImmutableList;
+import team.catgirl.collar.api.friends.Status;
 import team.catgirl.collar.api.groups.*;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -110,11 +111,10 @@ public final class GroupService {
 
     /**
      * Set the player as offline
-     * @param identity of the joining player
      * @param player the joining player
      * @return responses to send
      */
-    public ProtocolResponse playerIsOffline(ClientIdentity identity, Player player) {
+    public ProtocolResponse playerIsOffline(Player player) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         store.findGroupsContaining(player).forEach(group -> {
             group = group.updatePlayer(player);
@@ -123,7 +123,7 @@ public final class GroupService {
             BatchProtocolResponse updates = createMemberMessages(
                     group,
                     member -> member.membershipState.equals(MembershipState.ACCEPTED),
-                    ((memberIdentity, memberPlayer, updatedMember) -> new GroupMemberOfflineResponse(serverIdentity, finalGroup.id, identity)));
+                    ((memberIdentity, memberPlayer, updatedMember) -> new UpdateGroupMemberResponse(serverIdentity, finalGroup.id, player, Status.OFFLINE, null)));
             response.concat(updates);
             updateState(group);
         });
@@ -303,6 +303,36 @@ public final class GroupService {
                         player -> sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("cannot find identity for " + player)))
                 );
         return new BatchProtocolResponse(serverIdentity, responses);
+    }
+
+    public ProtocolResponse transferOwnership(TransferGroupOwnershipRequest req) {
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        store.findGroup(req.group).ifPresent(group -> {
+            Player currentPlayer = this.sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
+            UUID groupId = group.id;
+            if (group.getRole(currentPlayer) != MembershipRole.OWNER) {
+                throw new IllegalStateException(req.identity + " is not owner of group " + groupId);
+            }
+            Member newOwner = group.members.values().stream()
+                    .filter(member -> member.player.profile.equals(req.profile)).findFirst()
+                    .orElseThrow(() -> new IllegalStateException(req.profile + " is not member of group " + req.group));
+            if (newOwner.membershipState == MembershipState.ACCEPTED) {
+                group = store.updateMember(groupId, req.profile, MembershipRole.OWNER, MembershipState.ACCEPTED).orElseThrow(() -> new IllegalStateException("cant find group " + groupId));
+                // Set the member as owner
+                response.concat(createMemberMessages(
+                        group,
+                        member -> true,
+                        (identity, player, updatedMember) -> new UpdateGroupMemberResponse(serverIdentity, groupId, newOwner.player, null, MembershipRole.OWNER)));
+
+                // Set original owner as member
+                group = store.updateMember(groupId, currentPlayer.profile, MembershipRole.MEMBER, MembershipState.ACCEPTED).orElseThrow(() -> new IllegalStateException("cant find group " + groupId));
+                response.concat(createMemberMessages(
+                        group,
+                        member -> true,
+                        (identity, player, updatedMember) -> new UpdateGroupMemberResponse(serverIdentity, groupId, currentPlayer, null, MembershipRole.MEMBER)));
+            }
+        });
+        return response;
     }
 
     private void updateState(Group group) {

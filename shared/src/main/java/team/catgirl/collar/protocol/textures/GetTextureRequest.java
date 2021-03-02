@@ -13,12 +13,18 @@ import java.util.UUID;
 public final class GetTextureRequest extends ProtocolRequest {
     @JsonProperty("player")
     public final UUID player;
+    @JsonProperty("group")
+    public final UUID group;
     @JsonProperty("type")
     public final TextureType type;
 
-    public GetTextureRequest(@JsonProperty("identity") ClientIdentity identity, @JsonProperty("player") UUID player, @JsonProperty("type") TextureType type) {
+    public GetTextureRequest(@JsonProperty("identity") ClientIdentity identity,
+                             @JsonProperty("player") UUID player,
+                             @JsonProperty("group") UUID group,
+                             @JsonProperty("type") TextureType type) {
         super(identity);
         this.player = player;
+        this.group = group;
         this.type = type;
     }
 }

@@ -47,6 +47,9 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
         } else if (req instanceof AcknowledgedGroupJoinedRequest) {
             AcknowledgedGroupJoinedRequest request = (AcknowledgedGroupJoinedRequest) req;
             resp = groups.acknowledgeJoin(request);
+        } else if (req instanceof DeleteGroupRequest) {
+            DeleteGroupRequest request = (DeleteGroupRequest) req;
+            resp = groups.delete(request);
         } else {
             resp = null;
         }

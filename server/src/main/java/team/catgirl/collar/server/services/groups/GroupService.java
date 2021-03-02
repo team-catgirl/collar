@@ -68,6 +68,24 @@ public final class GroupService {
     }
 
     /**
+     * Delete a group
+     * @param req of the delete group request
+     * @return response to send to client
+     */
+    public ProtocolResponse delete(DeleteGroupRequest req) {
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        store.findGroup(req.group).ifPresent(group -> {
+            Player currentPlayer = this.sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player for " + req.identity));
+            if (group.getRole(currentPlayer) != MembershipRole.OWNER) {
+                throw new IllegalStateException(req.identity + " is not owner of group " + group.id);
+            }
+            response.concat(createMemberMessages(group, member -> true, (identity, player, updatedMember) -> new LeaveGroupResponse(serverIdentity, group.id, null, null)));
+            store.delete(group.id);
+        });
+        return response;
+    }
+
+    /**
      * Set the player as online
      * @param identity of the joining player
      * @param player the joining player

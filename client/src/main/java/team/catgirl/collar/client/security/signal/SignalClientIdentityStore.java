@@ -202,7 +202,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public void processLeaveGroupResponse(LeaveGroupResponse response) {
-        store.deleteGroupSession(response.groupId, response.sender);
+        store.deleteGroupSession(response.groupId, response.sender == null ? currentIdentity() : response.sender);
     }
 
     @Override

@@ -121,6 +121,14 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         sender.accept(new EjectGroupMemberRequest(identity(), group.id, member.player.minecraftPlayer.id));
     }
 
+    /**
+     * Delete a group
+     * @param group to delete
+     */
+    public void delete(Group group) {
+        sender.accept(new DeleteGroupRequest(identity(), group.id));
+    }
+
     @Override
     public void onStateChanged(Collar.State state) {
         if (state == Collar.State.DISCONNECTED) {

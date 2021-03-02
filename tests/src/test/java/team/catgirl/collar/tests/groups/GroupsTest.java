@@ -92,6 +92,31 @@ public class GroupsTest extends CollarTest {
     }
 
     @Test
+    public void deleteGroup() {
+
+        // Alice creates a new group with bob and eve
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId, evePlayerId));
+
+        // Check that Eve and Bob received their invitations
+        waitForCondition("Eve invite received", () -> eveListener.invitation != null);
+        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+
+        // Accept the invitation
+        bobPlayer.collar.groups().accept(bobListener.invitation);
+        evePlayer.collar.groups().accept(eveListener.invitation);
+
+        waitForCondition("Eve joined group", () -> eveListener.joinedGroup);
+        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
+
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
+
+        alicePlayer.collar.groups().delete(theGroup);
+
+        waitForCondition("bob is no longer a member", () -> bobPlayer.collar.groups().all().isEmpty());
+        waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().isEmpty());
+    }
+
+    @Test
     public void sendGroupMessage() {
         MessagingListenerImpl aliceMessages = new MessagingListenerImpl();
         alicePlayer.collar.messaging().subscribe(aliceMessages);

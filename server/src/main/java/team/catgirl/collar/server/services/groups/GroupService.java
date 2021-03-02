@@ -265,8 +265,7 @@ public final class GroupService {
     public BatchProtocolResponse updateNearbyGroups(NearbyGroups.Result result) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         result.add.forEach((groupId, nearbyGroup) -> {
-            String server = nearbyGroup.players.stream().findFirst().orElseThrow(() -> new IllegalStateException("could not find any players")).minecraftPlayer.server;
-            Group group = new Group(groupId, null, GroupType.NEARBY, server, Map.of());
+            Group group = new Group(groupId, null, GroupType.NEARBY, Map.of());
             Map<Group, List<Member>> groupToMembers = new HashMap<>();
             group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
             for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {

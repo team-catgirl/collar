@@ -28,7 +28,6 @@ public class GroupStoreTest {
         Group group = store.findGroup(groupId).orElseThrow(() -> new IllegalStateException("cant find group"));
         Assert.assertEquals(groupId, group.id);
         Assert.assertEquals("The Spawnmasons", group.name);
-        Assert.assertEquals("2b2t.org", group.server);
         Assert.assertEquals(GroupType.GROUP, group.type);
         Assert.assertEquals(1, group.members.size());
         Assert.assertTrue(group.members.values().stream().anyMatch(member -> member.player.equals(owner)));

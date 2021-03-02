@@ -26,7 +26,6 @@ public final class GroupStore {
     private static final String FIELD_ID = "id";
     private static final String FIELD_NAME = "name";
     private static final String FIELD_TYPE = "type";
-    private static final String FIELD_SERVER = "server";
     private static final String FIELD_MEMBERS = "members";
     private static final String FIELD_MEMBER_ROLE = "role";
     private static final String FIELD_MEMBER_STATE = "state";
@@ -131,8 +130,7 @@ public final class GroupStore {
         UUID groupId = doc.get(FIELD_ID, UUID.class);
         GroupType groupType = GroupType.valueOf(doc.getString(FIELD_TYPE));
         String name = doc.getString(FIELD_NAME);
-        String server = doc.getString(FIELD_SERVER);
-        return new Group(groupId, name, groupType, server, members);
+        return new Group(groupId, name, groupType, members);
     }
 
     static Document mapToDocument(Group group) {
@@ -140,7 +138,6 @@ public final class GroupStore {
         doc.put(FIELD_ID, group.id);
         doc.put(FIELD_NAME, group.name);
         doc.put(FIELD_TYPE, group.type.name());
-        doc.put(FIELD_SERVER, group.server);
         doc.put(FIELD_MEMBERS, mapToMembersList(group.members.values()));
         return new Document(doc);
     }

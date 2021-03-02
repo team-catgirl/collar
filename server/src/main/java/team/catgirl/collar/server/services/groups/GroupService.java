@@ -246,23 +246,21 @@ public final class GroupService {
 
     public BatchProtocolResponse updateNearbyGroups(NearbyGroups.Result result) {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
-        result.add.forEach((uuid, nearbyGroup) -> {
+        result.add.forEach((groupId, nearbyGroup) -> {
             String server = nearbyGroup.players.stream().findFirst().orElseThrow(() -> new IllegalStateException("could not find any players")).minecraftPlayer.server;
-            store.findGroup(uuid).ifPresent(group -> {
-                group = new Group(uuid, null, GroupType.NEARBY, server, Map.of());
-                Map<Group, List<Member>> groupToMembers = new HashMap<>();
-                group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
-                for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {
-                    response.concat(createGroupMembershipRequests(null, memberEntry.getKey(), memberEntry.getValue()));
-                }
-                updateState(group);
-            });
+            Group group = new Group(groupId, null, GroupType.NEARBY, server, Map.of());
+            Map<Group, List<Member>> groupToMembers = new HashMap<>();
+            group = group.addMembers(ImmutableList.copyOf(nearbyGroup.players), MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
+            for (Map.Entry<Group, List<Member>> memberEntry : groupToMembers.entrySet()) {
+                response.concat(createGroupMembershipRequests(null, memberEntry.getKey(), memberEntry.getValue()));
+            }
+            store.upsert(group);
         });
 
         // TODO: delay group removal by 1 minute
-        result.remove.forEach((uuid, nearbyGroup) -> store.findGroup(uuid).ifPresent(group -> {
+        result.remove.forEach((groupId, nearbyGroup) -> store.findGroup(groupId).ifPresent(group -> {
             for (Player player : nearbyGroup.players) {
-                sessions.getIdentity(player).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, uuid, null, player.minecraftPlayer)));
+                sessions.getIdentity(player).ifPresent(identity -> response.add(identity, new LeaveGroupResponse(serverIdentity, groupId, null, player.minecraftPlayer)));
                 group = group.removeMember(player);
             }
             store.delete(group.id);

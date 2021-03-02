@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import team.catgirl.collar.api.messaging.Message;
 import team.catgirl.collar.api.messaging.TextMessage;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.messaging.MessagingApi;
 import team.catgirl.collar.client.api.messaging.MessagingListener;
@@ -21,7 +22,7 @@ public class MessagingTest extends CollarTest {
         MessagingListenerImpl aliceListener = new MessagingListenerImpl();
         bobPlayer.collar.messaging().subscribe(bobMessageListener);
         alicePlayer.collar.messaging().subscribe(aliceListener);
-        alicePlayer.collar.messaging().sendPrivateMessage(bobPlayer.collar.player(), new TextMessage("UwU"));
+        alicePlayer.collar.messaging().sendPrivateMessage(bobPlayer.collar.player().minecraftPlayer, new TextMessage("UwU"));
         waitForCondition("Alice sent an UwU to Bob", () -> {
             if (!(bobMessageListener.lastMessage instanceof TextMessage)) {
                 return false;
@@ -52,7 +53,7 @@ public class MessagingTest extends CollarTest {
         Message lastMessageSent;
 
         @Override
-        public void onPrivateMessageReceived(Collar collar, MessagingApi messagingApi, MinecraftPlayer sender, Message message) {
+        public void onPrivateMessageReceived(Collar collar, MessagingApi messagingApi, Player sender, Message message) {
             this.lastMessage = message;
         }
 
@@ -62,7 +63,7 @@ public class MessagingTest extends CollarTest {
         }
 
         @Override
-        public void onPrivateMessageSent(Collar collar, MessagingApi messagingApi, MinecraftPlayer player, Message message) {
+        public void onPrivateMessageSent(Collar collar, MessagingApi messagingApi, Player player, Message message) {
             this.lastMessageSent = message;
         }
     }

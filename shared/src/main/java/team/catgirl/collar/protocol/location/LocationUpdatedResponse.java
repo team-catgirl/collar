@@ -2,6 +2,7 @@ package team.catgirl.collar.protocol.location;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
@@ -21,14 +22,14 @@ public final class LocationUpdatedResponse extends ProtocolResponse {
     @JsonProperty("group")
     public final UUID group;
     @JsonProperty("player")
-    public final MinecraftPlayer player;
+    public final Player player;
     @JsonProperty("location")
     public final byte[] location;
 
     public LocationUpdatedResponse(@JsonProperty("identity") ServerIdentity identity,
                                    @JsonProperty("sender") ClientIdentity sender,
                                    @JsonProperty("groupId") UUID group,
-                                   @JsonProperty("player") MinecraftPlayer player,
+                                   @JsonProperty("player") Player player,
                                    @JsonProperty("location") byte[] location) {
         super(identity);
         this.sender = sender;

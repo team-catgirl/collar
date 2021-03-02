@@ -6,6 +6,7 @@ import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
@@ -24,7 +25,6 @@ import team.catgirl.collar.protocol.waypoints.GetWaypointsResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.Key;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 public class LocationApi extends AbstractApi<LocationListener> {
 
     private final HashSet<UUID> groupsSharingWith = new HashSet<>();
-    private final ConcurrentHashMap<MinecraftPlayer, Location> playerLocations = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Player, Location> playerLocations = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, Waypoint> privateWaypoints = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, Map<UUID, Waypoint>> groupWaypoints = new ConcurrentHashMap<>();
     private final Supplier<Location> locationSupplier;
@@ -70,7 +70,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * Players who are sharing their location with you
      * @return players to their locations
      */
-    public Map<MinecraftPlayer, Location> playerLocations() {
+    public Map<Player, Location> playerLocations() {
         return new HashMap<>(playerLocations);
     }
 
@@ -285,7 +285,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
 
     class GroupListenerImpl implements GroupsListener {
         @Override
-        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, Player player) {
             stopSharingForGroup(group);
         }
     }

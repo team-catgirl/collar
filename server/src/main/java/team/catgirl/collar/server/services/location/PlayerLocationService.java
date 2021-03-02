@@ -69,12 +69,12 @@ public class PlayerLocationService {
      */
     public BatchProtocolResponse updateLocation(UpdateLocationRequest req) {
         Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
-        return createLocationResponses(player, new LocationUpdatedResponse(serverIdentity, req.identity, req.group, player.minecraftPlayer, req.location));
+        return createLocationResponses(player, new LocationUpdatedResponse(serverIdentity, req.identity, req.group, player, req.location));
     }
 
     private BatchProtocolResponse stopSharing(UUID groupId, ClientIdentity identity, Player player) {
         LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + groupId);
-        LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, groupId, player.minecraftPlayer, null);
+        LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, groupId, player, null);
         BatchProtocolResponse responses = createLocationResponses(player, locationUpdatedResponse);
         synchronized (playersSharing) {
             playersSharing.remove(groupId, player);

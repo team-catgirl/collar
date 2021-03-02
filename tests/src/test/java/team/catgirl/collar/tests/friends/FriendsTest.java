@@ -53,7 +53,7 @@ public class FriendsTest extends CollarTest {
         TestFriendListener aliceListener = new TestFriendListener();
         alicePlayer.collar.friends().subscribe(aliceListener);
 
-        alicePlayer.collar.friends().addFriend(bobPlayer.collar.player());
+        alicePlayer.collar.friends().addFriend(bobPlayer.collar.player().minecraftPlayer);
         CollarAssert.waitForCondition("Alice is friends with Bob", () -> alicePlayer.collar.friends().list().stream().anyMatch(friend -> friend.friend.equals(bobProfile.get().id)));
 
         CollarAssert.waitForCondition("Alice was told Bob was added", () -> {
@@ -62,7 +62,7 @@ public class FriendsTest extends CollarTest {
             return friend != null && friend.status == Status.ONLINE && friend.friend.equals(bobProfile.get().id);
         });
 
-        alicePlayer.collar.friends().removeFriend(bobPlayer.collar.player());
+        alicePlayer.collar.friends().removeFriend(bobPlayer.collar.player().minecraftPlayer);
         CollarAssert.waitForCondition("Alice is not friends with Bob", () -> alicePlayer.collar.friends().list().stream().noneMatch(friend -> friend.friend.equals(bobProfile.get().id)));
 
         CollarAssert.waitForCondition("Alice was told Bob was removed", () -> {

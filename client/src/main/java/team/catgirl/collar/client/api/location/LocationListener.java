@@ -2,11 +2,10 @@ package team.catgirl.collar.client.api.location;
 
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.ApiListener;
-import team.catgirl.collar.client.api.groups.GroupsApi;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.Set;
 
@@ -18,7 +17,7 @@ public interface LocationListener extends ApiListener {
      * @param player that is sharing their location
      * @param location of the player
      */
-    default void onLocationUpdated(Collar collar, LocationApi locationApi, MinecraftPlayer player, Location location) {};
+    default void onLocationUpdated(Collar collar, LocationApi locationApi, Player player, Location location) {};
 
     /**
      * Fired when a waypoint was created

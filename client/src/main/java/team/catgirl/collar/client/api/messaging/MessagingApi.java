@@ -3,6 +3,7 @@ package team.catgirl.collar.client.api.messaging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.messaging.Message;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.api.identity.IdentityApi;
@@ -49,7 +50,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                         }
                         this.sender.accept(new SendMessageRequest(collar.identity(), sender.get(), null, messageBytes));
                         fireListener("onPrivateMessageSent", listener -> {
-                            listener.onPrivateMessageSent(collar, this, player, message);
+                            listener.onPrivateMessageSent(collar, this, new Player(sender.get().id(), player), message);
                         });
                     } else {
                         LOGGER.log(Level.INFO, collar.identity() + " could not locate identity for " + player + ". The private message was not sent.");

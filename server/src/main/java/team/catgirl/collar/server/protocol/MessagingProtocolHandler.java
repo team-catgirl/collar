@@ -37,7 +37,7 @@ public class MessagingProtocolHandler extends ProtocolHandler {
             if (request.group != null) {
                 sender.accept(null, groups.createMessages(request));
             } else if (request.recipient != null) {
-                sessions.findMinecraftPlayer(request.identity).ifPresentOrElse(player -> {
+                sessions.findPlayer(request.identity).ifPresentOrElse(player -> {
                     sender.accept(request.recipient, new SendMessageResponse(this.serverIdentity, req.identity, null, player, request.message));
                 }, () -> {
                     LOGGER.log(Level.INFO, "could not find player for " + req.identity);

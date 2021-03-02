@@ -6,6 +6,7 @@ import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.groups.GroupInvitation;
@@ -20,7 +21,6 @@ import team.catgirl.collar.tests.junit.CollarTest;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
@@ -254,10 +254,10 @@ public class LocationTest extends CollarTest {
     }
 
     public static class Event {
-        public final MinecraftPlayer player;
+        public final Player player;
         public final Location location;
 
-        public Event(MinecraftPlayer player, Location location) {
+        public Event(Player player, Location location) {
             this.player = player;
             this.location = location;
         }
@@ -283,7 +283,7 @@ public class LocationTest extends CollarTest {
         public final LinkedList<Event> events = new LinkedList<>();
 
         @Override
-        public void onLocationUpdated(Collar collar, LocationApi locationApi, MinecraftPlayer player, Location location) {
+        public void onLocationUpdated(Collar collar, LocationApi locationApi, Player player, Location location) {
             events.add(new Event(player, location));
         }
     }
@@ -293,7 +293,7 @@ public class LocationTest extends CollarTest {
         public Group group;
 
         @Override
-        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, Player player) {
             this.group = group;
         }
 

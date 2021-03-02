@@ -10,6 +10,7 @@ import org.whispersystems.libsignal.IdentityKey;
 import team.catgirl.collar.api.http.CollarFeature;
 import team.catgirl.collar.api.http.CollarVersion;
 import team.catgirl.collar.api.http.DiscoverResponse;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.CollarException.ConnectionException;
 import team.catgirl.collar.client.CollarException.UnsupportedServerVersionException;
 import team.catgirl.collar.client.api.AbstractApi;
@@ -300,8 +301,8 @@ public final class Collar {
      * The current player
      * @return player
      */
-    public MinecraftPlayer player() {
-        return configuration.sessionSupplier.get().toPlayer();
+    public Player player() {
+        return new Player(identity().id(), configuration.sessionSupplier.get().toPlayer());
     }
 
     private void assertConnected() {

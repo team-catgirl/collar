@@ -15,7 +15,6 @@ import team.catgirl.collar.client.api.groups.GroupsApi;
 import team.catgirl.collar.client.api.groups.GroupsListener;
 import team.catgirl.collar.client.api.messaging.MessagingApi;
 import team.catgirl.collar.client.api.messaging.MessagingListener;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.tests.junit.CollarTest;
 
 import java.util.List;
@@ -112,20 +111,18 @@ public class GroupsTest extends CollarTest {
         waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
 
         Group theGroup = alicePlayer.collar.groups().all().get(0);
-        Player bob = new Player(bobProfile.get().id, bobPlayer.collar.player());
 
-        alicePlayer.collar.groups().transferOwnership(theGroup, bob);
+        alicePlayer.collar.groups().transferOwnership(theGroup, bobPlayer.collar.player());
 
         waitForCondition("alice is member", () -> {
             Group group = alicePlayer.collar.groups().findGroupById(theGroup.id).orElse(null);
             if (group == null) return false;
-            Player alice = new Player(aliceProfile.get().id, alicePlayer.collar.player());
-            return group.getRole(alice) == MembershipRole.MEMBER;
+            return group.getRole(alicePlayer.collar.player()) == MembershipRole.MEMBER;
         }, 20, TimeUnit.SECONDS);
 
         waitForCondition("bob is owner", () -> {
             Group group = bobPlayer.collar.groups().findGroupById(theGroup.id).orElse(null);
-            return group != null && group.getRole(bob) == MembershipRole.OWNER;
+            return group != null && group.getRole(bobPlayer.collar.player()) == MembershipRole.OWNER;
         }, 20, TimeUnit.SECONDS);
     }
 
@@ -205,14 +202,14 @@ public class GroupsTest extends CollarTest {
         }
 
         @Override
-        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupJoined(Collar collar, GroupsApi groupsApi, Group group, Player player) {
             if (collar.player().equals(player)) {
                 joinedGroup = true;
             }
         }
 
         @Override
-        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, MinecraftPlayer player) {
+        public void onGroupLeft(Collar collar, GroupsApi groupsApi, Group group, Player player) {
             if (collar.player().equals(player)) {
                 leftGroup = true;
             }
@@ -234,7 +231,7 @@ public class GroupsTest extends CollarTest {
         }
 
         @Override
-        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, MinecraftPlayer sender, Message message) {
+        public void onGroupMessageReceived(Collar collar, MessagingApi messagingApi, Group group, Player sender, Message message) {
             this.lastReceivedMessage = message;
         }
     }

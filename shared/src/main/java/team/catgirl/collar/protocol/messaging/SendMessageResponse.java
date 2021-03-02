@@ -2,6 +2,7 @@ package team.catgirl.collar.protocol.messaging;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Identity;
@@ -16,7 +17,7 @@ public final class SendMessageResponse extends ProtocolResponse {
     @JsonProperty("group")
     public final UUID group;
     @JsonProperty("player")
-    public final MinecraftPlayer player;
+    public final Player player;
     @JsonProperty("message")
     public final byte[] message;
 
@@ -24,7 +25,7 @@ public final class SendMessageResponse extends ProtocolResponse {
     public SendMessageResponse(@JsonProperty("identity") ServerIdentity identity,
                                @JsonProperty("sender") Identity sender,
                                @JsonProperty("group") UUID group,
-                               @JsonProperty("player") MinecraftPlayer player,
+                               @JsonProperty("player") Player player,
                                @JsonProperty("message") byte[] message) {
         super(identity);
         this.sender = sender;

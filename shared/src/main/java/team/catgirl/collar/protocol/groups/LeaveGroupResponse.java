@@ -2,6 +2,7 @@ package team.catgirl.collar.protocol.groups;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
@@ -18,13 +19,13 @@ public final class LeaveGroupResponse extends ProtocolResponse {
     @JsonProperty("sender")
     public final ClientIdentity sender;
     @JsonProperty("player")
-    public final MinecraftPlayer player;
+    public final Player player;
 
     @JsonCreator
     public LeaveGroupResponse(@JsonProperty("identity") ServerIdentity identity,
                               @JsonProperty("groupId") UUID groupId,
                               @JsonProperty("sender") ClientIdentity sender,
-                              @JsonProperty("player") MinecraftPlayer player) {
+                              @JsonProperty("player") Player player) {
         super(identity);
         this.groupId = groupId;
         this.sender = sender;

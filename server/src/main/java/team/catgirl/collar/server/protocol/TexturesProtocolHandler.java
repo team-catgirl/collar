@@ -42,7 +42,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
                 sessions.getSessionStateByOwner(request.player).ifPresent(sessionState -> {
                     try {
                         Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(sessionState.identity.owner, request.group, request.type)).texture;
-                        sender.accept(request.identity, new GetTextureResponse(serverIdentity, texture.id, null, sessionState.minecraftPlayer, texture.url, texture.type));
+                        sender.accept(request.identity, new GetTextureResponse(serverIdentity, texture.id, null, sessionState.toPlayer(), texture.url, texture.type));
                     } catch (NotFoundException ignored) {
                         LOGGER.log(Level.INFO, "Could not find texture " + request.type + " for player " + request.player);
                     }

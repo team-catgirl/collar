@@ -24,12 +24,14 @@ public final class Texture {
 
     private final Logger LOGGER = Logger.getLogger(Texture.class.getName());
 
-    public final MinecraftPlayer player;
+    public final Player player;
+    public final UUID group;
     public final TextureType type;
     private final URL url;
 
-    public Texture(MinecraftPlayer player, TextureType type, URL url) {
+    public Texture(Player player, UUID group, TextureType type, URL url) {
         this.player = player;
+        this.group = group;
         this.type = type;
         this.url = url;
     }

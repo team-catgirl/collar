@@ -25,7 +25,7 @@ public class TexturesApi extends AbstractApi<TexturesListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof GetTextureResponse) {
             GetTextureResponse response = (GetTextureResponse) resp;
-            Texture texture = new Texture(response.player, response.type, UrlBuilder.fromUrl(collar.configuration.collarServerURL).withPath(response.texturePath).toUrl());
+            Texture texture = new Texture(response.player, response.group, response.type, UrlBuilder.fromUrl(collar.configuration.collarServerURL).withPath(response.texturePath).toUrl());
             fireListener("onTextureReceived", texturesListener -> {
                 texturesListener.onTextureReceived(collar, this, texture);
             });

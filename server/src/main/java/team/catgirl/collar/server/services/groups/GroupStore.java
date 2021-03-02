@@ -72,27 +72,30 @@ public final class GroupStore {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
     }
 
-    public void addMembers(UUID id, List<Player> players, MembershipRole role, MembershipState state) {
+    public Optional<Group> addMembers(UUID id, List<Player> players, MembershipRole role, MembershipState state) {
         List<Document> members = mapToMembersList(players.stream().map(player -> new Member(player, role, state)).collect(Collectors.toList()));
         UpdateResult result = docs.updateOne(eq(FIELD_ID, id), pushEach(FIELD_MEMBERS, members));
-        if (!result.wasAcknowledged()) {
+        if (!result.wasAcknowledged() && result.getModifiedCount() != 1) {
             throw new IllegalStateException("failed to add members to group " + id);
         }
+        return findGroup(id);
     }
 
-    public void updateMember(UUID id, UUID profile, MembershipRole role, MembershipState state) {
+    public Optional<Group> updateMember(UUID id, UUID profile, MembershipRole role, MembershipState state) {
         UpdateOptions updateOptions = new UpdateOptions().arrayFilters(List.of(new Document("item." + FIELD_MEMBER_PROFILE_ID, profile)));
         UpdateResult result = docs.updateOne(eq(FIELD_ID, id), set(FIELD_MEMBERS + ".$[item]", mapMember(profile, role, state)), updateOptions);
-        if (!result.wasAcknowledged()) {
+        if (!result.wasAcknowledged() && result.getModifiedCount() != 1) {
             throw new IllegalStateException("could not remove member " + profile + " from group " + id);
         }
+        return findGroup(id);
     }
 
-    public void removeMember(UUID id, UUID profile) {
+    public Optional<Group> removeMember(UUID id, UUID profile) {
         UpdateResult result = docs.updateOne(eq(FIELD_ID, id), pull(FIELD_MEMBERS, new Document(Map.of(FIELD_MEMBER_PROFILE_ID, profile))));
-        if (!result.wasAcknowledged()) {
+        if (!result.wasAcknowledged() && result.getModifiedCount() != 1) {
             throw new IllegalStateException("could not remove member " + profile + " from group " + id);
         }
+        return findGroup(id);
     }
 
     /**

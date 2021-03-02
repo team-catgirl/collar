@@ -122,9 +122,8 @@ public final class GroupService {
         BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
         store.findGroup(req.groupId).ifPresent(group -> {
             MembershipState state = req.state;
-            group = group.updateMembershipState(sendingPlayer, state);
             MembershipRole role = group.getRole(sendingPlayer);
-            store.updateMember(group.id, sendingPlayer.profile, role, state);
+            group = store.updateMember(group.id, sendingPlayer.profile, role, state).orElseThrow(() -> new IllegalStateException("could not reload group " + req.groupId));
             // Send a response back to the player accepting membership, with the distribution keys
             response.add(req.identity, new JoinGroupResponse(serverIdentity, group.id, req.identity, sendingPlayer.minecraftPlayer, req.keys));
             // Let everyone else in the group know that this identity has accepted
@@ -150,8 +149,7 @@ public final class GroupService {
         store.findGroup(req.groupId).ifPresent(group -> {
             Group finalGroup = group;
             response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, req.identity, sender.minecraftPlayer)));
-            group = group.removeMember(sender);
-            store.removeMember(group.id, sender.profile);
+            group = store.removeMember(group.id, sender.profile).orElseThrow(() -> new IllegalStateException("could not reload group " + req.groupId));
             updateState(group);
         });
         return response;
@@ -176,8 +174,9 @@ public final class GroupService {
             }
             Map<Group, List<Member>> groupToMembers = new HashMap<>();
             List<Player> players = sessions.findPlayers(req.identity, req.players);
+            // TODO: replace line below with a method that can do the diff of existing players and new players invited
             group = group.addMembers(players, MembershipRole.MEMBER, MembershipState.PENDING, groupToMembers::put);
-            store.addMembers(group.id, players, MembershipRole.MEMBER, MembershipState.PENDING);
+            group = store.addMembers(group.id, players, MembershipRole.MEMBER, MembershipState.PENDING).orElseThrow(() -> new IllegalStateException("could not reload group " + req.groupId));
             for (Map.Entry<Group, List<Member>> entry : groupToMembers.entrySet()) {
                 response.concat(createGroupMembershipRequests(req.identity, entry.getKey(), entry.getValue()));
             }
@@ -205,8 +204,7 @@ public final class GroupService {
             }
             Group finalGroup = group;
             response.concat(createMemberMessages(group, member -> true, (identity, player, member) -> new LeaveGroupResponse(serverIdentity, finalGroup.id, identityToRemove.get(), playerToRemove.minecraftPlayer)));
-            group = group.removeMember(playerToRemove);
-            store.removeMember(group.id, playerToRemove.profile);
+            group = store.removeMember(group.id, playerToRemove.profile).orElseThrow(() -> new IllegalStateException("could not reload group " + req.groupId));
             updateState(group);
         });
         return response;

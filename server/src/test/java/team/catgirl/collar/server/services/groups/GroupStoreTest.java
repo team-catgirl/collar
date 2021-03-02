@@ -35,9 +35,9 @@ public class GroupStoreTest {
 
         Player player1 = new Player(UUID.randomUUID(), null);
         Player player2 = new Player(UUID.randomUUID(), null);
-        store.addMembers(groupId, List.of(player1, player2), MembershipRole.MEMBER, MembershipState.ACCEPTED);
+        group = store.addMembers(groupId, List.of(player1, player2), MembershipRole.MEMBER, MembershipState.ACCEPTED).orElse(null);
+        Assert.assertNotNull(group);
 
-        group = store.findGroup(groupId).orElseThrow(() -> new IllegalStateException("cant find group"));
         Member member1 = group.members.values().stream().filter(member -> member.player.equals(player1)).findFirst().orElseThrow();
         Assert.assertEquals(player1.profile, member1.player.profile);
         Assert.assertEquals(MembershipRole.MEMBER, member1.membershipRole);
@@ -50,16 +50,16 @@ public class GroupStoreTest {
 
         Assert.assertEquals(groupId, store.findGroupsContaining(player1).findFirst().map(group1 -> group1.id).orElse(null));
 
-        store.updateMember(groupId, player1.profile, MembershipRole.MEMBER, MembershipState.DECLINED);
-        group = store.findGroup(groupId).orElseThrow(() -> new IllegalStateException("cant find group"));
+        group = store.updateMember(groupId, player1.profile, MembershipRole.MEMBER, MembershipState.DECLINED).orElse(null);
+        Assert.assertNotNull(group);
         member1 = group.members.values().stream().filter(member -> member.player.equals(player1)).findFirst().orElseThrow();
         Assert.assertEquals(player1.profile, member1.player.profile);
         Assert.assertEquals(MembershipRole.MEMBER, member1.membershipRole);
         Assert.assertEquals(MembershipState.DECLINED, member1.membershipState);
         Assert.assertEquals(3, group.members.size());
 
-        store.removeMember(groupId, player1.profile);
-        group = store.findGroup(groupId).orElseThrow(() -> new IllegalStateException("cant find group"));
+        group = store.removeMember(groupId, player1.profile).orElse(null);
+        Assert.assertNotNull(group);
         Assert.assertEquals(2, group.members.size());
         Assert.assertFalse(group.members.values().stream().anyMatch(member -> member.player.equals(player1)));
         Assert.assertTrue(group.members.values().stream().anyMatch(member -> member.player.equals(player2)));

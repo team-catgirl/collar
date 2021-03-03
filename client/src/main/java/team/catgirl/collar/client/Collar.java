@@ -41,6 +41,7 @@ import team.catgirl.collar.protocol.keepalive.KeepAliveResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerificationFailedResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.PrivateIdentityMismatchResponse;
+import team.catgirl.collar.protocol.session.SessionFailedResponse.SessionErrorResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
@@ -425,8 +426,8 @@ public final class Collar {
                     PrivateIdentityMismatchResponse response = (PrivateIdentityMismatchResponse) resp;
                     LOGGER.log(Level.INFO, "SessionFailedResponse with private identity mismatch");
                     configuration.listener.onPrivateIdentityMismatch(collar, response.url);
-                } else {
-                    LOGGER.log(Level.INFO, "SessionFailedResponse with general server failure");
+                } else if (resp instanceof SessionErrorResponse) {
+                    LOGGER.log(Level.INFO, "SessionFailedResponse Reason: " + ((SessionErrorResponse) resp).reason);
                 }
                 collar.changeState(State.DISCONNECTED);
             } else if (resp instanceof IsTrustedRelationshipResponse) {

@@ -4,17 +4,16 @@ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 
 public enum GroupType {
     /**
-     * A persistent {@link #PARTY}. Always exists until the admin deletes it.
+     * A persistent group of players
      */
     GROUP,
     /**
-     * Created and managed by the players who are members
-     * The party is deleted when there are no players in the party
+     * A temporary group of players
      */
     @JsonEnumDefaultValue
     PARTY,
     /**
-     * Groups that use seen entities to infer players nearby the member. Entirely managed by the server.
+     * A location proximity group
      */
     NEARBY;
 }

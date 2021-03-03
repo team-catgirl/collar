@@ -98,13 +98,12 @@ public class PlayerLocationService {
         // Keep track of players we have sent to, so we do not send them duplicate messages (e.g. if they share membership of 2 or more groups)
         HashSet<Player> uniquePlayers = new HashSet<>();
         for (Group group : memberGroups) {
-            for (Map.Entry<Player, Member> entry : group.members.entrySet()) {
-                Player memberPlayer = entry.getKey();
+            for (Member member : group.members) {
+                Player memberPlayer = member.player;
                 // Do not send to self
                 if (memberPlayer.equals(player)) {
                     continue;
                 }
-                Member member = entry.getValue();
                 if (uniquePlayers.contains(memberPlayer) || member.membershipState != MembershipState.ACCEPTED) {
                     continue;
                 }

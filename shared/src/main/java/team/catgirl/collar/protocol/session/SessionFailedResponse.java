@@ -50,9 +50,12 @@ public abstract class SessionFailedResponse extends ProtocolResponse {
      * Fired when the server encounters an error and the client must reconnect
      */
     public static final class SessionErrorResponse extends SessionFailedResponse {
+        @JsonProperty("reason")
+        public final String reason;
         @JsonCreator
-        public SessionErrorResponse(@JsonProperty("identity") ServerIdentity identity) {
+        public SessionErrorResponse(@JsonProperty("identity") ServerIdentity identity, @JsonProperty("reason") String reason) {
             super(identity);
+            this.reason = reason;
         }
     }
 }

@@ -124,9 +124,9 @@ public final class GroupStore {
     }
 
     private Group mapFromDocument(Document doc) {
-        Map<Player, Member> members = doc.getList(FIELD_MEMBERS, Document.class, new ArrayList<>()).stream()
+        Set<Member> members = doc.getList(FIELD_MEMBERS, Document.class, new ArrayList<>()).stream()
                 .map(this::mapMemberFrom)
-                .collect(Collectors.toMap(member -> member.player, member -> member));
+                .collect(Collectors.toSet());
         UUID groupId = doc.get(FIELD_ID, UUID.class);
         GroupType groupType = GroupType.valueOf(doc.getString(FIELD_TYPE));
         String name = doc.getString(FIELD_NAME);
@@ -138,7 +138,7 @@ public final class GroupStore {
         doc.put(FIELD_ID, group.id);
         doc.put(FIELD_NAME, group.name);
         doc.put(FIELD_TYPE, group.type.name());
-        doc.put(FIELD_MEMBERS, mapToMembersList(group.members.values()));
+        doc.put(FIELD_MEMBERS, mapToMembersList(group.members));
         return new Document(doc);
     }
 

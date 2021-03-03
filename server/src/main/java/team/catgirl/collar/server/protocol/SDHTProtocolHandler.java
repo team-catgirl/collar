@@ -79,7 +79,7 @@ public class SDHTProtocolHandler extends ProtocolHandler {
             throw new IllegalStateException("sender is not a member of group " + namespace);
         }
         Set<ClientIdentity> listeners = new HashSet<>();
-        for (Member member : group.members.values()) {
+        for (Member member : group.members) {
             if (member.membershipState != MembershipState.ACCEPTED && sendingPlayer.equals(member.player)) {
                 continue;
             }

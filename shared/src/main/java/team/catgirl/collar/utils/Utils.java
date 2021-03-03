@@ -21,35 +21,15 @@ public final class Utils {
     private static final ObjectMapper MESSAGE_PACK_MAPPER;
 
     static {
-        SimpleModule keys = new SimpleModule();
-        keys.addKeyDeserializer(Player.class, new KeyDeserializer() {
-            @Override
-            public Object deserializeKey(String key, DeserializationContext ctxt) {
-                StringTokenizer tokenizer = new StringTokenizer(key, ":");
-                String profileId = tokenizer.nextToken();
-                String minecraftId = tokenizer.nextToken();
-                String minecraftServer = tokenizer.nextToken();
-                return new Player(UUID.fromString(profileId), new MinecraftPlayer(UUID.fromString(minecraftId), minecraftServer));
-            }
-        });
-        keys.addKeySerializer(Player.class, new JsonSerializer<Player>() {
-            @Override
-            public void serialize(Player value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                gen.writeFieldName(value.profile + ":" + value.minecraftPlayer.id + ":" + value.minecraftPlayer.id);
-            }
-        });
-
         JSON_MAPPER = new ObjectMapper()
                 .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
-                .registerModules(keys);
+                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
         MESSAGE_PACK_MAPPER = new ObjectMapper(new MessagePackFactory())
                 .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
-                .registerModules(keys);
+                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 
     public static final SecureRandom SECURERANDOM;

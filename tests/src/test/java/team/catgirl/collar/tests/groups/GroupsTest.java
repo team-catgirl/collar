@@ -60,7 +60,7 @@ public class GroupsTest extends CollarTest {
         Group theGroup = alicePlayer.collar.groups().all().get(0);
 
         // Find eve
-        Member eveMember = theGroup.members.values().stream().filter(candidate -> candidate.player.equals(evePlayer.collar.player())).findFirst().orElseThrow();
+        Member eveMember = theGroup.members.stream().filter(candidate -> candidate.player.equals(evePlayer.collar.player())).findFirst().orElseThrow();
 
         waitForCondition("eve is in alice's group", () -> alicePlayer.collar.groups().all().get(0).containsPlayer(evePlayer.collar.player()));
         waitForCondition("eve is in bobs's group", () -> bobPlayer.collar.groups().all().get(0).containsPlayer(evePlayer.collar.player()));
@@ -91,6 +91,44 @@ public class GroupsTest extends CollarTest {
         waitForCondition("bob is no longer a member", () -> bobPlayer.collar.groups().all().isEmpty());
         waitForCondition("eve is no longer a member", () -> evePlayer.collar.groups().all().isEmpty());
         waitForCondition("alice is no longer a member", () -> alicePlayer.collar.groups().all().isEmpty());
+    }
+
+    @Test
+    public void canRejoinGroupWhenBackOnline() {
+        // Alice creates a new group with bob and eve
+        alicePlayer.collar.groups().create("cute group", GroupType.PARTY, List.of(bobPlayerId));
+
+        // Check that Eve and Bob received their invitations
+        waitForCondition("Bob invite received", () -> bobListener.invitation != null);
+
+        // Accept the invitation
+        bobPlayer.collar.groups().accept(bobListener.invitation);
+
+        waitForCondition("Bob joined group", () -> bobListener.joinedGroup);
+
+        Group theGroup = alicePlayer.collar.groups().all().get(0);
+
+        bobPlayer.collar.disconnect();
+
+        waitForCondition("disconnected", () -> bobPlayer.collar.getState() == Collar.State.DISCONNECTED);
+
+        waitForCondition("bob should not have minecraft player", () -> {
+            Group group = alicePlayer.collar.groups().findGroupById(theGroup.id).orElse(null);
+            if (group == null) return false;
+            Member bobMember = group.members.stream().filter(member -> member.player.profile.equals(bobProfile.get().id)).findFirst().orElseThrow();
+            return bobMember.player.minecraftPlayer == null;
+        });
+
+        bobPlayer.collar.connect();
+
+        waitForCondition("bob connected", () -> bobPlayer.collar.getState() == Collar.State.CONNECTED, 30, TimeUnit.SECONDS);
+
+        waitForCondition("bob should not have minecraft player", () -> {
+            Group group = alicePlayer.collar.groups().findGroupById(theGroup.id).orElse(null);
+            if (group == null) return false;
+            Member bobMember = group.members.stream().filter(member -> member.player.profile.equals(bobProfile.get().id)).findFirst().orElseThrow();
+            return bobMember.player.minecraftPlayer == null;
+        });
     }
 
     @Test

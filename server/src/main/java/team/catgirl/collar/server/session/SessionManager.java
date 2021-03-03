@@ -91,7 +91,7 @@ public final class SessionManager {
         if (sessionState != null) {
             if (session.isOpen()) {
                 try {
-                    send(session, sessionState.identity, new SessionErrorResponse(store.getIdentity()));
+                    send(session, sessionState.identity, new SessionErrorResponse(store.getIdentity(), reason));
                 } catch (IOException ioException) {
                     throw new IllegalStateException("Couldn't send SessionErrorResponse", e);
                 }

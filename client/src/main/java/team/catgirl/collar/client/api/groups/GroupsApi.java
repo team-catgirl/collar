@@ -237,6 +237,9 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 }
             }
             return true;
+        } else if (resp instanceof RejoinGroupResponse) {
+            // Rejoin the group
+            sender.accept(identityStore().createJoinGroupRequest(identity(), ((RejoinGroupResponse) resp).group));
         } else if (resp instanceof UpdateGroupMemberResponse) {
             synchronized (this) {
                 UpdateGroupMemberResponse response = (UpdateGroupMemberResponse) resp;

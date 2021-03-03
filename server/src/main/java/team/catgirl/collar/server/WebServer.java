@@ -4,12 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import spark.ModelAndView;
 import spark.Request;
 import spark.Response;
+import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.http.*;
-import team.catgirl.collar.api.http.HttpException.BadRequestException;
-import team.catgirl.collar.api.http.HttpException.ForbiddenException;
-import team.catgirl.collar.api.http.HttpException.ServerErrorException;
-import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.http.HttpException.*;
 import team.catgirl.collar.api.profiles.PublicProfile;
+import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.server.common.ServerVersion;
 import team.catgirl.collar.server.configuration.Configuration;
@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static spark.Spark.*;
 
@@ -142,6 +143,10 @@ public class WebServer {
                         UUID uuid = UUID.fromString(id);
                         return services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(uuid)).profile.toPublic();
                     });
+                    get("/groups", (request, response) -> {
+                        RequestContext context = RequestContext.from(request);
+                        return services.groupStore.findGroupsContaining(new Player(context.owner, null)).collect(Collectors.toList());
+                    });
                     post("/reset", (request, response) -> {
                         LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), LoginRequest.class);
                         RequestContext context = RequestContext.from(request);
@@ -172,16 +177,22 @@ public class WebServer {
                     });
                     get("/textures", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
-                        return services.textures.findTexture(RequestContext.from(request), new FindTextureRequest(context.owner, null));
+                        return services.textures.findTexture(RequestContext.from(request), new FindTextureRequest(context.owner, null, null));
                     });
                     get("/textures/:type", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
                         TextureType textureType = TextureType.valueOf(request.params("type").toUpperCase());
-                        return services.textures.findTexture(RequestContext.from(request), new FindTextureRequest(context.owner, textureType));
+                        return services.textures.findTexture(RequestContext.from(request), new FindTextureRequest(context.owner, null, textureType));
                     });
                     post("/textures/upload", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
                         CreateTextureRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), CreateTextureRequest.class);
+                        if (req.group != null) {
+                            Group group = services.groups.findGroup(req.group).orElseThrow(() -> new NotFoundException("could not find group " + req.group));
+                            if (group.members.values().stream().noneMatch(member -> member.player.profile.equals(context.owner) && member.membershipRole == MembershipRole.OWNER)) {
+                                throw new NotFoundException("could not find group " + req.group);
+                            }
+                        }
                         return services.textures.createTexture(context, req);
                     });
                 });

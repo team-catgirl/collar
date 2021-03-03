@@ -12,7 +12,7 @@ import java.util.UUID;
 public final class MinecraftSession {
     @JsonProperty("id")
     public final UUID id;
-    @JsonProperty("id")
+    @JsonProperty("username")
     public final String username;
     @JsonProperty("server")
     public final String server;
@@ -26,20 +26,13 @@ public final class MinecraftSession {
             @JsonProperty("id") UUID id,
             @JsonProperty("username") String username,
             @JsonProperty("server") String server,
-            @JsonProperty("mode") Mode mode) {
+            @JsonProperty("mode") Mode mode,
+            @JsonProperty("accessToken") String accessToken) {
         this.id = id;
         this.username = username;
         this.server = server;
         this.mode = mode;
-        this.accessToken = null;
-    }
-
-    public MinecraftSession(UUID id, String username, String server, Mode mode, String accessToken) {
-        this.id = id;
-        this.username = username;
-        this.server = server;
-        this.mode = mode;
-        this.accessToken = null;
+        this.accessToken = accessToken;
     }
 
     /**

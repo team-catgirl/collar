@@ -100,7 +100,7 @@ public class Configuration {
                 new LocalEmail(appUrlProvider));
     }
 
-    public static Configuration testConfiguration(MongoDatabase db) {
+    public static Configuration testConfiguration(MongoDatabase db, MinecraftSessionVerifier sessionVerifier) {
         LOGGER.log(Level.SEVERE, "Starting in insecure testing mode. Do not use in production.");
         DefaultAppUrlProvider appUrlProvider = new DefaultAppUrlProvider("http://localhost:3001");
         return new Configuration(
@@ -108,7 +108,7 @@ public class Configuration {
                 appUrlProvider,
                 new TokenCrypter("insecureTokenCrypterPassword"),
                 new PasswordHashing("VSZL*bR8-=r]r5P_"),
-                new NojangMinecraftSessionVerifier(),
+                sessionVerifier,
                 "*",
                 false,
                 3001,

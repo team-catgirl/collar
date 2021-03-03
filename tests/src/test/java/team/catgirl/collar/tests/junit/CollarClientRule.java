@@ -33,10 +33,13 @@ public final class CollarClientRule implements TestRule {
     }, "Collar Client Test Loop");
 
     public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder) {
+        this(playerId, builder, MinecraftSession.noJang(playerId, "cuteplayer", "hypixel.net"));
+    }
+    public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder, MinecraftSession session) {
         this.ticks = new Ticks();
         this.builder = builder.withCollarServer("http://localhost:3001")
                 .withHomeDirectory(Files.createTempDir())
-                .withSession(() -> MinecraftSession.noJang(playerId, "cuteplayer", "hypixel.net"))
+                .withSession(() -> session)
                 .withTicks(ticks);
     }
 

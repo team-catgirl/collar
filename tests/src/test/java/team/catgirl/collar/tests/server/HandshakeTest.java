@@ -6,7 +6,10 @@ import org.junit.Test;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.server.Services;
+import team.catgirl.collar.server.configuration.Configuration;
 import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.security.mojang.NojangMinecraftSessionVerifier;
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.tests.junit.CollarClientRule;
@@ -38,7 +41,7 @@ public class HandshakeTest {
                 "alice",
                 "Alice UwU"
         )).profile);
-    });
+    }, Configuration.testConfiguration(Mongo.getTestingDatabase(), new NojangMinecraftSessionVerifier()));
 
     @Rule
     public CollarClientRule alicePlayer = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder()

@@ -1,5 +1,8 @@
 package team.catgirl.collar.security.mojang;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.mikael.urlbuilder.UrlBuilder;
 import okhttp3.MediaType;
@@ -30,66 +33,75 @@ public final class ServerAuthentication {
 
     public boolean joinServer(MinecraftSession session) {
         try {
-            JoinRequest joinReq = new JoinRequest(session.accessToken, session.id);
-            byte[] json = Utils.jsonMapper().writeValueAsBytes(joinReq);
-            RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+            JoinRequest joinReq = new JoinRequest(session.accessToken, toProfileId(session.id), session.server);
+            String json = Utils.jsonMapper().writeValueAsString(joinReq);
             Request request = new Request.Builder()
-                    .addHeader("Content-Type", "application/json")
-                    .url(baseUrl + "/session/minecraft/join")
-                    .post(body)
+                    .url(baseUrl + "session/minecraft/join")
+                    .post(RequestBody.create(json, MediaType.get("application/json")))
                     .build();
             try (Response response = Utils.http().newCall(request).execute()) {
                 if (response.code() != 204) {
-                    LOGGER.log(Level.SEVERE, "Couldn't register!\n"+response.body().string());
+                    LOGGER.log(Level.SEVERE, "Could not start verification with Mojang");
+                    return false;
                 }
-                return response.code() == 204;
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Couldn't register",e);
-                return false;
+                return true;
             }
-        } catch (IOException | NoSuchAlgorithmException e) {
-            LOGGER.log(Level.SEVERE, "Couldn't register",e);
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Could not start verification with Mojang",e);
             return false;
         }
     }
 
     public boolean verifyClient(MinecraftSession session) {
         try {
-            UrlBuilder builder = UrlBuilder.fromString(baseUrl)
-                    .withPath("/session/minecraft/hasJoined")
+            UrlBuilder builder = UrlBuilder.fromString(baseUrl + "session/minecraft/hasJoined")
                     .addParameter("username", session.username)
                     .addParameter("serverId", ServerAuthentication.genServerIDHash());
             Request request = new Request.Builder().url(builder.toUrl()).build();
             try (Response response = Utils.http().newCall(request).execute()) {
-                JsonNode resp = Utils.jsonMapper().readTree(response.body().string());
-                if (!resp.has("id")) {
-                    LOGGER.log(Level.SEVERE, "Couldn't verify " + session.username.toUpperCase());
-                    return false;
+                if (response.code() == 200) {
+                    String string = response.body().string();
+                    HasJoinedResponse hasJoinedResponse = Utils.jsonMapper().readValue(string, HasJoinedResponse.class);
+                    return hasJoinedResponse.id.equals(toProfileId(session.id));
                 }
-                return response.code() == 200 && resp.get("id").asText().equals(toProfileId(session.id));
+                return false;
             }
         } catch (IOException | NoSuchAlgorithmException e) {
             e.printStackTrace();
-            LOGGER.log(Level.SEVERE, "Couldn't verify " + session.username.toUpperCase(),e);
+            LOGGER.log(Level.SEVERE, "Couldn't verify " + session.username,e);
             return false;
         }
     }
 
     public static final class JoinRequest {
+        @JsonProperty("accessToken")
         public final String accessToken;
+        @JsonProperty("selectedProfile")
         public final String selectedProfile;
+        @JsonProperty("serverId")
         public final String serverId;
 
-        public JoinRequest(String accessToken, UUID playerId, String serverId) {
+        @JsonCreator
+        public JoinRequest(@JsonProperty("accessToken") String accessToken,
+                           @JsonProperty("selectedProfile") String selectedProfile,
+                           @JsonProperty("serverId") String serverId) {
             this.accessToken = accessToken;
-            this.selectedProfile = toProfileId(playerId);
+            this.selectedProfile = selectedProfile;
             this.serverId = serverId;
         }
+    }
 
-        public JoinRequest(String accessToken, UUID id) throws NoSuchAlgorithmException {
-            this.accessToken = accessToken;
-            this.selectedProfile = toProfileId(id);
-            this.serverId = genServerIDHash();
+    public static final class HasJoinedResponse {
+        @JsonProperty("id")
+        public final String id;
+        @JsonProperty("name")
+        public final String name;
+
+        @JsonCreator
+        public HasJoinedResponse(@JsonProperty("id") String id,
+                                 @JsonProperty("name") String name) {
+            this.id = id;
+            this.name = name;
         }
     }
 

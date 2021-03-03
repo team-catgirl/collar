@@ -10,7 +10,10 @@ import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.CollarListener;
 import team.catgirl.collar.server.Services;
+import team.catgirl.collar.server.configuration.Configuration;
 import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.mongo.Mongo;
+import team.catgirl.collar.server.security.mojang.NojangMinecraftSessionVerifier;
 import team.catgirl.collar.server.services.devices.Device;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.profiles.Profile;
@@ -64,7 +67,7 @@ public abstract class CollarTest {
         )).profile);
 
         withServices(services);
-    });
+    }, Configuration.testConfiguration(Mongo.getTestingDatabase(), new NojangMinecraftSessionVerifier()));
 
     // Generates a new location on every call
     private final Supplier<Location> locationSupplier = () -> new Location(Utils.secureRandom().nextDouble(), Utils.secureRandom().nextDouble(), Utils.secureRandom().nextDouble(), Dimension.OVERWORLD);

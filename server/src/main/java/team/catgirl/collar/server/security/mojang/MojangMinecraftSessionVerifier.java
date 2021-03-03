@@ -10,7 +10,6 @@ import java.util.logging.Logger;
  */
 public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier {
 
-    private static final Logger LOGGER = Logger.getLogger(MojangMinecraftSessionVerifier.class.getName());
     private static final String NAME = "mojang";
 
     public final String baseUrl;
@@ -26,7 +25,6 @@ public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier 
 
     @Override
     public boolean verify(MinecraftSession session) {
-        ServerAuthentication authentication = new ServerAuthentication(baseUrl);
-        return authentication.verifyClient(session);
+        return new ServerAuthentication(baseUrl).verifyClient(session);
     }
 }

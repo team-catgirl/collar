@@ -23,10 +23,12 @@ public final class CollarServerRule implements TestRule {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final Consumer<Services> setupState;
     private Thread serverThread;
+    private final Configuration configuration;
     public WebServer webServer;
 
-    public CollarServerRule(Consumer<Services> setupState) {
+    public CollarServerRule(Consumer<Services> setupState, Configuration configuration) {
         this.setupState = setupState;
+        this.configuration = configuration;
     }
 
     @Override
@@ -37,7 +39,7 @@ public final class CollarServerRule implements TestRule {
             @Override public void evaluate() throws Throwable {
                 stopServer();
                 serverThread = new Thread(() -> {
-                    webServer = new WebServer(Configuration.testConfiguration(db));
+                    webServer = new WebServer(configuration);
                     webServer.start(services -> {
                         setupState.accept(services);
                         started.set(true);

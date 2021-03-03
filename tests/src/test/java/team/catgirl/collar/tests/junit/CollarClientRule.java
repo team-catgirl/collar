@@ -7,8 +7,10 @@ import org.junit.runners.model.Statement;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.minecraft.Ticks;
+import team.catgirl.collar.security.mojang.MinecraftSession;
 
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public final class CollarClientRule implements TestRule {
 
@@ -34,7 +36,7 @@ public final class CollarClientRule implements TestRule {
         this.ticks = new Ticks();
         this.builder = builder.withCollarServer("http://localhost:3001")
                 .withHomeDirectory(Files.createTempDir())
-                .withNoJangAuthentication(playerId, "hypixel.net")
+                .withSession(() -> MinecraftSession.noJang(playerId, "cuteplayer", "hypixel.net"))
                 .withTicks(ticks);
     }
 

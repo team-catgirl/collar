@@ -77,7 +77,7 @@ public class Configuration {
                 appUrlProvider,
                 new TokenCrypter(crypterPassword),
                 new PasswordHashing(passwordSalt),
-                useMojang ? new MojangMinecraftSessionVerifier() : new NojangMinecraftSessionVerifier(),
+                useMojang ? new MojangMinecraftSessionVerifier("https://sessionserver.mojang.com/") : new NojangMinecraftSessionVerifier(),
                 appUrlProvider.homeUrl(),
                 enableWeb,
                 httpPort(),

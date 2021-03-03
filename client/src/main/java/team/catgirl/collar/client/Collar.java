@@ -54,6 +54,7 @@ import team.catgirl.collar.security.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.security.mojang.MinecraftSession;
+import team.catgirl.collar.security.mojang.ServerAuthentication;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -264,9 +265,9 @@ public final class Collar {
         verificationScheme.ifPresent(collarFeature -> {
             MinecraftSession minecraftSession = configuration.sessionSupplier.get();
             LOGGER.log(Level.INFO, "Server supports versions " + versions);
-            if ("mojang".equals(collarFeature.value) && minecraftSession.clientToken == null && minecraftSession.accessToken == null) {
-                throw new IllegalStateException("mojang verification scheme requested but was provided an invalid MinecraftSession");
-            } else if ("nojang".equals(collarFeature.value) && minecraftSession.clientToken != null && minecraftSession.accessToken != null) {
+            if ("mojang".equals(collarFeature.value) && minecraftSession.mode != MinecraftSession.Mode.MOJANG && minecraftSession.accessToken == null) {
+                throw new IllegalStateException("mojang verification scheme s but was provided an invalid MinecraftSession");
+            } else if ("nojang".equals(collarFeature.value) && minecraftSession.mode != MinecraftSession.Mode.NOJANG && minecraftSession.accessToken != null) {
                 throw new IllegalStateException("nojang verification scheme requested but was provided an invalid MinecraftSession");
             }
         });
@@ -388,7 +389,14 @@ public final class Collar {
                 if (identityStore == null) {
                     identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
                 }
-                StartSessionRequest request = new StartSessionRequest(identity, configuration.sessionSupplier.get());
+                MinecraftSession session = configuration.sessionSupplier.get();
+                if (session.mode == MinecraftSession.Mode.MOJANG) {
+                    ServerAuthentication authentication = new ServerAuthentication(configuration.yggdrasilBaseUrl);
+                    if (!authentication.joinServer(session)) {
+                        throw new ConnectionException("could start session with Mojang");
+                    }
+                }
+                StartSessionRequest request = new StartSessionRequest(identity, session);
                 sendRequest(webSocket, request);
                 keepAlive.stop();
                 keepAlive.start(identity);

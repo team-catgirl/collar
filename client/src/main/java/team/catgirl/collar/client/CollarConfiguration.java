@@ -10,10 +10,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,6 +27,7 @@ public final class CollarConfiguration {
     public final URL collarServerURL;
     public final CollarListener listener;
     public final Ticks ticks;
+    public final String yggdrasilBaseUrl;
 
     private CollarConfiguration(Supplier<Location> playerLocation,
                                 Supplier<MinecraftSession> sessionSupplier,
@@ -36,7 +35,7 @@ public final class CollarConfiguration {
                                 HomeDirectory homeDirectory,
                                 URL collarServerURL,
                                 CollarListener listener,
-                                Ticks ticks) {
+                                Ticks ticks, String yggdrasilBaseUrl) {
         this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
         this.entitiesSupplier = entitiesSupplier;
@@ -44,6 +43,7 @@ public final class CollarConfiguration {
         this.collarServerURL = collarServerURL;
         this.listener = listener;
         this.ticks = ticks;
+        this.yggdrasilBaseUrl = yggdrasilBaseUrl;
     }
 
     public final static class Builder {
@@ -54,6 +54,7 @@ public final class CollarConfiguration {
         private File homeDirectory;
         private URL collarServerURL;
         private Ticks ticks;
+        private String yggdrasilBaseUrl;
 
         public Builder() {}
 
@@ -139,25 +140,13 @@ public final class CollarConfiguration {
         }
 
         /**
-         * Do not verify the minecraft session on the server.
-         * To use this the server must be setup with the NoJang auth scheme.
-         * @param uuid of the minecraft player
-         * @param server the minecraft server the player is logged into
-         * @return builder
-         */
-        public Builder withNoJangAuthentication(UUID uuid, String server) {
-            this.sessionSupplier = () -> MinecraftSession.from(uuid, null,  null, server);
-            return this;
-        }
-
-        /**
-         * Supplies the Mojang session information for the logged in user
+         * Supplies the session information for the logged in user
          * The supplier should never cache this information
-         * @param mojangAuthentication session supplier
+         * @param sessionSupplier session supplier
          * @return builder
          */
-        public Builder withMojangAuthentication(Supplier<MinecraftSession> mojangAuthentication) {
-            this.sessionSupplier = mojangAuthentication;
+        public Builder withSession(Supplier<MinecraftSession> sessionSupplier) {
+            this.sessionSupplier = sessionSupplier;
             return this;
         }
 
@@ -168,6 +157,16 @@ public final class CollarConfiguration {
          */
         public Builder withTicks(Ticks ticks) {
             this.ticks = ticks;
+            return this;
+        }
+
+        /**
+         * Override the Mojang Yggdrasil base server
+         * @param yggdrasilBaseUrl alternative
+         * @return builder
+         */
+        public Builder withYggdrasilBaseUrl(String yggdrasilBaseUrl) {
+            this.yggdrasilBaseUrl = yggdrasilBaseUrl;
             return this;
         }
 
@@ -188,7 +187,8 @@ public final class CollarConfiguration {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });
-            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, from, collarServerURL, listener, ticks);
+            String yggdrasilBaseUrl = MoreObjects.firstNonNull(this.yggdrasilBaseUrl, "https://sessionserver.mojang.com/");
+            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, from, collarServerURL, listener, ticks, this.yggdrasilBaseUrl);
         }
     }
 }

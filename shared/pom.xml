@@ -39,6 +39,10 @@
             <artifactId>openmcauthenticator</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.mikael</groupId>
+            <artifactId>urlbuilder</artifactId>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
         </dependency>

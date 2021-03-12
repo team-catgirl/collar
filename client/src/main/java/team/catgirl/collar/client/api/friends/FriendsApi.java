@@ -68,7 +68,7 @@ public class FriendsApi extends AbstractApi<FriendsListener> {
         if (resp instanceof GetFriendListResponse) {
             GetFriendListResponse response = (GetFriendListResponse) resp;
             response.friends.forEach(friend -> {
-                friends.put(friend.friend, friend);
+                friends.put(friend.friend.id, friend);
                 fireListener("onFriendStatusChanged", listener -> {
                     listener.onFriendChanged(collar, this, friend);
                 });
@@ -76,14 +76,14 @@ public class FriendsApi extends AbstractApi<FriendsListener> {
             return true;
         } else if (resp instanceof FriendChangedResponse) {
             FriendChangedResponse response = (FriendChangedResponse) resp;
-            friends.put(response.friend.friend, response.friend);
+            friends.put(response.friend.friend.id, response.friend);
             fireListener("onFriendChanged", listener -> {
                 listener.onFriendChanged(collar, this, response.friend);
             });
             return true;
         } else if (resp instanceof AddFriendResponse) {
             AddFriendResponse response = (AddFriendResponse) resp;
-            friends.put(response.friend.friend, response.friend);
+            friends.put(response.friend.friend.id, response.friend);
             fireListener("onFriendAdded", listener -> {
                 listener.onFriendAdded(collar, this, response.friend);
             });

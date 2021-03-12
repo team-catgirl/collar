@@ -2,6 +2,7 @@ package team.catgirl.collar.api.friends;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.api.profiles.PublicProfile;
 
 import java.util.List;
 import java.util.Objects;
@@ -20,7 +21,7 @@ public final class Friend {
      * Who the owner is friends with
      */
     @JsonProperty("friend")
-    public final UUID friend;
+    public final PublicProfile friend;
 
     /**
      * The current status of the friend
@@ -37,7 +38,7 @@ public final class Friend {
 
     @JsonCreator
     public Friend(@JsonProperty("owner") UUID owner,
-                  @JsonProperty("friendsWith") UUID friend,
+                  @JsonProperty("friendsWith") PublicProfile friend,
                   @JsonProperty("status") Status status,
                   @JsonProperty("playerIds") Set<UUID> playerIds) {
         this.owner = owner;

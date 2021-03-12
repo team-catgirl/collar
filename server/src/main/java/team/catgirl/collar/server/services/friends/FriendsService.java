@@ -13,7 +13,9 @@ import team.catgirl.collar.api.friends.Status;
 import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
@@ -29,10 +31,12 @@ public final class FriendsService {
     public static final String FIELD_FRIEND = "friend";
 
     private final MongoCollection<Document> docs;
+    private final ProfileService profiles;
     private final SessionManager sessions;
 
-    public FriendsService(MongoDatabase db, SessionManager sessions) {
+    public FriendsService(MongoDatabase db, ProfileService profiles, SessionManager sessions) {
         this.docs = db.getCollection("friends");
+        this.profiles = profiles;
         Map<String, Object> index = Map.of(
             FIELD_OWNER, 1,
             FIELD_FRIEND, 1
@@ -90,9 +94,10 @@ public final class FriendsService {
     private Friend mapFriend(Document document) {
         UUID owner = document.get(FIELD_OWNER, UUID.class);
         UUID friend = document.get(FIELD_FRIEND, UUID.class);
+        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(owner)).profile.toPublic();
         return sessions.getSessionStateByOwner(friend)
-                .map(sessionState -> new Friend(owner, friend, Status.ONLINE, Set.of(sessionState.minecraftPlayer.id)))
-                .orElse(new Friend(friend, owner, Status.OFFLINE, Set.of()));
+                .map(sessionState -> new Friend(owner, profile, Status.ONLINE, Set.of(sessionState.minecraftPlayer.id)))
+                .orElse(new Friend(friend, profile, Status.OFFLINE, Set.of()));
     }
 
     public static final class CreateFriendRequest {

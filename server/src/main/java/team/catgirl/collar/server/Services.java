@@ -58,7 +58,7 @@ public final class Services {
         this.groups = new GroupService(groupStore, identityStore.getIdentity(), sessions);
         this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
-        this.friends = new FriendsService(configuration.database, sessions);
+        this.friends = new FriendsService(configuration.database, profiles, sessions);
         this.waypoints = new WaypointService(profileStorage);
     }
 }

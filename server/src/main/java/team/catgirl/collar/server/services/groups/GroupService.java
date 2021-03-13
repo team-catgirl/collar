@@ -10,7 +10,6 @@ import team.catgirl.collar.protocol.messaging.SendMessageRequest;
 import team.catgirl.collar.protocol.messaging.SendMessageResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.services.location.NearbyGroups;
 import team.catgirl.collar.server.session.SessionManager;
@@ -288,7 +287,7 @@ public final class GroupService {
                 .filter(member -> member.player == null || member.membershipState == MembershipState.PENDING)
                 .map(member -> member.player)
                 .collect(Collectors.toMap(
-                        o -> new GroupInviteResponse(serverIdentity, group.id, group.type, sender, new ArrayList<>(group.members.stream().map(member -> member.player).collect(Collectors.toList()))),
+                        o -> new GroupInviteResponse(serverIdentity, group.id, group.name, group.type, sender),
                         player -> sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("cannot find identity for " + player)))
                 );
         return new BatchProtocolResponse(serverIdentity, responses);

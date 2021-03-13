@@ -1,28 +1,25 @@
 package team.catgirl.collar.client.api.groups;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.groups.GroupInviteResponse;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
-import java.util.List;
 import java.util.UUID;
 
 public final class GroupInvitation {
-    @JsonProperty("groupId")
-    public final UUID groupId;
-    @JsonProperty("player")
-    public final Player player;
-    @JsonProperty("members")
-    public final List<Player> members;
+    public final UUID group;
+    public final String name;
+    public final GroupType type;
+    public final Player sender;
 
-    public GroupInvitation(UUID groupId, Player player, List<Player> members) {
-        this.groupId = groupId;
-        this.player = player;
-        this.members = members;
+    public GroupInvitation(UUID group, String name, GroupType type, Player sender) {
+        this.group = group;
+        this.name = name;
+        this.type = type;
+        this.sender = sender;
     }
 
     public static GroupInvitation from(GroupInviteResponse req) {
-        return new GroupInvitation(req.groupId, req.player, req.members);
+        return new GroupInvitation(req.group, req.name, req.type, req.sender);
     }
 }

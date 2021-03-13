@@ -6,35 +6,33 @@ import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
  * Sent by the group owner to invite players to an existing group using a {@link GroupInviteRequest}
  */
 public final class GroupInviteResponse extends ProtocolResponse {
-    @JsonProperty("groupId")
-    public final UUID groupId;
-    @JsonProperty("groupType")
-    public final GroupType groupType;
-    @JsonProperty("player")
-    public final Player player;
-    @JsonProperty("members")
-    public final List<Player> members;
+    @JsonProperty("group")
+    public final UUID group;
+    @JsonProperty("name")
+    public final String name;
+    @JsonProperty("type")
+    public final GroupType type;
+    @JsonProperty("sender")
+    public final Player sender;
 
     @JsonCreator
     public GroupInviteResponse(
             @JsonProperty("identity") ServerIdentity identity,
-            @JsonProperty("groupId") UUID groupId,
-            @JsonProperty("groupType") GroupType groupType,
-            @JsonProperty("player") Player player,
-            @JsonProperty("members") List<Player> members) {
+            @JsonProperty("group") UUID group,
+            @JsonProperty("name") String name,
+            @JsonProperty("type") GroupType type,
+            @JsonProperty("sender") Player sender) {
         super(identity);
-        this.groupId = groupId;
-        this.groupType = groupType;
-        this.player = player;
-        this.members = members;
+        this.group = group;
+        this.name = name;
+        this.type = type;
+        this.sender = sender;
     }
 }

@@ -8,7 +8,6 @@ import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
-import team.catgirl.collar.client.api.textures.Texture;
 import team.catgirl.collar.client.sdht.SDHTApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
@@ -109,8 +108,8 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
      * @param invitation to accept
      */
     public void accept(GroupInvitation invitation) {
-        sender.accept(identityStore().createJoinGroupRequest(identity(), invitation.groupId));
-        invitations.remove(invitation.groupId);
+        sender.accept(identityStore().createJoinGroupRequest(identity(), invitation.group));
+        invitations.remove(invitation.group);
     }
 
     /**
@@ -220,10 +219,10 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
             synchronized (this) {
                 GroupInviteResponse response = (GroupInviteResponse) resp;
                 GroupInvitation invitation = GroupInvitation.from(response);
-                switch (response.groupType) {
+                switch (response.type) {
                     case GROUP:
                     case PARTY:
-                        invitations.put(invitation.groupId, invitation);
+                        invitations.put(invitation.group, invitation);
                         fireListener("onGroupInvited", groupsListener -> {
                             groupsListener.onGroupInvited(collar, this, invitation);
                         });
@@ -233,7 +232,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                         accept(invitation);
                         break;
                     default:
-                        throw new IllegalStateException("unknown group type" + response.groupType);
+                        throw new IllegalStateException("unknown group type" + response.type);
                 }
             }
             return true;

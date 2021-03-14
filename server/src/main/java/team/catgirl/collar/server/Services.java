@@ -54,9 +54,9 @@ public final class Services {
         this.tokenCrypter = configuration.tokenCrypter;
         this.auth = new AuthenticationService(profiles, passwordHashing, tokenCrypter, configuration.email, urlProvider);
         this.minecraftSessionVerifier = configuration.minecraftSessionVerifier;
-        this.groupStore = new GroupStore(sessions, configuration.database);
-        this.groups = new GroupService(groupStore, identityStore.getIdentity(), sessions);
-        this.playerLocations = new PlayerLocationService(sessions, groups, identityStore.getIdentity());
+        this.groupStore = new GroupStore(profiles, sessions, configuration.database);
+        this.groups = new GroupService(groupStore, identityStore.getIdentity(), profiles, sessions);
+        this.playerLocations = new PlayerLocationService(sessions, profiles, groups, identityStore.getIdentity());
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, profiles, sessions);
         this.waypoints = new WaypointService(profileStorage);

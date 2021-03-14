@@ -3,13 +3,18 @@ package team.catgirl.collar.server.services.location;
 import com.google.common.collect.ArrayListMultimap;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.Member;
+import team.catgirl.collar.api.groups.MemberSource;
 import team.catgirl.collar.api.groups.MembershipState;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.location.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.services.groups.GroupService;
+import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
@@ -22,14 +27,16 @@ public class PlayerLocationService {
     private static final Logger LOGGER = Logger.getLogger(PlayerLocationService.class.getName());
 
     private final SessionManager sessions;
+    private final ProfileService profiles;
     private final GroupService groups;
     private final ServerIdentity serverIdentity;
     private final NearbyGroups nearbyGroups = new NearbyGroups();
 
     private final ArrayListMultimap<UUID, Player> playersSharing = ArrayListMultimap.create();
 
-    public PlayerLocationService(SessionManager sessions, GroupService groups, ServerIdentity serverIdentity) {
+    public PlayerLocationService(SessionManager sessions, ProfileService profiles, GroupService groups, ServerIdentity serverIdentity) {
         this.sessions = sessions;
+        this.profiles = profiles;
         this.groups = groups;
         this.serverIdentity = serverIdentity;
     }
@@ -84,7 +91,8 @@ public class PlayerLocationService {
 
     public BatchProtocolResponse updateNearbyGroups(UpdateNearbyRequest req) {
         Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
-        NearbyGroups.Result result = this.nearbyGroups.updateNearbyGroups(player, req.nearbyHashes);
+        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(player.profile)).profile.toPublic();
+        NearbyGroups.Result result = this.nearbyGroups.updateNearbyGroups(new MemberSource(player, profile), req.nearbyHashes);
         return groups.updateNearbyGroups(result);
     }
 

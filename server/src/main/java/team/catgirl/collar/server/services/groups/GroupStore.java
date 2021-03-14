@@ -9,10 +9,13 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import team.catgirl.collar.api.groups.*;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.session.Player;
+import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.session.SessionManager;
 
-import javax.print.Doc;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,10 +34,12 @@ public final class GroupStore {
     private static final String FIELD_MEMBER_STATE = "state";
     private static final String FIELD_MEMBER_PROFILE_ID = "profileId";
 
+    private final ProfileService profiles;
     private final SessionManager sessions;
     private final MongoCollection<Document> docs;
 
-    public GroupStore(SessionManager sessions, MongoDatabase database) {
+    public GroupStore(ProfileService profiles, SessionManager sessions, MongoDatabase database) {
+        this.profiles = profiles;
         this.sessions = sessions;
         this.docs = database.getCollection("groups");
     }
@@ -71,8 +76,8 @@ public final class GroupStore {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
     }
 
-    public Optional<Group> addMembers(UUID id, List<Player> players, MembershipRole role, MembershipState state) {
-        List<Document> members = mapToMembersList(players.stream().map(player -> new Member(player, role, state)).collect(Collectors.toList()));
+    public Optional<Group> addMembers(UUID id, List<MemberSource> memberSources, MembershipRole role, MembershipState state) {
+        List<Document> members = mapToMembersList(memberSources.stream().map(source -> new Member(source.player, source.profile, role, state)).collect(Collectors.toList()));
         UpdateResult result = docs.updateOne(eq(FIELD_ID, id), pushEach(FIELD_MEMBERS, members));
         if (!result.wasAcknowledged() && result.getModifiedCount() != 1) {
             throw new IllegalStateException("failed to add members to group " + id);
@@ -149,11 +154,12 @@ public final class GroupStore {
     }
 
     private Member mapMemberFrom(Document document) {
-        UUID profile = document.get(FIELD_MEMBER_PROFILE_ID, UUID.class);
-        Player player = sessions.findPlayerByProfile(profile).orElse(new Player(profile, null));
+        UUID profileId = document.get(FIELD_MEMBER_PROFILE_ID, UUID.class);
+        Player player = sessions.findPlayerByProfile(profileId).orElse(new Player(profileId, null));
         MembershipRole role = MembershipRole.valueOf(document.getString(FIELD_MEMBER_ROLE));
         MembershipState state = MembershipState.valueOf(document.getString(FIELD_MEMBER_STATE));
-        return new Member(player, role, state);
+        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(profileId)).profile.toPublic();
+        return new Member(player, profile, role, state);
     }
 
     private static Map<String, Object> mapMember(Member member) {

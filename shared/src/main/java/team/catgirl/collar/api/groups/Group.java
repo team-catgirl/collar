@@ -1,11 +1,8 @@
 package team.catgirl.collar.api.groups;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import team.catgirl.collar.api.session.Player;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -35,10 +32,10 @@ public final class Group {
         this.members = ImmutableSet.copyOf(members);
     }
 
-    public static Group newGroup(UUID id, String name, GroupType type, Player owner, List<Player> members) {
+    public static Group newGroup(UUID id, String name, GroupType type, MemberSource owner, List<MemberSource> members) {
         Set<Member> memberList = new HashSet<>();
-        memberList.add(new Member(owner, MembershipRole.OWNER, MembershipState.ACCEPTED));
-        members.forEach(player -> memberList.add(new Member(player, MembershipRole.MEMBER, MembershipState.PENDING)));
+        memberList.add(new Member(owner.player, owner.profile, MembershipRole.OWNER, MembershipState.ACCEPTED));
+        members.forEach(memberSource -> memberList.add(new Member(memberSource.player, memberSource.profile, MembershipRole.MEMBER, MembershipState.PENDING)));
         return new Group(id, name, type, memberList);
     }
 
@@ -50,11 +47,11 @@ public final class Group {
         return members.stream().filter(member -> member.player.equals(player)).findFirst();
     }
 
-    public Group updatePlayer(Player player) {
-        Member memberToUpdate = members.stream().filter(member -> member.player.equals(player))
-                .findFirst().orElseThrow(() -> new IllegalStateException(player + " is not a member of group " + id));
+    public Group updatePlayer(MemberSource memberSource) {
+        Member memberToUpdate = members.stream().filter(member -> member.player.equals(memberSource.player))
+                .findFirst().orElseThrow(() -> new IllegalStateException(memberSource.player + " is not a member of group " + id));
         Map<Player, Member> playerMemberMap = members.stream().collect(Collectors.toMap(member -> member.player, member -> member));
-        playerMemberMap.put(player, new Member(player, memberToUpdate.membershipRole, memberToUpdate.membershipState));
+        playerMemberMap.put(memberSource.player, new Member(memberSource.player, memberSource.profile, memberToUpdate.membershipRole, memberToUpdate.membershipState));
         return new Group(id, name, type, ImmutableSet.copyOf(playerMemberMap.values()));
     }
 
@@ -79,13 +76,13 @@ public final class Group {
         return new Group(id, name, type, members);
     }
 
-    public Group addMembers(List<Player> players, MembershipRole role, MembershipState membershipState, BiConsumer<Group, List<Member>> newMemberConsumer) {
+    public Group addMembers(List<MemberSource> players, MembershipRole role, MembershipState membershipState, BiConsumer<Group, List<Member>> newMemberConsumer) {
         Map<Player, Member> playerMemberMap = members.stream().collect(Collectors.toMap(member -> member.player, member -> member));
         List<Member> newMembers = new ArrayList<>();
-        players.forEach(player -> {
-            if (!playerMemberMap.containsKey(player)) {
-                Member newMember = new Member(player, role, membershipState);
-                playerMemberMap.put(player, newMember);
+        players.forEach(memberSource -> {
+            if (!playerMemberMap.containsKey(memberSource.player)) {
+                Member newMember = new Member(memberSource.player, memberSource.profile, role, membershipState);
+                playerMemberMap.put(memberSource.player, newMember);
                 newMembers.add(newMember);
             }
         });

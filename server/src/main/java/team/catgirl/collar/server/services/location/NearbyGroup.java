@@ -1,5 +1,6 @@
 package team.catgirl.collar.server.services.location;
 
+import team.catgirl.collar.api.groups.MemberSource;
 import team.catgirl.collar.api.session.Player;
 
 import java.util.*;
@@ -8,9 +9,9 @@ import java.util.*;
  * Represents players that appear in each others entity lists that should be placed in a group together
  */
 public final class NearbyGroup {
-    public final Set<Player> players;
+    public final Set<MemberSource> players;
 
-    public NearbyGroup(Set<Player> players) {
+    public NearbyGroup(Set<MemberSource> players) {
         this.players = players;
     }
 

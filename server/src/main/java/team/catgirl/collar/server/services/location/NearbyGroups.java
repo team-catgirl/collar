@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.services.location;
 
 import com.google.common.collect.Sets;
+import team.catgirl.collar.api.groups.MemberSource;
 import team.catgirl.collar.api.session.Player;
 
 import java.util.*;
@@ -13,27 +14,27 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class NearbyGroups {
 
-    private final ConcurrentMap<Player, Set<String>> playerHashes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<MemberSource, Set<String>> playerHashes = new ConcurrentHashMap<>();
     private final ConcurrentMap<NearbyGroup, UUID> nearbyGroups = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Player, Set<NearbyGroup>> playerToGroups = new ConcurrentHashMap<>();
+    private final ConcurrentMap<MemberSource, Set<NearbyGroup>> playerToGroups = new ConcurrentHashMap<>();
 
     /**
      * Calculates any nearby groups for the minecraft player and anyone in the calculated group
      * Both parties must have entity hashes in common to form one or more groups with other players
-     * @param player to create state for
+     * @param source to create state for
      * @param hashes the players hashes
      * @return result delta
      */
-    public Result updateNearbyGroups(Player player, Set<String> hashes) {
-        playerHashes.compute(player, (thePlayer, strings) -> hashes);
+    public Result updateNearbyGroups(MemberSource source, Set<String> hashes) {
+        playerHashes.compute(source, (thePlayer, strings) -> hashes);
         Map<UUID, NearbyGroup> add = new HashMap<>();
         Map<UUID, NearbyGroup> remove = new HashMap<>();
         playerHashes.keySet().stream()
-                .filter(anotherPlayer -> anotherPlayer.minecraftPlayer.inServerWith(player.minecraftPlayer)
-                        && !anotherPlayer.minecraftPlayer.equals(player.minecraftPlayer)
+                .filter(anotherPlayer -> anotherPlayer.player.minecraftPlayer.inServerWith(source.player.minecraftPlayer)
+                        && !anotherPlayer.player.minecraftPlayer.equals(source.player.minecraftPlayer)
                 ).forEach(anotherPlayer -> {
             Set<String> otherPlayersHashes = playerHashes.get(anotherPlayer);
-            NearbyGroup group = new NearbyGroup(Set.of(player, anotherPlayer));
+            NearbyGroup group = new NearbyGroup(Set.of(source, anotherPlayer));
             if (Sets.difference(hashes, otherPlayersHashes).isEmpty()) {
                 nearbyGroups.compute(group, (nearbyGroup, uuid) -> {
                     if (uuid == null) {
@@ -42,7 +43,7 @@ public final class NearbyGroups {
                     }
                     return uuid;
                 });
-                playerToGroups.compute(player, (thePlayer, playersGroups) -> {
+                playerToGroups.compute(source, (thePlayer, playersGroups) -> {
                     playersGroups = playersGroups == null ? new HashSet<>() : playersGroups;
                     playersGroups.add(group);
                     return playersGroups;
@@ -51,7 +52,7 @@ public final class NearbyGroups {
                 UUID groupId = nearbyGroups.get(group);
                 if (groupId != null) {
                     remove.put(groupId, group);
-                    playerToGroups.compute(player, (thePlayer, playersGroups) -> {
+                    playerToGroups.compute(source, (thePlayer, playersGroups) -> {
                         playersGroups = playersGroups == null ? new HashSet<>() : playersGroups;
                         playersGroups.remove(group);
                         return nearbyGroups.isEmpty() ? null : playersGroups;

@@ -7,6 +7,7 @@ import team.catgirl.collar.api.groups.*;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.junit.MongoDatabaseTestRule;
+import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
 
@@ -19,11 +20,12 @@ public class GroupStoreTest {
 
     @Test
     public void crud() {
-        GroupStore store = new GroupStore(new SessionManager(Utils.messagePackMapper(), null), dbRule.db);
+        ProfileService profiles = new ProfileService(dbRule.db, null);
+        GroupStore store = new GroupStore(profiles, new SessionManager(Utils.messagePackMapper(), null), dbRule.db);
 
         UUID groupId = UUID.randomUUID();
         Player owner = new Player(groupId, new MinecraftPlayer(UUID.randomUUID(), "2b2t.org"));
-        store.upsert(Group.newGroup(groupId, "The Spawnmasons", GroupType.GROUP, owner, List.of()));
+        store.upsert(Group.newGroup(groupId, "The Spawnmasons", GroupType.GROUP, new MemberSource(owner, null), List.of()));
 
         Group group = store.findGroup(groupId).orElseThrow(() -> new IllegalStateException("cant find group"));
         Assert.assertEquals(groupId, group.id);
@@ -34,7 +36,7 @@ public class GroupStoreTest {
 
         Player player1 = new Player(UUID.randomUUID(), null);
         Player player2 = new Player(UUID.randomUUID(), null);
-        group = store.addMembers(groupId, List.of(player1, player2), MembershipRole.MEMBER, MembershipState.ACCEPTED).orElse(null);
+        group = store.addMembers(groupId, List.of(new MemberSource(player1, null), new MemberSource(player2, null)), MembershipRole.MEMBER, MembershipState.ACCEPTED).orElse(null);
         Assert.assertNotNull(group);
 
         Member member1 = group.members.stream().filter(member -> member.player.equals(player1)).findFirst().orElseThrow();

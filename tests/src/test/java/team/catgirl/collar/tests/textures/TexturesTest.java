@@ -5,6 +5,7 @@ import com.google.common.io.Resources;
 import org.junit.Test;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.groups.GroupType;
+import team.catgirl.collar.api.groups.MemberSource;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.client.api.textures.Texture;
@@ -63,7 +64,7 @@ public class TexturesTest extends CollarTest {
         AtomicReference<Texture> theTexture = new AtomicReference<>();
         alicePlayer.collar.textures().subscribe((collar, texturesApi, texture) -> theTexture.set(texture));
 
-        Group group = Group.newGroup(groupId, "Cool group", GroupType.GROUP, new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "hypoxel.net")), new ArrayList<>());
+        Group group = Group.newGroup(groupId, "Cool group", GroupType.GROUP, new MemberSource(new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "hypoxel.net")), null), new ArrayList<>());
 
         alicePlayer.collar.textures().requestGroupTexture(group, TextureType.AVATAR);
         CollarAssert.waitForCondition("Receive the requested texture", () -> theTexture.get() != null);

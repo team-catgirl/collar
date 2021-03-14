@@ -1,10 +1,7 @@
 package team.catgirl.collar.client.api.groups;
 
 import team.catgirl.collar.api.friends.Status;
-import team.catgirl.collar.api.groups.Group;
-import team.catgirl.collar.api.groups.GroupType;
-import team.catgirl.collar.api.groups.Member;
-import team.catgirl.collar.api.groups.MembershipRole;
+import team.catgirl.collar.api.groups.*;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
@@ -246,7 +243,7 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
                 if (group != null) {
                     Group updatedGroup;
                     if (response.status == Status.OFFLINE) {
-                        updatedGroup = group.updatePlayer(response.player);
+                        updatedGroup = group.updatePlayer(new MemberSource(response.player, response.profile));
                     } else if (response.role != null) {
                         updatedGroup = group.updateMembershipRole(response.player, response.role);
                     } else {

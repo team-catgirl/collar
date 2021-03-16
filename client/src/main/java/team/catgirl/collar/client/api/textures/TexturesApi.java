@@ -1,5 +1,9 @@
 package team.catgirl.collar.client.api.textures;
 
+import com.stoyanr.evictor.ConcurrentMapWithTimedEviction;
+import com.stoyanr.evictor.map.ConcurrentHashMapWithTimedEviction;
+import com.stoyanr.evictor.map.EvictibleEntry;
+import com.stoyanr.evictor.scheduler.RegularTaskEvictionScheduler;
 import io.mikael.urlbuilder.UrlBuilder;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.api.session.Player;
@@ -12,10 +16,25 @@ import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.textures.GetTextureRequest;
 import team.catgirl.collar.protocol.textures.GetTextureResponse;
 
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class TexturesApi extends AbstractApi<TexturesListener> {
+
+    private final RegularTaskEvictionScheduler<TextureKey, CompletableFuture<Optional<Texture>>> texturesFutureScheduler = new RegularTaskEvictionScheduler<TextureKey, CompletableFuture<Optional<Texture>>>(1, TimeUnit.SECONDS) {
+        @Override
+        protected void onScheduleEviction(EvictibleEntry<TextureKey, CompletableFuture<Optional<Texture>>> entry) {
+            super.onScheduleEviction(entry);
+            entry.getValue().complete(null);
+        }
+    };
+
+    private final ConcurrentMapWithTimedEviction<TextureKey, CompletableFuture<Optional<Texture>>> textureFutures = new ConcurrentHashMapWithTimedEviction<>(texturesFutureScheduler);
 
     public TexturesApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
         super(collar, identityStoreSupplier, sender);
@@ -26,6 +45,18 @@ public class TexturesApi extends AbstractApi<TexturesListener> {
         if (resp instanceof GetTextureResponse) {
             GetTextureResponse response = (GetTextureResponse) resp;
             Texture texture = new Texture(response.player, response.group, response.type, UrlBuilder.fromUrl(collar.configuration.collarServerURL).withPath(response.texturePath).toUrl());
+            TextureKey textureKey;
+            if (response.player != null) {
+                textureKey = new TextureKey(response.player.profile, response.type);
+            } else if (response.group != null) {
+                textureKey = new TextureKey(response.group, response.type);
+            } else {
+                throw new IllegalStateException("neither group or player texture was returned");
+            }
+            CompletableFuture<Optional<Texture>> removed = textureFutures.remove(textureKey);
+            if (removed != null) {
+                removed.complete(Optional.of(texture));
+            }
             fireListener("onTextureReceived", texturesListener -> {
                 texturesListener.onTextureReceived(collar, this, texture);
             });
@@ -34,15 +65,73 @@ public class TexturesApi extends AbstractApi<TexturesListener> {
         return false;
     }
 
+    /**
+     * Request a player texture by future
+     * @param player the texture belongs to
+     * @param type the type of texture
+     * @return future
+     */
+    public CompletableFuture<Optional<Texture>> playerTextureFuture(Player player, TextureType type) {
+        CompletableFuture<Optional<Texture>> future = new CompletableFuture<>();
+        textureFutures.put(new TextureKey(player.profile, type), future);
+        requestPlayerTexture(player, type);
+        return future;
+    }
+
+    /**
+     * Request a player texture
+     * @param player the texture belongs to
+     * @param type the type of texture
+     */
     public void requestPlayerTexture(Player player, TextureType type) {
         sender.accept(new GetTextureRequest(identity(), player.profile, null, type));
     }
 
+    /**
+     * Request a group texture by future
+     * @param group the texture belongs to
+     * @param type the type of texture
+     * @return future
+     */
+    public CompletableFuture<Optional<Texture>> groupTextureFuture(Group group, TextureType type) {
+        CompletableFuture<Optional<Texture>> future = new CompletableFuture<>();
+        textureFutures.put(new TextureKey(group.id, type), future);
+        requestGroupTexture(group, type);
+        return future;
+    }
 
+    /**
+     * Request a group texture
+     * @param group the texture belongs to
+     * @param type the type of texture
+     */
     public void requestGroupTexture(Group group, TextureType type) {
         sender.accept(new GetTextureRequest(identity(), null, group.id, type));
     }
 
     @Override
     public void onStateChanged(Collar.State state) {}
+
+    private static final class TextureKey {
+        public final UUID id;
+        public final TextureType type;
+
+        public TextureKey(UUID id, TextureType type) {
+            this.id = id;
+            this.type = type;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            TextureKey that = (TextureKey) o;
+            return id.equals(that.id) && type == that.type;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, type);
+        }
+    }
 }

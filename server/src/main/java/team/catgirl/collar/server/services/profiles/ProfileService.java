@@ -14,6 +14,8 @@ import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
+import team.catgirl.collar.api.profiles.TexturePreference;
+import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 
@@ -33,6 +35,10 @@ public class ProfileService {
     private static final String FIELD_HASHED_PASSWORD = "hashedPassword";
     private static final String FIELD_EMAIL_VERIFIED = "emailVerified";
     private static final String FIELD_PRIVATE_IDENTITY_TOKEN = "privateIdentityToken";
+    private static final String FIELD_CAPE_TEXTURE = "capeTexture";
+    private static final String FIELD_CAPE_TEXTURE_TYPE = "type";
+    private static final String FIELD_CAPE_TEXTURE_PROFILE = "profile";
+    private static final String FIELD_CAPE_TEXTURE_GROUP = "group";
 
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
@@ -111,6 +117,8 @@ public class ProfileService {
         } else if (req.privateIdentityToken != null) {
             Binary token = req.privateIdentityToken.length == 0 ? null : new Binary(req.privateIdentityToken);
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, token)));
+        } else if (req.cape != null) {
+            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_CAPE_TEXTURE, map(req.cape))));
         } else {
             throw new BadRequestException("bad request");
         }
@@ -123,6 +131,15 @@ public class ProfileService {
         } else {
             throw new ServerErrorException("could not update profile");
         }
+    }
+
+    private Document map(TexturePreference capeTexture) {
+        Map<String, Object> state = Map.of(
+                FIELD_CAPE_TEXTURE_TYPE, capeTexture.type.name(),
+                FIELD_CAPE_TEXTURE_PROFILE, capeTexture.profile,
+                FIELD_CAPE_TEXTURE_GROUP, capeTexture.group
+        );
+        return new Document(state);
     }
 
     public static class CreateProfileRequest {
@@ -178,7 +195,16 @@ public class ProfileService {
         String hashedPassword = doc.getString(FIELD_HASHED_PASSWORD);
         boolean emailVerified = doc.getBoolean(FIELD_EMAIL_VERIFIED, false);
         Binary privateIdentityToken = doc.get(FIELD_PRIVATE_IDENTITY_TOKEN, Binary.class);
-        return new Profile(profileId, email, name, hashedPassword, emailVerified, privateIdentityToken != null ? privateIdentityToken.getData() : null);
+        TexturePreference capeTexture = mapTexturePreference(doc.get(FIELD_CAPE_TEXTURE, Document.class));
+        return new Profile(profileId, email, name, hashedPassword, emailVerified, privateIdentityToken != null ? privateIdentityToken.getData() : null, capeTexture);
+    }
+
+    private static TexturePreference mapTexturePreference(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+        String type = doc.getString(FIELD_CAPE_TEXTURE_TYPE);
+        return new TexturePreference(doc.get(FIELD_CAPE_TEXTURE_PROFILE, UUID.class), doc.get(FIELD_CAPE_TEXTURE_GROUP, UUID.class), TextureType.valueOf(type));
     }
 
     public static final class UpdateProfileRequest {
@@ -190,27 +216,35 @@ public class ProfileService {
         public final String hashedPassword;
         @JsonProperty("privateIdentityToken")
         public final byte[] privateIdentityToken;
+        @JsonProperty("cape")
+        public final TexturePreference cape;
 
         public UpdateProfileRequest(@JsonProperty("profile") UUID profile,
                                     @JsonProperty("emailVerified") Boolean emailVerified,
                                     @JsonProperty("hashedPassword") String hashedPassword,
-                                    @JsonProperty("privateIdentityToken") byte[] privateIdentityToken) {
+                                    @JsonProperty("privateIdentityToken") byte[] privateIdentityToken,
+                                    @JsonProperty("cape") TexturePreference cape) {
             this.profile = profile;
             this.emailVerified = emailVerified;
             this.hashedPassword = hashedPassword;
             this.privateIdentityToken = privateIdentityToken;
+            this.cape = cape;
         }
 
         public static UpdateProfileRequest emailVerified(UUID profile) {
-            return new UpdateProfileRequest(profile, true, null, null);
+            return new UpdateProfileRequest(profile, true, null, null, null);
         }
 
         public static UpdateProfileRequest hashedPassword(UUID profile, String newPassword) {
-            return new UpdateProfileRequest(profile, null, newPassword, null);
+            return new UpdateProfileRequest(profile, null, newPassword, null, null);
         }
 
         public static UpdateProfileRequest privateIdentityToken(UUID profile, byte[] privateIdentityToken) {
-            return new UpdateProfileRequest(profile, null, null, privateIdentityToken);
+            return new UpdateProfileRequest(profile, null, null, privateIdentityToken, null);
+        }
+
+        public static UpdateProfileRequest capeTexturePreference(UUID profile, TexturePreference capeTexture) {
+            return new UpdateProfileRequest(profile, null, null, null, capeTexture);
         }
     }
 

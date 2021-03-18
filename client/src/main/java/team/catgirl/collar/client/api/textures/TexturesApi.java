@@ -45,9 +45,9 @@ public class TexturesApi extends AbstractApi<TexturesListener> {
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof GetTextureResponse) {
             GetTextureResponse response = (GetTextureResponse) resp;
-            TextureKey textureKey;
+                TextureKey textureKey;
             if (response.player != null) {
-                textureKey = new TextureKey(response.player.profile, response.type);
+                textureKey = new TextureKey(response.player.minecraftPlayer.id, response.type);
             } else if (response.group != null) {
                 textureKey = new TextureKey(response.group, response.type);
             } else {

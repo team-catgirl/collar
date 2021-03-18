@@ -17,7 +17,6 @@ import team.catgirl.collar.server.http.ApiToken;
 import team.catgirl.collar.server.http.Cookie;
 import team.catgirl.collar.server.http.HandlebarsTemplateEngine;
 import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.protocol.*;
 import team.catgirl.collar.server.services.authentication.AuthenticationService.*;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 import team.catgirl.collar.server.services.authentication.VerificationToken;
@@ -25,10 +24,8 @@ import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.devices.DeviceService.DeleteDeviceRequest;
 import team.catgirl.collar.server.services.devices.DeviceService.TrustDeviceResponse;
 import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
-import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.services.textures.TextureService.CreateTextureRequest;
 import team.catgirl.collar.server.services.textures.TextureService.FindTextureRequest;
 import team.catgirl.collar.server.services.textures.TextureService.GetTextureContentRequest;
@@ -193,6 +190,15 @@ public class WebServer {
                             }
                         }
                         return services.textures.createTexture(context, req);
+                    }, services.jsonMapper::writeValueAsString);
+                    post("/textures/:type/default", (request, response) -> {
+                        RequestContext context = RequestContext.from(request);
+                        UpdateProfileRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), UpdateProfileRequest.class);
+                        context.assertCallerIs(req.profile);
+                        if (req.cape != null) {
+                            throw new HttpException.BadRequestException("missing capeTexture");
+                        }
+                        return services.profiles.updateProfile(context, req);
                     }, services.jsonMapper::writeValueAsString);
                     post("/reset", (request, response) -> {
                         RequestContext context = RequestContext.from(request);

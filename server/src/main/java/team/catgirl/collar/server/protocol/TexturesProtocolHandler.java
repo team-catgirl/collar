@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.protocol;
 
 import org.eclipse.jetty.websocket.api.Session;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.protocol.ProtocolRequest;
@@ -12,6 +13,8 @@ import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.services.textures.TextureService.FindTextureRequest;
 import team.catgirl.collar.server.services.textures.TextureService.Texture;
@@ -26,11 +29,13 @@ public class TexturesProtocolHandler extends ProtocolHandler {
     private static final Logger LOGGER = Logger.getLogger(TexturesProtocolHandler.class.getName());
 
     private final ServerIdentity serverIdentity;
+    private final ProfileService profiles;
     private final SessionManager sessions;
     private final TextureService textures;
 
-    public TexturesProtocolHandler(ServerIdentity serverIdentity, SessionManager sessions, TextureService textures) {
+    public TexturesProtocolHandler(ServerIdentity serverIdentity, ProfileService profiles, SessionManager sessions, TextureService textures) {
         this.serverIdentity = serverIdentity;
+        this.profiles = profiles;
         this.sessions = sessions;
         this.textures = textures;
     }

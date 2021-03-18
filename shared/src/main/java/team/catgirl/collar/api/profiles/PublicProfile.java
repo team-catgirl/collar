@@ -9,9 +9,14 @@ public final class PublicProfile {
     public final UUID id;
     @JsonProperty("name")
     public final String name;
+    @JsonProperty("cape")
+    public final TexturePreference cape;
 
-    public PublicProfile(@JsonProperty("id") UUID id, @JsonProperty("name") String name) {
+    public PublicProfile(@JsonProperty("id") UUID id,
+                         @JsonProperty("name") String name,
+                         @JsonProperty("cape") TexturePreference cape) {
         this.id = id;
         this.name = name;
+        this.cape = cape;
     }
 }

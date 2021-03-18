@@ -15,6 +15,7 @@ import java.util.logging.Logger;
  */
 public class Crypto {
     private static final Logger LOGGER = Logger.getLogger(Crypto.class.getName());
+    private static final int RESTRICTED_CRYPTO_MIN_REVISION = 161;
 
     public static void removeCryptographyRestrictions() {
         if (!isRestrictedCryptography()) {
@@ -61,10 +62,10 @@ public class Crypto {
     private static boolean isRestrictedCryptography() {
         final String name = System.getProperty("java.runtime.name");
         final String ver = System.getProperty("java.version");
-        final String javaVersion = ver.substring(0, ver.indexOf("_"));
+        if (!name.equals("Java(TM) SE Runtime Environment") && !ver.startsWith("1.8.0")) {
+            return false;
+        }
         final int revision = Integer.parseInt(ver.substring(ver.indexOf("_") + 1));
-        return name != null
-                && name.equals("Java(TM) SE Runtime Environment")
-                && javaVersion.equals("1.8.0") && revision < 161;
+        return revision < RESTRICTED_CRYPTO_MIN_REVISION;
     }
 }

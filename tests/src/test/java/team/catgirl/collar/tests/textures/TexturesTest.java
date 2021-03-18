@@ -51,7 +51,7 @@ public class TexturesTest extends CollarTest {
         AtomicReference<Texture> theTexture = new AtomicReference<>();
         alicePlayer.collar.textures().subscribe((collar, texturesApi, texture) -> theTexture.set(texture));
 
-        alicePlayer.collar.textures().requestPlayerTexture(new Player(aliceProfile.get().id, null), TextureType.AVATAR);
+        alicePlayer.collar.textures().requestPlayerTexture(alicePlayer.collar.player(), TextureType.AVATAR);
         CollarAssert.waitForCondition("Receive the requested texture", () -> theTexture.get() != null);
 
         AtomicReference<Optional<BufferedImage>> imageRef = new AtomicReference<>();

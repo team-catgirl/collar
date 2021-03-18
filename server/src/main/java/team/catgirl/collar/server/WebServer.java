@@ -1,10 +1,12 @@
 package team.catgirl.collar.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableList;
 import spark.ModelAndView;
 import spark.Request;
 import spark.Response;
 import team.catgirl.collar.api.groups.Group;
+import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.http.*;
 import team.catgirl.collar.api.http.HttpException.*;
@@ -26,9 +28,8 @@ import team.catgirl.collar.server.services.devices.DeviceService.TrustDeviceResp
 import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
-import team.catgirl.collar.server.services.textures.TextureService.CreateTextureRequest;
-import team.catgirl.collar.server.services.textures.TextureService.FindTextureRequest;
-import team.catgirl.collar.server.services.textures.TextureService.GetTextureContentRequest;
+import team.catgirl.collar.server.services.textures.TextureService;
+import team.catgirl.collar.server.services.textures.TextureService.*;
 import team.catgirl.collar.utils.Utils;
 
 import javax.servlet.ServletOutputStream;
@@ -171,14 +172,18 @@ public class WebServer {
                         String deviceId = request.params("id");
                         return services.devices.deleteDevice(context, new DeleteDeviceRequest(context.owner, Integer.parseInt(deviceId)));
                     });
-                    get("/textures", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
-                        return services.textures.findTexture(RequestContext.from(request), new FindTextureRequest(context.owner, null, null));
-                    }, services.jsonMapper::writeValueAsString);
                     get("/textures/:type", (request, response) -> {
                         RequestContext context = RequestContext.from(request);
                         TextureType textureType = TextureType.valueOf(request.params("type").toUpperCase());
-                        return services.textures.findTexture(RequestContext.from(request), new FindTextureRequest(context.owner, null, textureType));
+                        PublicProfile profile = services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(context.owner)).profile.toPublic();
+                        // Find all textures in groups
+                        List<TextureService.Texture> groupTextures = services.groupStore.findGroupsContaining(profile)
+                                .filter(group -> group.type == GroupType.GROUP)
+                                .flatMap(group -> services.textures.findTextures(context, new FindTexturesRequest(textureType, null, group.id)).textures.stream())
+                                .collect(Collectors.toList());
+                        // Find all the textures belonging to player
+                        List<TextureService.Texture> playerTextures = services.textures.findTextures(RequestContext.from(request), new FindTexturesRequest(textureType, context.owner, null)).textures;
+                        return new FindTexturesResponse(ImmutableList.<TextureService.Texture>builder().addAll(playerTextures).addAll(groupTextures).build());
                     }, services.jsonMapper::writeValueAsString);
                     post("/textures/upload", (request, response) -> {
                         RequestContext context = RequestContext.from(request);

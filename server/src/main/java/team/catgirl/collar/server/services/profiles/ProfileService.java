@@ -36,9 +36,7 @@ public class ProfileService {
     private static final String FIELD_EMAIL_VERIFIED = "emailVerified";
     private static final String FIELD_PRIVATE_IDENTITY_TOKEN = "privateIdentityToken";
     private static final String FIELD_CAPE_TEXTURE = "capeTexture";
-    private static final String FIELD_CAPE_TEXTURE_TYPE = "type";
-    private static final String FIELD_CAPE_TEXTURE_PROFILE = "profile";
-    private static final String FIELD_CAPE_TEXTURE_GROUP = "group";
+    private static final String FIELD_CAPE_TEXTURE_ID = "texture";
 
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
@@ -133,15 +131,6 @@ public class ProfileService {
         }
     }
 
-    private Document map(TexturePreference capeTexture) {
-        Map<String, Object> state = Map.of(
-                FIELD_CAPE_TEXTURE_TYPE, capeTexture.type.name(),
-                FIELD_CAPE_TEXTURE_PROFILE, capeTexture.profile,
-                FIELD_CAPE_TEXTURE_GROUP, capeTexture.group
-        );
-        return new Document(state);
-    }
-
     public static class CreateProfileRequest {
         public final String email;
         public final String password;
@@ -203,8 +192,13 @@ public class ProfileService {
         if (doc == null) {
             return null;
         }
-        String type = doc.getString(FIELD_CAPE_TEXTURE_TYPE);
-        return new TexturePreference(doc.get(FIELD_CAPE_TEXTURE_PROFILE, UUID.class), doc.get(FIELD_CAPE_TEXTURE_GROUP, UUID.class), TextureType.valueOf(type));
+        return new TexturePreference(doc.get(FIELD_CAPE_TEXTURE_ID, UUID.class));
+    }
+
+    private Document map(TexturePreference capeTexture) {
+        return new Document(Map.of(
+            FIELD_CAPE_TEXTURE_ID, capeTexture.texture
+        ));
     }
 
     public static final class UpdateProfileRequest {

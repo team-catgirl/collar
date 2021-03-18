@@ -4,19 +4,18 @@ import org.eclipse.jetty.websocket.api.Session;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
+import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
-import team.catgirl.collar.protocol.textures.GetTextureRequest;
 import team.catgirl.collar.protocol.textures.GetTextureResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.services.profiles.Profile;
 import team.catgirl.collar.server.services.profiles.ProfileService;
 import team.catgirl.collar.server.services.textures.TextureService;
-import team.catgirl.collar.server.services.textures.TextureService.FindTextureRequest;
+import team.catgirl.collar.server.services.textures.TextureService.GetTextureRequest;
 import team.catgirl.collar.server.services.textures.TextureService.Texture;
 import team.catgirl.collar.server.session.SessionManager;
 
@@ -42,13 +41,21 @@ public class TexturesProtocolHandler extends ProtocolHandler {
 
     @Override
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
-        if (req instanceof GetTextureRequest) {
-            GetTextureRequest request = (GetTextureRequest) req;
+        if (req instanceof team.catgirl.collar.protocol.textures.GetTextureRequest) {
+            team.catgirl.collar.protocol.textures.GetTextureRequest request = (team.catgirl.collar.protocol.textures.GetTextureRequest) req;
             if (request.player != null) {
                 sessions.getSessionStateByPlayer(request.player).ifPresentOrElse(sessionState -> {
                     GetTextureResponse response;
                     try {
-                        Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(sessionState.identity.owner, request.group, request.type)).texture;
+                        Texture texture = null;
+                        // If asking for a cape, lookup the default cape first
+                        if (request.type == TextureType.CAPE) {
+                            texture = findDefaultCape(request, sessionState);
+                        }
+                        // otherwise fall back to fetching any cape cape the player owns
+                        if (texture == null) {
+                            texture = textures.getTexture(RequestContext.ANON, new GetTextureRequest(null, sessionState.identity.owner, request.group, request.type)).texture;
+                        }
                         response = new GetTextureResponse(serverIdentity, texture.id, null, sessionState.toPlayer(), texture.url, texture.type);
                     } catch (NotFoundException ignored) {
                         LOGGER.log(Level.INFO, "Could not find texture " + request.type + " for player " + request.player);
@@ -65,7 +72,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
             } else if (request.group != null) {
                 GetTextureResponse response;
                 try {
-                    Texture texture = textures.findTexture(RequestContext.ANON, new FindTextureRequest(null, request.group, request.type)).texture;
+                    Texture texture = textures.getTexture(RequestContext.ANON, new GetTextureRequest(null,null, request.group, request.type)).texture;
                     response = new GetTextureResponse(serverIdentity, texture.id, texture.group, null, texture.url, texture.type);
                 } catch (NotFoundException ignored) {
                     LOGGER.log(Level.INFO, "Could not find texture " + request.type + " for group " + request.group);
@@ -76,6 +83,22 @@ public class TexturesProtocolHandler extends ProtocolHandler {
             return true;
         }
         return false;
+    }
+
+    private Texture findDefaultCape(team.catgirl.collar.protocol.textures.GetTextureRequest request, SessionManager.SessionState sessionState) {
+        Texture texture;
+        PublicProfile playerProfile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(sessionState.identity.owner)).profile.toPublic();
+        if (playerProfile.cape != null) {
+            try {
+                texture = textures.getTexture(RequestContext.ANON, new GetTextureRequest(playerProfile.cape.texture, null, null, null)).texture;
+            } catch (NotFoundException ignored) {
+                LOGGER.log(Level.INFO, "Could not find texture " + playerProfile.cape.texture + " for player " + request.player);
+                texture = null;
+            }
+        } else {
+            texture = null;
+        }
+        return texture;
     }
 
     @Override

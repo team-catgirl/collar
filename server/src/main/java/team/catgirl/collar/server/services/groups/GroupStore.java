@@ -18,6 +18,7 @@ import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -73,6 +74,11 @@ public final class GroupStore {
 
     public Stream<Group> findGroupsContaining(Player player) {
         MongoCursor<Group> iterator = docs.find(eq(FIELD_MEMBERS + "." + FIELD_MEMBER_PROFILE_ID, player.profile)).map(this::mapFromDocument).batchSize(100).iterator();
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
+    }
+
+    public Stream<Group> findGroupsContaining(PublicProfile profile) {
+        MongoCursor<Group> iterator = docs.find(eq(FIELD_MEMBERS + "." + FIELD_MEMBER_PROFILE_ID, profile.id)).map(this::mapFromDocument).batchSize(100).iterator();
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false);
     }
 

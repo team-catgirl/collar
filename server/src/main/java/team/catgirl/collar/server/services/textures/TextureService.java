@@ -16,10 +16,9 @@ import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.server.http.RequestContext;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
@@ -78,6 +77,21 @@ public class TextureService {
         return new Texture(id, url, TextureType.valueOf(doc.getString(FIELD_TYPE)), doc.get(FIELD_OWNER, UUID.class), group);
     }
 
+    public FindTexturesResponse findTextures(RequestContext context, FindTexturesRequest req) {
+        if (req.type == null) {
+            throw new BadRequestException("missing type");
+        }
+        MongoCursor<Texture> iterator;
+        if (req.group != null) {
+            iterator = docs.find(and(eq(FIELD_TYPE, req.type.name()), eq(FIELD_TEXTURE_GROUP, req.group))).map(this::map).iterator();
+        } else if (req.profile != null) {
+            iterator = docs.find(and(eq(FIELD_TYPE, req.type.name()), eq(FIELD_OWNER, req.profile))).map(this::map).iterator();
+        } else {
+            throw new IllegalStateException("missing group or profile");
+        }
+        return new FindTexturesResponse(StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), false).collect(Collectors.toList()));
+    }
+
     public GetTextureContentResponse getTextureContent(GetTextureContentRequest req) {
         TextureContent texture = docs.find(and(eq(FIELD_TEXTURE_ID, req.id)))
                 .map(doc -> new TextureContent(doc.get(FIELD_TEXTURE_ID, UUID.class), doc.get(FIELD_BYTES, Binary.class).getData()))
@@ -88,10 +102,12 @@ public class TextureService {
         return new GetTextureContentResponse(texture);
     }
 
-    public FindTextureResponse findTexture(RequestContext context, FindTextureRequest req) {
+    public GetTextureResponse getTexture(RequestContext context, GetTextureRequest req) {
         context.assertAnonymous();
         Texture texture;
-        if (req.profile != null) {
+        if (req.texture != null) {
+            texture = docs.find(and(eq(FIELD_OWNER, req.profile), eq(FIELD_TEXTURE_ID, req.texture))).map(this::map).first();
+        } else if (req.profile != null) {
             texture = docs.find(and(eq(FIELD_OWNER, req.profile), eq(FIELD_TYPE, req.type.name()))).map(this::map).first();
         } else if (req.group != null) {
             texture = docs.find(and(eq(FIELD_TEXTURE_GROUP, req.group), eq(FIELD_TYPE, req.type.name()))).map(this::map).first();
@@ -101,7 +117,7 @@ public class TextureService {
         if (texture == null) {
             throw new NotFoundException("cannot find texture " + req.profile + " " + req.type);
         }
-        return new FindTextureResponse(texture);
+        return new GetTextureResponse(texture);
     }
 
     public static class CreateTextureRequest {
@@ -134,7 +150,9 @@ public class TextureService {
         }
     }
 
-    public static class FindTextureRequest {
+    public static class GetTextureRequest {
+        @JsonProperty("texture")
+        public final UUID texture;
         @JsonProperty("profile")
         public final UUID profile;
         @JsonProperty("group")
@@ -142,19 +160,21 @@ public class TextureService {
         @JsonProperty("type")
         public final TextureType type;
 
-        public FindTextureRequest(@JsonProperty("profile") UUID profile,
-                                  @JsonProperty("group") UUID group,
-                                  @JsonProperty("type") TextureType type) {
+        public GetTextureRequest(@JsonProperty("texture") UUID texture,
+                                 @JsonProperty("profile") UUID profile,
+                                 @JsonProperty("group") UUID group,
+                                 @JsonProperty("type") TextureType type) {
+            this.texture = texture;
             this.profile = profile;
             this.group = group;
             this.type = type;
         }
     }
 
-    public static class FindTextureResponse {
+    public static class GetTextureResponse {
         public final Texture texture;
 
-        public FindTextureResponse(@JsonProperty("texture") Texture texture) {
+        public GetTextureResponse(@JsonProperty("texture") Texture texture) {
             this.texture = texture;
         }
     }
@@ -212,6 +232,28 @@ public class TextureService {
 
         public GetTextureContentResponse(@JsonProperty("content") TextureContent content) {
             this.content = content;
+        }
+    }
+
+    public static final class FindTexturesRequest {
+        public final TextureType type;
+        public final UUID profile;
+        public final UUID group;
+
+        public FindTexturesRequest(@JsonProperty("type") TextureType type,
+                                   @JsonProperty("profile") UUID profile,
+                                   @JsonProperty("group") UUID group) {
+            this.type = type;
+            this.profile = profile;
+            this.group = group;
+        }
+    }
+
+    public static final class FindTexturesResponse {
+        public final List<Texture> textures;
+
+        public FindTexturesResponse(@JsonProperty("textures") List<Texture> textures) {
+            this.textures = textures;
         }
     }
 }

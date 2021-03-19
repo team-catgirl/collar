@@ -255,8 +255,8 @@ public class ProfileService {
             return new UpdateProfileRequest(profile, null, null, null, capeTexture, null);
         }
 
-        public static UpdateProfileRequest addMinecraftAccount(UUID addAccount) {
-            return new UpdateProfileRequest(null, null, null, null, null, addAccount);
+        public static UpdateProfileRequest addMinecraftAccount(UUID profile, UUID addAccount) {
+            return new UpdateProfileRequest(profile, null, null, null, null, addAccount);
         }
     }
 

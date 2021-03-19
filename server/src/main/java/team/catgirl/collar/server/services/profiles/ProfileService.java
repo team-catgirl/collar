@@ -15,16 +15,13 @@ import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.profiles.TexturePreference;
-import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.push;
 
 public class ProfileService {
 
@@ -37,6 +34,7 @@ public class ProfileService {
     private static final String FIELD_PRIVATE_IDENTITY_TOKEN = "privateIdentityToken";
     private static final String FIELD_CAPE_TEXTURE = "capeTexture";
     private static final String FIELD_CAPE_TEXTURE_ID = "texture";
+    private static final String FIELD_KNOWN_ACCOUNTS = "knownAccounts";
 
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
@@ -117,6 +115,8 @@ public class ProfileService {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, token)));
         } else if (req.cape != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_CAPE_TEXTURE, map(req.cape))));
+        } else if (req.addMinecraftAccount != null) {
+            result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), push(FIELD_KNOWN_ACCOUNTS, req.addMinecraftAccount));
         } else {
             throw new BadRequestException("bad request");
         }
@@ -185,7 +185,17 @@ public class ProfileService {
         boolean emailVerified = doc.getBoolean(FIELD_EMAIL_VERIFIED, false);
         Binary privateIdentityToken = doc.get(FIELD_PRIVATE_IDENTITY_TOKEN, Binary.class);
         TexturePreference capeTexture = mapTexturePreference(doc.get(FIELD_CAPE_TEXTURE, Document.class));
-        return new Profile(profileId, email, name, hashedPassword, emailVerified, privateIdentityToken != null ? privateIdentityToken.getData() : null, capeTexture);
+        List<UUID> knownAccounts = doc.getList("knownAccounts", UUID.class);
+        return new Profile(
+                profileId,
+                email,
+                name,
+                hashedPassword,
+                emailVerified,
+                privateIdentityToken != null ? privateIdentityToken.getData() : null,
+                capeTexture,
+                knownAccounts == null ? Set.of() : Set.copyOf(knownAccounts)
+        );
     }
 
     private static TexturePreference mapTexturePreference(Document doc) {
@@ -212,33 +222,41 @@ public class ProfileService {
         public final byte[] privateIdentityToken;
         @JsonProperty("cape")
         public final TexturePreference cape;
+        @JsonProperty("addMinecraftAccount")
+        public final UUID addMinecraftAccount;
 
         public UpdateProfileRequest(@JsonProperty("profile") UUID profile,
                                     @JsonProperty("emailVerified") Boolean emailVerified,
                                     @JsonProperty("hashedPassword") String hashedPassword,
                                     @JsonProperty("privateIdentityToken") byte[] privateIdentityToken,
-                                    @JsonProperty("cape") TexturePreference cape) {
+                                    @JsonProperty("cape") TexturePreference cape,
+                                    @JsonProperty("addAccount") UUID addMinecraftAccount) {
             this.profile = profile;
             this.emailVerified = emailVerified;
             this.hashedPassword = hashedPassword;
             this.privateIdentityToken = privateIdentityToken;
             this.cape = cape;
+            this.addMinecraftAccount = addMinecraftAccount;
         }
 
         public static UpdateProfileRequest emailVerified(UUID profile) {
-            return new UpdateProfileRequest(profile, true, null, null, null);
+            return new UpdateProfileRequest(profile, true, null, null, null, null);
         }
 
         public static UpdateProfileRequest hashedPassword(UUID profile, String newPassword) {
-            return new UpdateProfileRequest(profile, null, newPassword, null, null);
+            return new UpdateProfileRequest(profile, null, newPassword, null, null, null);
         }
 
         public static UpdateProfileRequest privateIdentityToken(UUID profile, byte[] privateIdentityToken) {
-            return new UpdateProfileRequest(profile, null, null, privateIdentityToken, null);
+            return new UpdateProfileRequest(profile, null, null, privateIdentityToken, null, null);
         }
 
         public static UpdateProfileRequest capeTexturePreference(UUID profile, TexturePreference capeTexture) {
-            return new UpdateProfileRequest(profile, null, null, null, capeTexture);
+            return new UpdateProfileRequest(profile, null, null, null, capeTexture, null);
+        }
+
+        public static UpdateProfileRequest addMinecraftAccount(UUID addAccount) {
+            return new UpdateProfileRequest(null, null, null, null, null, addAccount);
         }
     }
 

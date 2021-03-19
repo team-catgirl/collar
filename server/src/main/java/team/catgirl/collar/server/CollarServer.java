@@ -147,6 +147,7 @@ public class CollarServer {
             if (services.minecraftSessionVerifier.verify(request.session)) {
                 MinecraftPlayer minecraftPlayer = request.session.toPlayer();
                 services.sessions.identify(session, req.identity, minecraftPlayer);
+                services.profiles.updateProfile(RequestContext.from(req.identity), UpdateProfileRequest.addMinecraftAccount(request.session.id));
                 sendPlain(session, new StartSessionResponse(serverIdentity));
             } else {
                 sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));

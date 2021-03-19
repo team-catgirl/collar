@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.profiles.TexturePreference;
 
+import java.util.Set;
 import java.util.UUID;
 
 public final class Profile {
@@ -23,6 +24,8 @@ public final class Profile {
     public final byte[] privateIdentityToken;
     @JsonProperty("cape")
     public final TexturePreference cape;
+    @JsonProperty("knownAccounts")
+    public final Set<UUID> knownAccounts;
 
     public Profile(UUID id,
                    String email,
@@ -30,7 +33,8 @@ public final class Profile {
                    String hashedPassword,
                    Boolean emailVerified,
                    byte[] privateIdentityToken,
-                   TexturePreference cape) {
+                   TexturePreference cape,
+                   Set<UUID> knownAccounts) {
         this.id = id;
         this.email = email;
         this.name = name;
@@ -38,6 +42,7 @@ public final class Profile {
         this.emailVerified = emailVerified;
         this.privateIdentityToken = privateIdentityToken;
         this.cape = cape;
+        this.knownAccounts = knownAccounts;
     }
 
     @JsonCreator
@@ -45,12 +50,14 @@ public final class Profile {
                    @JsonProperty("email") String email,
                    @JsonProperty("name") String name,
                    @JsonProperty("name") Boolean emailVerified,
-                   @JsonProperty("cape") TexturePreference cape) {
+                   @JsonProperty("cape") TexturePreference cape,
+                   @JsonProperty("knownAccounts") Set<UUID> knownAccounts) {
         this.id = id;
         this.email = email;
         this.name = name;
         this.emailVerified = emailVerified;
         this.cape = cape;
+        this.knownAccounts = knownAccounts;
         this.privateIdentityToken = null;
         this.hashedPassword = null;
     }

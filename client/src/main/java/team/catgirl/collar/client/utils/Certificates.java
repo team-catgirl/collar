@@ -1,4 +1,4 @@
-package team.catgirl.collar.utils;
+package team.catgirl.collar.client.utils;
 
 import com.google.common.io.Resources;
 
@@ -22,10 +22,10 @@ class Certificates {
         ks.load(null, null);
 
         X509Certificate dev = load("dev.api.collarmc.com.cer");
-        ks.setCertificateEntry(Integer.toString(1), dev);
+        ks.setCertificateEntry("dev.api.collarmc.com", dev);
 
         X509Certificate prod = load("api.collarmc.com.cer");
-        ks.setCertificateEntry(Integer.toString(2), prod);
+        ks.setCertificateEntry("api.collarmc.com", prod);
 
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init(ks);

@@ -1,5 +1,6 @@
 package team.catgirl.collar.server.security.mojang;
 
+import okhttp3.OkHttpClient;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.security.mojang.ServerAuthentication;
 
@@ -12,9 +13,11 @@ public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier 
 
     private static final String NAME = "mojang";
 
+    private final OkHttpClient http;
     public final String baseUrl;
 
-    public MojangMinecraftSessionVerifier(String baseUrl) {
+    public MojangMinecraftSessionVerifier(OkHttpClient http, String baseUrl) {
+        this.http = http;
         this.baseUrl = baseUrl;
     }
 
@@ -25,6 +28,6 @@ public class MojangMinecraftSessionVerifier implements MinecraftSessionVerifier 
 
     @Override
     public boolean verify(MinecraftSession session) {
-        return new ServerAuthentication(baseUrl).verifyClient(session);
+        return new ServerAuthentication(http, baseUrl).verifyClient(session);
     }
 }

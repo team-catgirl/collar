@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.configuration;
 
 import com.mongodb.client.MongoDatabase;
+import okhttp3.OkHttpClient;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.CollarWebAppUrlProvider;
 import team.catgirl.collar.server.http.DefaultAppUrlProvider;
@@ -29,8 +30,19 @@ public class Configuration {
     public final boolean enableWeb;
     public final int httpPort;
     public final Email email;
+    public final OkHttpClient http;
 
-    public Configuration(MongoDatabase database, AppUrlProvider appUrlProvider, TokenCrypter tokenCrypter, PasswordHashing passwordHashing, MinecraftSessionVerifier minecraftSessionVerifier, String corsOrigin, boolean enableWeb, int httpPort, Email email) {
+    public Configuration(MongoDatabase database,
+                         AppUrlProvider appUrlProvider,
+                         TokenCrypter tokenCrypter,
+                         PasswordHashing passwordHashing,
+                         MinecraftSessionVerifier minecraftSessionVerifier,
+                         String corsOrigin,
+                         boolean enableWeb,
+                         int httpPort,
+                         Email email,
+                         OkHttpClient http
+    ) {
         this.database = database;
         this.appUrlProvider = appUrlProvider;
         this.tokenCrypter = tokenCrypter;
@@ -40,6 +52,7 @@ public class Configuration {
         this.enableWeb = enableWeb;
         this.httpPort = httpPort;
         this.email = email;
+        this.http = http;
         LOGGER.log(Level.INFO, "Using Email type " + email.getClass().getSimpleName());
     }
 
@@ -71,16 +84,18 @@ public class Configuration {
             throw new IllegalStateException("MAILGUN_API_KEY not set");
         }
         AppUrlProvider appUrlProvider = new CollarWebAppUrlProvider(baseUrl);
+        OkHttpClient http = new OkHttpClient();
         return new Configuration(
                 Mongo.database(),
                 appUrlProvider,
                 new TokenCrypter(crypterPassword),
                 new PasswordHashing(passwordSalt),
-                useMojang ? new MojangMinecraftSessionVerifier("https://sessionserver.mojang.com/") : new NojangMinecraftSessionVerifier(),
+                useMojang ? new MojangMinecraftSessionVerifier(http, "https://sessionserver.mojang.com/") : new NojangMinecraftSessionVerifier(),
                 appUrlProvider.homeUrl(),
                 enableWeb,
                 httpPort(),
-                new MailGunEmail(appUrlProvider, mailgunDomain, mailgunApiKey)
+                new MailGunEmail(http, appUrlProvider, mailgunDomain, mailgunApiKey),
+                http
         );
     }
 
@@ -96,7 +111,8 @@ public class Configuration {
                 "*",
                 true,
                 httpPort(),
-                new LocalEmail(appUrlProvider));
+                new LocalEmail(appUrlProvider),
+                new OkHttpClient());
     }
 
     public static Configuration testConfiguration(MongoDatabase db, MinecraftSessionVerifier sessionVerifier) {
@@ -111,7 +127,8 @@ public class Configuration {
                 "*",
                 false,
                 3001,
-                new LocalEmail(appUrlProvider));
+                new LocalEmail(appUrlProvider),
+                new OkHttpClient());
     }
 
     private static int httpPort() {

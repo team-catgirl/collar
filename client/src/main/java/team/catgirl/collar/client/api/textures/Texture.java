@@ -4,6 +4,7 @@ import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.textures.TextureType;
+import team.catgirl.collar.client.utils.Http;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.utils.Utils;
 
@@ -46,7 +47,7 @@ public final class Texture {
                 .url(url)
                 .build();
 
-        Utils.http().newCall(request).enqueue(new Callback() {
+        Http.collar().newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 LOGGER.log(Level.SEVERE, "Failed to load texture from " + url, e);

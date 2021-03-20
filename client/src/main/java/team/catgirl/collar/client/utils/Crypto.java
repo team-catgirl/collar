@@ -1,4 +1,4 @@
-package team.catgirl.collar.utils;
+package team.catgirl.collar.client.utils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

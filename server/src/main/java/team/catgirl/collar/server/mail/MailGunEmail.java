@@ -17,11 +17,13 @@ public class MailGunEmail extends AbstractEmail {
 
     private static final Logger LOGGER = Logger.getLogger(MailGunEmail.class.getName());
 
+    private final OkHttpClient http;
     private final String domain;
     private final String apiKey;
 
-    public MailGunEmail(AppUrlProvider urlProvider, String domain, String apiKey) {
+    public MailGunEmail(OkHttpClient http, AppUrlProvider urlProvider, String domain, String apiKey) {
         super(urlProvider);
+        this.http = http;
         this.domain = domain;
         this.apiKey = apiKey;
     }
@@ -44,7 +46,7 @@ public class MailGunEmail extends AbstractEmail {
                 .post(formBody)
                 .build();
 
-        try (Response response = Utils.http().newCall(request).execute()) {
+        try (Response response = http.newCall(request).execute()) {
             if (response.code() != 200) {
                 throw new UnmappedHttpException(response.code(), response.message());
             }

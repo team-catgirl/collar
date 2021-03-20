@@ -30,6 +30,7 @@ import team.catgirl.collar.client.security.PrivateIdentity;
 import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
+import team.catgirl.collar.client.utils.Http;
 import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -52,10 +53,9 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.security.mojang.ServerAuthentication;
-import team.catgirl.collar.utils.Crypto;
+import team.catgirl.collar.client.utils.Crypto;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -133,7 +133,7 @@ public final class Collar {
         checkServerCompatibility(configuration);
         String url = UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/1/listen").toString();
         LOGGER.log(Level.INFO, "Connecting to server " + url);
-        webSocket = Utils.http().newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
+        webSocket = Http.collar().newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
         webSocket.request();
         changeState(State.CONNECTING);
     }
@@ -287,7 +287,7 @@ public final class Collar {
         Request request = new Request.Builder()
                 .url(url)
                 .build();
-        try (Response response = Utils.http().newCall(request).execute()) {
+        try (Response response = Http.collar().newCall(request).execute()) {
             if (response.code() == 200) {
                 byte[] bytes = Objects.requireNonNull(response.body()).bytes();
                 return Utils.jsonMapper().readValue(bytes, aClass);
@@ -393,7 +393,7 @@ public final class Collar {
                 }
                 MinecraftSession session = configuration.sessionSupplier.get();
                 if (session.mode == MinecraftSession.Mode.MOJANG) {
-                    ServerAuthentication authentication = new ServerAuthentication(configuration.yggdrasilBaseUrl);
+                    ServerAuthentication authentication = new ServerAuthentication(Http.external(), configuration.yggdrasilBaseUrl);
                     if (!authentication.joinServer(session)) {
                         throw new ConnectionException("could start session with Mojang");
                     }

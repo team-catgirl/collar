@@ -6,6 +6,7 @@ import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
+import team.catgirl.collar.client.utils.Http;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.security.mojang.ServerAuthentication;
 import team.catgirl.collar.security.mojang.ServerAuthentication.HasJoinedResponse;
@@ -70,7 +71,7 @@ public class YggdrasilTest {
                 return new HasJoinedResponse(alicePlayerId.toString().replace("-", ""), "alice");
             }
         });
-    }, Configuration.testConfiguration(Mongo.getTestingDatabase(), new MojangMinecraftSessionVerifier("http://localhost:3001/test/")));
+    }, Configuration.testConfiguration(Mongo.getTestingDatabase(), new MojangMinecraftSessionVerifier(Http.external(), "http://localhost:3001/test/")));
 
     @Rule
     public CollarClientRule aliceClient = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder()

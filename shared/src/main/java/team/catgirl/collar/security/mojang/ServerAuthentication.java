@@ -5,10 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.mikael.urlbuilder.UrlBuilder;
-import okhttp3.MediaType;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+import okhttp3.*;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -25,9 +22,11 @@ public final class ServerAuthentication {
 
     private static final Logger LOGGER = Logger.getLogger(ServerAuthentication.class.getName());
 
+    private final OkHttpClient http;
     private final String baseUrl;
 
-    public ServerAuthentication(String baseUrl) {
+    public ServerAuthentication(OkHttpClient http, String baseUrl) {
+        this.http = http;
         this.baseUrl = baseUrl;
     }
 
@@ -39,7 +38,7 @@ public final class ServerAuthentication {
                     .url(baseUrl + "session/minecraft/join")
                     .post(RequestBody.create(json, MediaType.get("application/json")))
                     .build();
-            try (Response response = Utils.http().newCall(request).execute()) {
+            try (Response response = http.newCall(request).execute()) {
                 if (response.code() != 204) {
                     LOGGER.log(Level.SEVERE, "Could not start verification with Mojang");
                     return false;
@@ -58,7 +57,7 @@ public final class ServerAuthentication {
                     .addParameter("username", session.username)
                     .addParameter("serverId", ServerAuthentication.genServerIDHash());
             Request request = new Request.Builder().url(builder.toUrl()).build();
-            try (Response response = Utils.http().newCall(request).execute()) {
+            try (Response response = http.newCall(request).execute()) {
                 if (response.code() == 200) {
                     String string = response.body().string();
                     HasJoinedResponse hasJoinedResponse = Utils.jsonMapper().readValue(string, HasJoinedResponse.class);

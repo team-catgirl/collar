@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import team.catgirl.collar.api.authentication.AuthenticationService;
 import team.catgirl.collar.api.authentication.AuthenticationService.LoginRequest;
 import team.catgirl.collar.api.authentication.AuthenticationService.LoginResponse;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,7 +19,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-public class AdminTool {
+public final class AdminTool {
 
     private final OkHttpClient http;
     private final ObjectMapper mapper;
@@ -48,7 +50,13 @@ public class AdminTool {
 
     public void resetPassword(String email) {
         client.resetPassword(new AuthenticationService.RequestPasswordResetRequest(email));
-        System.out.println("Reset request sent for " + email);
+        System.out.println("Reset password request sent for " + email);
+    }
+
+    public void resetIdentity(String email) {
+        Profile profile = client.getProfile(ProfileService.GetProfileRequest.byEmail(email)).profile;
+        client.updateProfile(ProfileService.UpdateProfileRequest.privateIdentityToken(profile.id, new byte[0]));
+        System.out.println("Reset identity for " + email);
     }
 
     public int addConfig(String name, String apiUrl, String email, String password) {

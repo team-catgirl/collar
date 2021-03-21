@@ -29,7 +29,7 @@ public class ApiTokenTest {
     @Test
     public void roundTrip() throws Exception {
         Profile profile = profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
-        ApiToken token = new ApiToken(profile.id, new Date().getTime() * TimeUnit.HOURS.toMillis(24));
+        ApiToken token = new ApiToken(profile.id, new Date().getTime() * TimeUnit.HOURS.toMillis(24), profile.roles);
         TokenCrypter crypter = new TokenCrypter("helloworld");
         String tokenString = token.serialize(crypter);
         ApiToken deserialized = ApiToken.deserialize(crypter, tokenString);

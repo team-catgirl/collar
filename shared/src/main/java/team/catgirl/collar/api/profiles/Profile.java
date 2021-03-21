@@ -3,8 +3,6 @@ package team.catgirl.collar.api.profiles;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.api.profiles.PublicProfile;
-import team.catgirl.collar.api.profiles.TexturePreference;
 
 import java.util.Set;
 import java.util.UUID;
@@ -12,6 +10,8 @@ import java.util.UUID;
 public final class Profile {
     @JsonProperty("id")
     public final UUID id;
+    @JsonProperty("roles")
+    public final Set<Role> roles;
     @JsonProperty("email")
     public final String email;
     @JsonProperty("name")
@@ -28,6 +28,7 @@ public final class Profile {
     public final Set<UUID> knownAccounts;
 
     public Profile(UUID id,
+                   Set<Role> roles,
                    String email,
                    String name,
                    String hashedPassword,
@@ -36,6 +37,7 @@ public final class Profile {
                    TexturePreference cape,
                    Set<UUID> knownAccounts) {
         this.id = id;
+        this.roles = roles;
         this.email = email;
         this.name = name;
         this.hashedPassword = hashedPassword;
@@ -47,12 +49,14 @@ public final class Profile {
 
     @JsonCreator
     public Profile(@JsonProperty("id") UUID id,
+                   @JsonProperty("roles") Set<Role> roles,
                    @JsonProperty("email") String email,
                    @JsonProperty("name") String name,
                    @JsonProperty("emailVerified") Boolean emailVerified,
                    @JsonProperty("cape") TexturePreference cape,
                    @JsonProperty("knownAccounts") Set<UUID> knownAccounts) {
         this.id = id;
+        this.roles = roles;
         this.email = email;
         this.name = name;
         this.emailVerified = emailVerified;

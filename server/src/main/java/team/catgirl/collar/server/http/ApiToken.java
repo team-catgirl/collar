@@ -2,10 +2,13 @@ package team.catgirl.collar.server.http;
 
 import com.google.common.io.BaseEncoding;
 import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.profiles.Role;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 
 import java.io.*;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -14,18 +17,21 @@ import java.util.concurrent.TimeUnit;
  */
 public class ApiToken {
 
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     public final UUID profileId;
     public final long expiresAt;
+    public final Set<Role> roles;
 
-    public ApiToken(UUID profileId, long expiresAt) {
+    public ApiToken(UUID profileId, long expiresAt, Set<Role> roles) {
         this.profileId = profileId;
         this.expiresAt = expiresAt;
+        this.roles = roles;
     }
 
-    public ApiToken(UUID profileId) {
+    public ApiToken(UUID profileId, Set<Role> roles) {
         this.profileId = profileId;
+        this.roles = roles;
         this.expiresAt = new Date().getTime() + TimeUnit.DAYS.toMillis(7);
     }
 
@@ -39,6 +45,10 @@ public class ApiToken {
                 dataStream.write(VERSION);
                 dataStream.writeUTF(profileId.toString());
                 dataStream.writeLong(expiresAt);
+                dataStream.writeInt(roles.size());
+                for (Role role : roles) {
+                    dataStream.writeInt(role.ordinal());
+                }
             }
             return BaseEncoding.base64Url().encode(crypter.crypt(outputStream.toByteArray()));
         }
@@ -52,20 +62,31 @@ public class ApiToken {
                 int version = dataStream.read();
                 String uuidAsString;
                 long expiresAt;
+                Set<Role> roles = new HashSet<>();
                 switch (version) {
                     case 1:
                         uuidAsString = dataStream.readUTF();
                         expiresAt = dataStream.readLong();
+                        roles.add(Role.PLAYER);
+                        break;
+                    case 2:
+                        uuidAsString = dataStream.readUTF();
+                        expiresAt = dataStream.readLong();
+                        int rolesCount = dataStream.readInt();
+                        for (int i = 0; i < rolesCount; i++) {
+                            int roleId = dataStream.readInt();
+                            roles.add(Role.values()[roleId]);
+                        }
                         break;
                     default:
                         throw new IllegalStateException("unknown version " + version);
                 }
-                return new ApiToken(UUID.fromString(uuidAsString), expiresAt);
+                return new ApiToken(UUID.fromString(uuidAsString), expiresAt, roles);
             }
         }
     }
 
     public RequestContext fromToken() {
-        return new RequestContext(profileId);
+        return new RequestContext(profileId, roles);
     }
 }

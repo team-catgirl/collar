@@ -15,11 +15,13 @@ import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.profiles.Profile;
 import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.Role;
 import team.catgirl.collar.api.profiles.TexturePreference;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
 import team.catgirl.collar.api.http.RequestContext;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.push;
@@ -36,6 +38,7 @@ public class ProfileServiceServer implements ProfileService {
     private static final String FIELD_CAPE_TEXTURE = "capeTexture";
     private static final String FIELD_CAPE_TEXTURE_ID = "texture";
     private static final String FIELD_KNOWN_ACCOUNTS = "knownAccounts";
+    private static final String FIELD_ROLES = "roles";
 
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
@@ -74,6 +77,7 @@ public class ProfileServiceServer implements ProfileService {
         state.put(FIELD_EMAIL, req.email.toLowerCase());
         state.put(FIELD_HASHED_PASSWORD, hashedPassword);
         state.put(FIELD_EMAIL_VERIFIED, false);
+        state.put(FIELD_ROLES, List.of(Role.PLAYER.name()));
         InsertOneResult insertOneResult = docs.insertOne(new Document(state));
         if (insertOneResult.wasAcknowledged()) {
             BsonObjectId id = Objects.requireNonNull(insertOneResult.getInsertedId()).asObjectId();
@@ -119,7 +123,7 @@ public class ProfileServiceServer implements ProfileService {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, token)));
         } else if (req.cape != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_CAPE_TEXTURE, map(req.cape))));
-        } else if (req != null) {
+        } else if (req.addMinecraftAccount != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), push(FIELD_KNOWN_ACCOUNTS, req.addMinecraftAccount));
         } else {
             throw new BadRequestException("bad request");
@@ -144,8 +148,10 @@ public class ProfileServiceServer implements ProfileService {
         Binary privateIdentityToken = doc.get(FIELD_PRIVATE_IDENTITY_TOKEN, Binary.class);
         TexturePreference capeTexture = mapTexturePreference(doc.get(FIELD_CAPE_TEXTURE, Document.class));
         List<UUID> knownAccounts = doc.getList("knownAccounts", UUID.class);
+        Set<Role> roles = doc.getList(FIELD_ROLES, String.class, List.of()).stream().map(Role::valueOf).collect(Collectors.toSet());
         return new Profile(
                 profileId,
+                roles,
                 email,
                 name,
                 hashedPassword,

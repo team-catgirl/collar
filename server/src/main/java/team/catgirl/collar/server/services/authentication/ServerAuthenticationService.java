@@ -142,7 +142,7 @@ public class ServerAuthenticationService implements AuthenticationService {
     }
 
     private String tokenFrom(Profile profile) {
-        ApiToken apiToken = new ApiToken(profile.id);
+        ApiToken apiToken = new ApiToken(profile.id, profile.roles);
         String token;
         try {
             token = apiToken.serialize(tokenCrypter);

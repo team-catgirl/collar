@@ -25,7 +25,7 @@ public class Main {
                 .executes(ctx -> {
                     String config = ctx.getArgument("config", String.class);
                     return adminTool.currentConfig(config);
-        })));
+                })));
 
         dispatcher.register(literal("use")
                 .executes(ctx -> {
@@ -45,7 +45,16 @@ public class Main {
                     String email = ctx.getArgument("email", String.class);
                     adminTool.resetPassword(email);
                     return 1;
-        }))));
+                }))));
+
+        dispatcher.register(literal("reset")
+                .then(literal("identity")
+                .then(argument("email", string())
+                        .executes(ctx -> {
+                            String email = ctx.getArgument("email", String.class);
+                            adminTool.resetIdentity(email);
+                            return 1;
+                }))));
 
         dispatcher.register(literal("config")
             .then(literal("list").executes(ctx -> {

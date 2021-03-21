@@ -5,9 +5,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.profiles.Role;
 import team.catgirl.collar.server.junit.MongoDatabaseTestRule;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class DeviceServiceTest {
@@ -23,7 +25,7 @@ public class DeviceServiceTest {
     @Test
     public void createDevice() {
         UUID owner = UUID.randomUUID();
-        RequestContext ctx = new RequestContext(owner);
+        RequestContext ctx = new RequestContext(owner, Set.of(Role.PLAYER));
         Device device = devices.createDevice(ctx, new DeviceService.CreateDeviceRequest(owner, "Cool Computer")).device;
         Assert.assertEquals(1, device.deviceId);
         Assert.assertEquals("Cool Computer", device.name);
@@ -37,8 +39,8 @@ public class DeviceServiceTest {
 
     @Test
     public void findDevice() {
-        RequestContext owner1 = new RequestContext(UUID.randomUUID());
-        RequestContext owner2 = new RequestContext(UUID.randomUUID());
+        RequestContext owner1 = new RequestContext(UUID.randomUUID(), Set.of(Role.PLAYER));
+        RequestContext owner2 = new RequestContext(UUID.randomUUID(), Set.of(Role.PLAYER));
         devices.createDevice(owner1, new DeviceService.CreateDeviceRequest(owner1.owner, "Cool Computer"));
         devices.createDevice(owner2, new DeviceService.CreateDeviceRequest(owner2.owner, "Lazy Laptop"));
 
@@ -52,8 +54,8 @@ public class DeviceServiceTest {
 
     @Test
     public void deleteDevice() {
-        RequestContext owner1 = new RequestContext(UUID.randomUUID());
-        RequestContext owner2 = new RequestContext(UUID.randomUUID());
+        RequestContext owner1 = new RequestContext(UUID.randomUUID(), Set.of(Role.PLAYER));
+        RequestContext owner2 = new RequestContext(UUID.randomUUID(), Set.of(Role.PLAYER));
         devices.createDevice(owner1, new DeviceService.CreateDeviceRequest(owner1.owner, "Cool Computer"));
         devices.createDevice(owner2, new DeviceService.CreateDeviceRequest(owner2.owner, "Lazy Laptop"));
 

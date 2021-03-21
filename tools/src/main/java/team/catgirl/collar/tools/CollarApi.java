@@ -3,6 +3,7 @@ package team.catgirl.collar.tools;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
+import io.mikael.urlbuilder.UrlBuilder;
 import okhttp3.*;
 import team.catgirl.collar.api.authentication.AuthenticationService;
 import team.catgirl.collar.api.authentication.AuthenticationService.LoginRequest;
@@ -10,13 +11,17 @@ import team.catgirl.collar.api.authentication.AuthenticationService.LoginRespons
 import team.catgirl.collar.api.authentication.AuthenticationService.RequestPasswordResetRequest;
 import team.catgirl.collar.api.authentication.AuthenticationService.RequestPasswordResetResponse;
 import team.catgirl.collar.api.http.HttpException;
-import team.catgirl.collar.api.http.HttpException.BadRequestException;
+import team.catgirl.collar.api.http.HttpException.*;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileResponse;
+import team.catgirl.collar.api.profiles.ProfileService.UpdateProfileResponse;
 
 import java.awt.*;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 
-public class CollarApi {
+public final class CollarApi {
 
     private final String baseURL;
     private final ObjectMapper mapper;
@@ -30,22 +35,36 @@ public class CollarApi {
     }
 
     public LoginResponse login(LoginRequest req) {
-        return doHttpPost(baseURL + "/auth/login", req, LoginResponse.class);
+        return doHttpPost(baseURL + "/auth/login", req, LoginResponse.class, false);
     }
 
     public void resetPassword(RequestPasswordResetRequest req) {
-        doHttpPost(baseURL + "/auth/reset/request", req, RequestPasswordResetResponse.class);
+        doHttpPost(baseURL + "/auth/reset/request", req, RequestPasswordResetResponse.class, false);
     }
 
-    private <T> T doHttpPost(String url, Object bodyObject, Class<T> responseClazz) {
+    public void updateProfile(ProfileService.UpdateProfileRequest req) {
+        doHttpPost(baseURL + "/auth/reset/request", req, UpdateProfileResponse.class, true);
+    }
+
+    public GetProfileResponse getProfile(GetProfileRequest req) {
+        String url = UrlBuilder.fromString(baseURL + "/profile")
+                .addParameter("email", req.byEmail)
+                .toString();
+        return doHttpGet(url, GetProfileResponse.class, true);
+    }
+
+    private <T> T doHttpPost(String url, Object bodyObject, Class<T> responseClazz, boolean withAuth) {
         String bodyContent;
         try {
             bodyContent = mapper.writeValueAsString(bodyObject);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("cant serialize", e);
         }
-        RequestBody requestBody = RequestBody.create(MediaType.get("application/json"), bodyContent);
-        Request.Builder request = prepareHeaders(new Request.Builder().url(url)).post(requestBody);
+        RequestBody requestBody = RequestBody.create(bodyContent, MediaType.get("application/json"));
+        Request.Builder request = new Request.Builder().url(url).post(requestBody);
+        if (withAuth) {
+            request = request.addHeader("Authorization", "Bearer " + token);
+        }
         try (Response response = http.newCall(request.build()).execute()) {
             final ResponseBody body = response.body();
             String responseBodyContent = body == null ? null : body.string();
@@ -53,13 +72,13 @@ public class CollarApi {
                 case 400:
                     throw new BadRequestException(response.message() + " Body: " +  responseBodyContent);
                 case 401:
-                    throw new HttpException.UnauthorisedException(response.message());
+                    throw new UnauthorisedException(response.message());
                 case 403:
-                    throw new HttpException.ForbiddenException(response.message());
+                    throw new ForbiddenException(response.message());
                 case 404:
-                    throw new HttpException.NotFoundException(response.message());
+                    throw new NotFoundException(response.message());
                 case 409:
-                    throw new HttpException.ConflictException(response.message());
+                    throw new ConflictException(response.message());
                 case 200:
                     if (responseBodyContent == null) throw new IllegalStateException("body is null");
                     return mapper.readValue(responseBodyContent, responseClazz);
@@ -71,8 +90,32 @@ public class CollarApi {
         }
     }
 
-    private Request.Builder prepareHeaders(Request.Builder builder) {
-        return builder;
+    private <T> T doHttpGet(String url, Class<T> responseClazz, boolean withAuth) {
+        Request.Builder request = new Request.Builder().url(url);
+        if (withAuth) {
+            request = request.addHeader("Authorization", "Bearer " + token);
+        }
+        try (Response response = http.newCall(request.build()).execute()) {
+            final ResponseBody body = response.body();
+            final String stringBody = body == null ? "" : body.string();
+            switch (response.code()) {
+                case 400:
+                    throw new BadRequestException(response.message() + " Body: " +  stringBody);
+                case 401:
+                    throw new UnauthorisedException(response.message());
+                case 403:
+                    throw new ForbiddenException(response.message());
+                case 404:
+                    throw new NotFoundException(response.message());
+                case 200:
+                    if (body == null) throw new IllegalStateException("body is null");
+                    return mapper.readValue(stringBody, responseClazz);
+                default:
+                    throw new HttpException.UnmappedHttpException(response.code(), response.message());
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not map " + responseClazz.getName(), e);
+        }
     }
 
     public void setToken(String token) {

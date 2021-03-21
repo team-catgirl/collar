@@ -11,6 +11,7 @@ import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.http.*;
 import team.catgirl.collar.api.http.HttpException.*;
 import team.catgirl.collar.api.profiles.PublicProfile;
+import team.catgirl.collar.api.profiles.Role;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.server.common.ServerVersion;
@@ -128,6 +129,11 @@ public class WebServer {
                     before("/*", (request, response) -> {
                         assertAuthenticated(request);
                     });
+                    get("/", (request, response) -> {
+                        String email = request.queryParams("email");
+                        RequestContext context = from(request);
+                        return services.profiles.getProfile(context, GetProfileRequest.byEmail(email));
+                    });
                     // Get your own profile
                     get("/me", (request, response) -> {
                         RequestContext context = from(request);
@@ -147,7 +153,7 @@ public class WebServer {
                         LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), LoginRequest.class);
                         RequestContext context = from(request);
                         LoginResponse loginResp = services.auth.login(context, req);
-                        if (!loginResp.profile.id.equals(context.owner)) {
+                        if (!context.hasRole(Role.ADMINISTRATOR) && !context.callerIs(loginResp.profile.id)) {
                             throw new BadRequestException("user mismatch");
                         }
                         services.profileStorage.delete(context.owner);

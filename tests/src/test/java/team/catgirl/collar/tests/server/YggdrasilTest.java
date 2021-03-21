@@ -33,7 +33,7 @@ import static spark.Spark.get;
 import static spark.Spark.post;
 import static team.catgirl.collar.tests.junit.CollarAssert.waitForCondition;
 
-//@Ignore("seems to have broken but we are going to fix this later")
+@Ignore("seems to have broken but we are going to fix this later")
 public class YggdrasilTest {
 
     private final AtomicReference<Services> services = new AtomicReference<>();

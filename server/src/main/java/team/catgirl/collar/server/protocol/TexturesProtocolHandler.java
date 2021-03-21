@@ -12,8 +12,9 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.CollarServer;
-import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.services.textures.TextureService.GetTextureRequest;
 import team.catgirl.collar.server.services.textures.TextureService.Texture;
@@ -87,7 +88,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
 
     private Texture findDefaultCape(team.catgirl.collar.protocol.textures.GetTextureRequest request, SessionManager.SessionState sessionState) {
         Texture texture;
-        PublicProfile playerProfile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(sessionState.identity.owner)).profile.toPublic();
+        PublicProfile playerProfile = profiles.getProfile(RequestContext.SERVER, ProfileServiceServer.GetProfileRequest.byId(sessionState.identity.owner)).profile.toPublic();
         if (playerProfile.cape != null) {
             try {
                 texture = textures.getTexture(RequestContext.ANON, new GetTextureRequest(playerProfile.cape.texture, null, null, null)).texture;

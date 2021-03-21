@@ -2,7 +2,7 @@ package team.catgirl.collar.server.mail;
 
 import com.google.common.io.Files;
 import team.catgirl.collar.server.http.AppUrlProvider;
-import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.api.profiles.Profile;
 
 import java.io.File;
 import java.io.IOException;

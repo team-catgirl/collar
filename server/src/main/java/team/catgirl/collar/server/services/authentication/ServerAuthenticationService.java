@@ -1,19 +1,18 @@
 package team.catgirl.collar.server.services.authentication;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import team.catgirl.collar.api.authentication.AuthenticationService;
 import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.*;
-import team.catgirl.collar.api.profiles.PublicProfile;
-import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.ApiToken;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.server.http.AppUrlProvider;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.mail.Email;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
-import team.catgirl.collar.server.services.profiles.ProfileService.CreateProfileRequest;
-import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
-import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService.CreateProfileRequest;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.api.profiles.ProfileService.UpdateProfileRequest;
 
 import java.io.IOException;
 import java.util.Date;
@@ -23,9 +22,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class AuthenticationService {
+public class ServerAuthenticationService implements AuthenticationService {
 
-    private final static Logger LOGGER = Logger.getLogger(AuthenticationService.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(ServerAuthenticationService.class.getName());
 
     private final ProfileService profiles;
     private final PasswordHashing passwordHashing;
@@ -34,7 +33,7 @@ public class AuthenticationService {
     private final AppUrlProvider urlProvider;
 
 
-    public AuthenticationService(ProfileService profiles, PasswordHashing passwordHashing, TokenCrypter tokenCrypter, Email email, AppUrlProvider urlProvider) {
+    public ServerAuthenticationService(ProfileService profiles, PasswordHashing passwordHashing, TokenCrypter tokenCrypter, Email email, AppUrlProvider urlProvider) {
         this.profiles = profiles;
         this.passwordHashing = passwordHashing;
         this.tokenCrypter = tokenCrypter;
@@ -42,6 +41,7 @@ public class AuthenticationService {
         this.urlProvider = urlProvider;
     }
 
+    @Override
     public CreateAccountResponse createAccount(RequestContext context, CreateAccountRequest req) {
         context.assertAnonymous();
         if (req.name == null) {
@@ -76,6 +76,7 @@ public class AuthenticationService {
         }
     }
 
+    @Override
     public LoginResponse login(RequestContext context, LoginRequest req) {
         context.assertAnonymous();
         if (req.email == null) {
@@ -98,6 +99,7 @@ public class AuthenticationService {
         }
     }
 
+    @Override
     public VerifyAccountResponse verify(RequestContext context, VerifyAccountRequest req) {
         context.assertAnonymous();
         return VerificationToken.from(tokenCrypter, req.token).map(verificationToken -> {
@@ -110,7 +112,8 @@ public class AuthenticationService {
         }).orElseThrow(() -> new UnauthorisedException("bad or missing token"));
     }
 
-    public RequestPasswordResponse requestPasswordReset(RequestContext context, RequestPasswordResetRequest req) {
+    @Override
+    public RequestPasswordResetResponse requestPasswordReset(RequestContext context, RequestPasswordResetRequest req) {
         context.assertAnonymous();
         Profile profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail(req.email)).profile;
         VerificationToken apiToken = new VerificationToken(profile.id, new Date().getTime() + TimeUnit.HOURS.toMillis(24));
@@ -121,9 +124,10 @@ public class AuthenticationService {
             throw new ServerErrorException("token could not be serialized", e);
         }
         email.send(profile, "Verify your new Collar account", "verify-account", Map.of("resetPasswordUrl", url));
-        return new RequestPasswordResponse();
+        return new RequestPasswordResetResponse();
     }
 
+    @Override
     public ResetPasswordResponse resetPassword(RequestContext context, ResetPasswordRequest req) {
         context.assertAnonymous();
         VerificationToken token = VerificationToken.from(tokenCrypter, req.token).orElseThrow(() -> new BadRequestException("token missing"));
@@ -143,125 +147,8 @@ public class AuthenticationService {
         try {
             token = apiToken.serialize(tokenCrypter);
         } catch (IOException e) {
-            throw new ServerErrorException("token generation error", e);
+            throw new HttpException.ServerErrorException("token generation error", e);
         }
         return token;
-    }
-
-    public static class CreateAccountRequest {
-        @JsonProperty("email")
-        public final String email;
-        @JsonProperty("name")
-        public final String name;
-        @JsonProperty("password")
-        public final String password;
-        @JsonProperty("confirmPassword")
-        public final String confirmPassword;
-
-        public CreateAccountRequest(
-                @JsonProperty("email") String email,
-                @JsonProperty("name") String name,
-                @JsonProperty("password") String password,
-                @JsonProperty("confirmPassword") String confirmPassword) {
-            this.email = email;
-            this.name = name;
-            this.password = password;
-            this.confirmPassword = confirmPassword;
-        }
-    }
-
-    public static class CreateAccountResponse {
-        @JsonProperty("profile")
-        public final PublicProfile profile;
-        @JsonProperty("token")
-        public final String token;
-
-        public CreateAccountResponse(@JsonProperty("profile") PublicProfile profile,
-                                     @JsonProperty("token") String token) {
-            this.profile = profile;
-            this.token = token;
-        }
-    }
-
-    public static class LoginRequest {
-        @JsonProperty("email")
-        public final String email;
-        @JsonProperty("password")
-        public final String password;
-
-        public LoginRequest(@JsonProperty("email") String email,
-                            @JsonProperty("password") String password) {
-            this.email = email;
-            this.password = password;
-        }
-    }
-
-    public static class LoginResponse {
-        @JsonProperty("profile")
-        public final Profile profile;
-        @JsonProperty("token")
-        public final String token;
-
-        public LoginResponse(@JsonProperty("profile") Profile profile,
-                             @JsonProperty("token") String token) {
-            this.profile = profile;
-            this.token = token;
-        }
-    }
-
-    public static class VerifyAccountRequest {
-        @JsonProperty("token")
-        public final String token;
-
-        public VerifyAccountRequest(@JsonProperty("token") String token) {
-            this.token = token;
-        }
-    }
-
-    public static class VerifyAccountResponse {
-        @JsonProperty("redirectUrl")
-        public final String redirectUrl;
-
-        public VerifyAccountResponse(@JsonProperty("redirectUrl") String redirectUrl) {
-            this.redirectUrl = redirectUrl;
-        }
-    }
-
-    public static class RequestPasswordResetRequest {
-        @JsonProperty("email")
-        public final String email;
-
-        public RequestPasswordResetRequest(@JsonProperty("email") String email) {
-            this.email = email;
-        }
-    }
-
-    public static class RequestPasswordResponse {}
-
-    public static class ResetPasswordRequest {
-        @JsonProperty("token")
-        public final String token;
-        @JsonProperty("oldPassword")
-        public final String oldPassword;
-        @JsonProperty("newPassword")
-        public final String newPassword;
-
-        public ResetPasswordRequest(@JsonProperty("token") String token,
-                                    @JsonProperty("oldPassword") String oldPassword,
-                                    @JsonProperty("newPassword") String newPassword) {
-            this.token = token;
-            this.oldPassword = oldPassword;
-            this.newPassword = newPassword;
-        }
-    }
-
-    public static class ResetPasswordResponse {
-        @JsonProperty("profile")
-        public final PublicProfile profile;
-
-        public ResetPasswordResponse(@JsonProperty("profile") PublicProfile profile) {
-
-            this.profile = profile;
-        }
     }
 }

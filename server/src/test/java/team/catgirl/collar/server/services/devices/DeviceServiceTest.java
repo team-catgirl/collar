@@ -4,7 +4,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.junit.MongoDatabaseTestRule;
 
 import java.util.List;

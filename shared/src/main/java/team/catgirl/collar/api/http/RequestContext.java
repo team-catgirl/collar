@@ -1,6 +1,5 @@
-package team.catgirl.collar.server.http;
+package team.catgirl.collar.api.http;
 
-import spark.Request;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
 import team.catgirl.collar.security.ClientIdentity;
 
@@ -56,9 +55,5 @@ public final class RequestContext {
         if (o == null || getClass() != o.getClass()) return false;
         RequestContext that = (RequestContext) o;
         return owner.equals(that.owner);
-    }
-
-    public static RequestContext from(Request req) {
-        return req.attribute("requestContext");
     }
 }

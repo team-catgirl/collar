@@ -7,11 +7,12 @@ import team.catgirl.collar.api.groups.*;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.configuration.Configuration;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.junit.MongoDatabaseTestRule;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
-import team.catgirl.collar.server.services.profiles.ProfileService.CreateProfileRequest;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService.CreateProfileRequest;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
 
@@ -24,7 +25,7 @@ public class GroupStoreTest {
 
     @Test
     public void crud() {
-        ProfileService profiles = new ProfileService(dbRule.db, Configuration.defaultConfiguration().passwordHashing);
+        ProfileService profiles = new ProfileServiceServer(dbRule.db, Configuration.defaultConfiguration().passwordHashing);
         Profile ownerProfile = profiles.createProfile(RequestContext.ANON, new CreateProfileRequest("owner@example.com", "cute", "owner")).profile;
         GroupStore store = new GroupStore(profiles, new SessionManager(Utils.messagePackMapper(), null), dbRule.db);
 

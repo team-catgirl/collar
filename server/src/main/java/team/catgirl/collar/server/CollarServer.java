@@ -28,11 +28,11 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntru
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.protocol.*;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
-import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.api.profiles.ProfileService.UpdateProfileRequest;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;

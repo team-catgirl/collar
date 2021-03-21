@@ -7,11 +7,11 @@ import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.server.Services;
 import team.catgirl.collar.server.configuration.Configuration;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.mongo.Mongo;
 import team.catgirl.collar.server.security.mojang.NojangMinecraftSessionVerifier;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.tests.junit.CollarClientRule;
 import team.catgirl.collar.tests.junit.CollarServerRule;
 import team.catgirl.collar.tests.junit.CollarTest;
@@ -36,7 +36,7 @@ public class HandshakeTest {
     @Rule
     public CollarServerRule serverRule = new CollarServerRule(services -> {
         this.services.set(services);
-        aliceProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
+        aliceProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest(
                 "alice@example.com",
                 "alice",
                 "Alice UwU"

@@ -1,6 +1,7 @@
 package team.catgirl.collar.server.http;
 
 import com.google.common.io.BaseEncoding;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
 
 import java.io.*;

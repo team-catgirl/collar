@@ -10,7 +10,7 @@ import org.bson.types.ObjectId;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 
 import java.util.*;
 import java.util.stream.Collectors;

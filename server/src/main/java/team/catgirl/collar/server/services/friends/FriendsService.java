@@ -14,8 +14,9 @@ import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.profiles.PublicProfile;
-import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
@@ -94,7 +95,7 @@ public final class FriendsService {
     private Friend mapFriend(Document document) {
         UUID owner = document.get(FIELD_OWNER, UUID.class);
         UUID friend = document.get(FIELD_FRIEND, UUID.class);
-        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(friend)).profile.toPublic();
+        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileServiceServer.GetProfileRequest.byId(friend)).profile.toPublic();
         return sessions.getSessionStateByOwner(friend)
                 .map(sessionState -> new Friend(owner, profile, Status.ONLINE, Set.of(sessionState.minecraftPlayer.id)))
                 .orElse(new Friend(friend, profile, Status.OFFLINE, Set.of()));

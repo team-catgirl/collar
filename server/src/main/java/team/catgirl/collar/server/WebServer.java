@@ -18,16 +18,15 @@ import team.catgirl.collar.server.configuration.Configuration;
 import team.catgirl.collar.server.http.ApiToken;
 import team.catgirl.collar.server.http.Cookie;
 import team.catgirl.collar.server.http.HandlebarsTemplateEngine;
-import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.services.authentication.AuthenticationService.*;
+import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.authentication.AuthenticationService.*;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
-import team.catgirl.collar.server.services.authentication.VerificationToken;
 import team.catgirl.collar.server.services.devices.DeviceService;
 import team.catgirl.collar.server.services.devices.DeviceService.DeleteDeviceRequest;
 import team.catgirl.collar.server.services.devices.DeviceService.TrustDeviceResponse;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
-import team.catgirl.collar.server.services.profiles.ProfileService.UpdateProfileRequest;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.api.profiles.ProfileService.UpdateProfileRequest;
 import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.services.textures.TextureService.*;
 import team.catgirl.collar.utils.Utils;
@@ -131,7 +130,7 @@ public class WebServer {
                     });
                     // Get your own profile
                     get("/me", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         return services.profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile;
                     }, services.jsonMapper::writeValueAsString);
                     // Get someone elses profile
@@ -141,12 +140,12 @@ public class WebServer {
                         return services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(uuid)).profile.toPublic();
                     }, services.jsonMapper::writeValueAsString);
                     get("/groups", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         return services.groupStore.findGroupsContaining(new Player(context.owner, null)).collect(Collectors.toList());
                     }, services.jsonMapper::writeValueAsString);
                     post("/reset", (request, response) -> {
                         LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), LoginRequest.class);
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         LoginResponse loginResp = services.auth.login(context, req);
                         if (!loginResp.profile.id.equals(context.owner)) {
                             throw new BadRequestException("user mismatch");
@@ -156,10 +155,10 @@ public class WebServer {
                         return new Object();
                     }, services.jsonMapper::writeValueAsString);
                     get("/devices", (request, response) -> {
-                        return services.devices.findDevices(RequestContext.from(request), services.jsonMapper.readValue(request.bodyAsBytes(), DeviceService.FindDevicesRequest.class));
+                        return services.devices.findDevices(from(request), services.jsonMapper.readValue(request.bodyAsBytes(), DeviceService.FindDevicesRequest.class));
                     }, services.jsonMapper::writeValueAsString);
                     post("/devices/trust", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         context.assertNotAnonymous();
                         DeviceService.TrustDeviceRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), DeviceService.TrustDeviceRequest.class);
                         DeviceService.CreateDeviceResponse device = services.devices.createDevice(context, new DeviceService.CreateDeviceRequest(context.owner, req.deviceName));
@@ -168,12 +167,12 @@ public class WebServer {
                         return new TrustDeviceResponse();
                     }, services.jsonMapper::writeValueAsString);
                     delete("/devices/:id", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         String deviceId = request.params("id");
                         return services.devices.deleteDevice(context, new DeleteDeviceRequest(context.owner, Integer.parseInt(deviceId)));
                     });
                     get("/textures/:type", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         TextureType textureType = TextureType.valueOf(request.params("type").toUpperCase());
                         PublicProfile profile = services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(context.owner)).profile.toPublic();
                         // Find all textures in groups
@@ -182,11 +181,11 @@ public class WebServer {
                                 .flatMap(group -> services.textures.findTextures(context, new FindTexturesRequest(textureType, null, group.id)).textures.stream())
                                 .collect(Collectors.toList());
                         // Find all the textures belonging to player
-                        List<TextureService.Texture> playerTextures = services.textures.findTextures(RequestContext.from(request), new FindTexturesRequest(textureType, context.owner, null)).textures;
+                        List<TextureService.Texture> playerTextures = services.textures.findTextures(from(request), new FindTexturesRequest(textureType, context.owner, null)).textures;
                         return new FindTexturesResponse(ImmutableList.<TextureService.Texture>builder().addAll(playerTextures).addAll(groupTextures).build());
                     }, services.jsonMapper::writeValueAsString);
                     post("/textures/upload", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         CreateTextureRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), CreateTextureRequest.class);
                         if (req.group != null) {
                             Group group = services.groups.findGroup(req.group).orElseThrow(() -> new NotFoundException("could not find group " + req.group));
@@ -197,7 +196,7 @@ public class WebServer {
                         return services.textures.createTexture(context, req);
                     }, services.jsonMapper::writeValueAsString);
                     post("/textures/:type/default", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         UpdateProfileRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), UpdateProfileRequest.class);
                         context.assertCallerIs(req.profile);
                         if (req.cape != null) {
@@ -206,7 +205,7 @@ public class WebServer {
                         return services.profiles.updateProfile(context, req);
                     }, services.jsonMapper::writeValueAsString);
                     post("/reset", (request, response) -> {
-                        RequestContext context = RequestContext.from(request);
+                        RequestContext context = from(request);
                         services.profileStorage.delete(context.owner);
                         services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(context.owner, new byte[0]));
                         response.status(204);
@@ -216,29 +215,29 @@ public class WebServer {
 
                 path("/auth", () -> {
                     before("/*", (request, response) -> {
-                        RequestContext.from(request).assertAnonymous();
+                        from(request).assertAnonymous();
                     });
                     // Login
                     post("/login", (request, response) -> {
                         LoginRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), LoginRequest.class);
-                        return services.auth.login(RequestContext.from(request), req);
+                        return services.auth.login(from(request), req);
                     }, services.jsonMapper::writeValueAsString);
                     // Create an account
                     post("/create", (request, response) -> {
                         CreateAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), CreateAccountRequest.class);
-                        return services.auth.createAccount(RequestContext.from(request), req);
+                        return services.auth.createAccount(from(request), req);
                     }, services.jsonMapper::writeValueAsString);
                     post("/verify", (request, response) -> {
                         VerifyAccountRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), VerifyAccountRequest.class);
-                        return services.auth.verify(RequestContext.from(request), req);
+                        return services.auth.verify(from(request), req);
                     }, services.jsonMapper::writeValueAsString);
                     post("/reset/request", (request, response) -> {
                         RequestPasswordResetRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), RequestPasswordResetRequest.class);
-                        return services.auth.requestPasswordReset(RequestContext.from(request), req);
+                        return services.auth.requestPasswordReset(from(request), req);
                     }, services.jsonMapper::writeValueAsString);
                     post("/reset/perform", (request, response) -> {
                         ResetPasswordRequest req = services.jsonMapper.readValue(request.bodyAsBytes(), ResetPasswordRequest.class);
-                        return services.auth.resetPassword(RequestContext.from(request), req);
+                        return services.auth.resetPassword(from(request), req);
                     });
                 });
 
@@ -270,134 +269,19 @@ public class WebServer {
             return new DiscoverResponse(versions, features);
         }, services.jsonMapper::writeValueAsString);
 
-        // Basic web interface. Not for production use.
-        if (configuration.enableWeb) {
-            LOGGER.log(Level.WARNING, "Builtin web interface is NOT for production use");
-            get("/", (request, response) -> {
-                response.redirect("/app/login");
-                return "";
-            });
-            path("/app", () -> {
-                before("/*", (request, response) -> {
-                    response.header("Content-Type", "text/html; charset=UTF-8");
-                });
-                get("/login", (request, response) -> {
-                    Cookie cookie = Cookie.from(services.tokenCrypter, request);
-                    if (cookie == null) {
-                        return render("login");
-                    } else {
-                        response.redirect("/app");
-                        return "";
-                    }
-                });
-                get("/reset", (request, response) -> {
-                    Cookie cookie = Cookie.from(services.tokenCrypter, request);
-                    if (cookie == null) {
-                        return render("login");
-                    } else {
-                        RequestContext context = new RequestContext(cookie.profileId);
-                        services.profileStorage.delete(context.owner);
-                        services.profiles.updateProfile(context, UpdateProfileRequest.privateIdentityToken(context.owner, new byte[0]));
-                        response.redirect("/app");
-                        return "";
-                    }
-                });
-                post("/login", (request, response) -> {
-                    String email = request.queryParamsSafe("email");
-                    String password = request.queryParamsSafe("password");
-                    Profile profile = services.auth.login(RequestContext.ANON, new LoginRequest(email, password)).profile;
-                    if (!profile.emailVerified) {
-                        throw new UnauthorisedException("email not verified");
-                    }
-                    setLoginCookie(services, response, profile);
-                    response.redirect("/app");
-                    return "";
-                });
-                get("/logout", (request, response) -> {
-                    Cookie.remove(response);
-                    response.redirect("/app/login");
-                    return "";
-                }, Object::toString);
-                get("/signup", (request, response) -> render("signup"));
-                post("/signup", (request, response) -> {
-                    String name = request.queryParamsSafe("name");
-                    String email = request.queryParamsSafe("email");
-                    String password = request.queryParamsSafe("password");
-                    String confirmPassword = request.queryParamsSafe("confirmPassword");
-                    PublicProfile profile = services.auth.createAccount(RequestContext.ANON, new CreateAccountRequest(email, name, password, confirmPassword)).profile;
-                    Cookie cookie = new Cookie(profile.id, new Date().getTime() * TimeUnit.DAYS.toMillis(1));
-                    cookie.set(services.tokenCrypter, response);
-                    response.redirect("/app");
-                    return "";
-                });
-                get("", (request, response) -> {
-                    Cookie cookie = Cookie.from(services.tokenCrypter, request);
-                    if (cookie == null) {
-                        response.redirect("/app/login");
-                        return "";
-                    } else {
-                        Profile profile = services.profiles.getProfile(new RequestContext(cookie.profileId), GetProfileRequest.byId(cookie.profileId)).profile;
-                        Map<String, Object> ctx = new HashMap<>();
-                        ctx.put("name", profile.name);
-                        return render(ctx, "home");
-                    }
-                });
-
-                get("/verify/", (request, response) -> {
-                    String token = request.queryParams("token");
-                    VerificationToken.from(configuration.tokenCrypter, token).ifPresent(aToken -> {
-                        String redirect = services.auth.verify(RequestContext.ANON, new VerifyAccountRequest(token)).redirectUrl;
-                        Profile profile = services.profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(aToken.profileId)).profile;
-                        try {
-                            setLoginCookie(services, response, profile);
-                        } catch (IOException e) {
-                            throw new ServerErrorException("server error", e);
-                        }
-                        response.redirect(redirect);
-                    });
-                    return "";
-                });
-
-                path("/devices", () -> {
-                    get("/trust/:token", (request, response) -> {
-                        Cookie cookie = Cookie.from(services.tokenCrypter, request);
-                        if (cookie == null) {
-                            response.redirect("/app/login");
-                            return "";
-                        } else {
-                            Map<String, Object> ctx = new HashMap<>();
-                            ctx.put("token", request.params("token"));
-                            return render(ctx, "trust");
-                        }
-                    });
-                    post("/trust/:id", (request, response) -> {
-                        Cookie cookie = Cookie.from(services.tokenCrypter, request);
-                        if (cookie == null) {
-                            response.redirect("/app/login");
-                            return "";
-                        } else {
-                            String token = request.queryParams("token");
-                            String name = request.queryParams("name");
-                            RequestContext context = new RequestContext(cookie.profileId);
-                            DeviceService.CreateDeviceResponse device = services.devices.createDevice(context, new DeviceService.CreateDeviceRequest(context.owner, name));
-                            PublicProfile profile = services.profiles.getProfile(context, GetProfileRequest.byId(context.owner)).profile.toPublic();
-                            services.sessions.onDeviceRegistered(services.identityStore.getIdentity(), profile, token, device);
-                            response.redirect("/app");
-                            return "";
-                        }
-                    });
-                });
-            });
-        }
         callback.accept(services);
         LOGGER.info("Collar server started.");
         LOGGER.info(services.urlProvider.homeUrl());
     }
 
+    public static RequestContext from(Request req) {
+        return req.attribute("requestContext");
+    }
+
     private void assertAuthenticated(Request request) {
         // Must let in OPTIONS because CORS is horrible
         if (!request.requestMethod().equals("OPTIONS")) {
-            RequestContext.from(request).assertNotAnonymous();
+            from(request).assertNotAnonymous();
         }
     }
 

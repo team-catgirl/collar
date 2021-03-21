@@ -1,4 +1,4 @@
-package team.catgirl.collar.server.services.profiles;
+package team.catgirl.collar.api.profiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -49,7 +49,7 @@ public final class Profile {
     public Profile(@JsonProperty("id") UUID id,
                    @JsonProperty("email") String email,
                    @JsonProperty("name") String name,
-                   @JsonProperty("name") Boolean emailVerified,
+                   @JsonProperty("emailVerified") Boolean emailVerified,
                    @JsonProperty("cape") TexturePreference cape,
                    @JsonProperty("knownAccounts") Set<UUID> knownAccounts) {
         this.id = id;

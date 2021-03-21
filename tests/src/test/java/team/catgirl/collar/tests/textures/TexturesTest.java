@@ -11,9 +11,9 @@ import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.client.api.textures.Texture;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 import team.catgirl.collar.server.Services;
-import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.services.textures.TextureService.CreateTextureRequest;
 import team.catgirl.collar.tests.junit.CollarAssert;
 import team.catgirl.collar.tests.junit.CollarTest;
@@ -31,7 +31,7 @@ public class TexturesTest extends CollarTest {
 
     @Override
     protected void withServices(Services services) {
-        Profile profile = services.profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byEmail("alice@example.com")).profile;
+        Profile profile = services.profiles.getProfile(RequestContext.SERVER, ProfileServiceServer.GetProfileRequest.byEmail("alice@example.com")).profile;
         ByteSource source = Resources.asByteSource(Resources.getResource("cat.png"));
         try {
             services.textures.createTexture(new RequestContext(profile.id), new CreateTextureRequest(profile.id, null, TextureType.AVATAR, source.read()));

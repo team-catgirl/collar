@@ -10,11 +10,11 @@ import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.protocol.location.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.protocol.BatchProtocolResponse;
 import team.catgirl.collar.server.services.groups.GroupService;
-import team.catgirl.collar.server.services.profiles.ProfileService;
-import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;

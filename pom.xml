@@ -12,6 +12,7 @@
         <module>shared</module>
         <module>tests</module>
         <module>plugin</module>
+        <module>tools</module>
     </modules>
 
     <scm>
@@ -201,6 +202,11 @@
                 <artifactId>bucket4j-core</artifactId>
                 <version>6.0.2</version>
             </dependency>
+            <dependency>
+                <groupId>com.mojang</groupId>
+                <artifactId>brigadier</artifactId>
+                <version>1.0.17</version>
+            </dependency>
             <!-- hopefully not wishful thinking -->
             <dependency>
                 <groupId>junit</groupId>
@@ -215,6 +221,13 @@
         <repository>
             <id>jitpack</id>
             <url>https://jitpack.io</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>mojang</id>
+            <url>https://libraries.minecraft.net</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>

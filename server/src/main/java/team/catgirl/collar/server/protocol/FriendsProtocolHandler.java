@@ -11,13 +11,13 @@ import team.catgirl.collar.protocol.friends.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.server.CollarServer;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.services.friends.FriendsService;
 import team.catgirl.collar.server.services.friends.FriendsService.CreateFriendRequest;
 import team.catgirl.collar.server.services.friends.FriendsService.DeleteFriendRequest;
 import team.catgirl.collar.server.services.friends.FriendsService.GetFriendsRequest;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.List;
@@ -89,7 +89,7 @@ public class FriendsProtocolHandler extends ProtocolHandler {
         // Broadcast to the players friends that the player is now offline
         friends.getFriends(RequestContext.from(identity), new GetFriendsRequest(null, identity.owner)).friends.forEach(friend -> {
             sessions.getSessionStateByOwner(friend.owner).ifPresentOrElse(sessionState -> {
-                PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(identity.owner)).profile.toPublic();
+                PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileServiceServer.GetProfileRequest.byId(identity.owner)).profile.toPublic();
                 Friend offline = new Friend(sessionState.identity.owner, profile, Status.OFFLINE, Set.of());
                 LOGGER.log(Level.INFO, "Notifying " + sessionState.identity + " that player " + identity + " is OFFLINE");
                 sender.accept(sessionState.session, new FriendChangedResponse(serverIdentity, offline));

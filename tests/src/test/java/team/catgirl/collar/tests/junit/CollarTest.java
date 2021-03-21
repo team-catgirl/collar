@@ -3,7 +3,6 @@ package team.catgirl.collar.tests.junit;
 import org.junit.Before;
 import org.junit.Rule;
 import team.catgirl.collar.api.entities.Entity;
-import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.location.Dimension;
 import team.catgirl.collar.api.location.Location;
 import team.catgirl.collar.client.Collar;
@@ -11,13 +10,13 @@ import team.catgirl.collar.client.CollarConfiguration;
 import team.catgirl.collar.client.CollarListener;
 import team.catgirl.collar.server.Services;
 import team.catgirl.collar.server.configuration.Configuration;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.mongo.Mongo;
 import team.catgirl.collar.server.security.mojang.NojangMinecraftSessionVerifier;
 import team.catgirl.collar.server.services.devices.Device;
 import team.catgirl.collar.server.services.devices.DeviceService;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.utils.Utils;
 
 import java.util.Set;
@@ -50,17 +49,17 @@ public abstract class CollarTest {
     @Rule
     public CollarServerRule serverRule = new CollarServerRule(services -> {
         this.services.set(services);
-         aliceProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
+         aliceProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest(
                 "alice@example.com",
                 "alice",
                 "Alice"
         )).profile);
-        bobProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
+        bobProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest(
                 "bob@example.com",
                 "bob",
                 "Bob"
         )).profile);
-        eveProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest(
+        eveProfile.set(services.profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest(
                 "eve@example.com",
                 "eve",
                 "Eve"

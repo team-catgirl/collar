@@ -1,6 +1,5 @@
 package team.catgirl.collar.server.services.profiles;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -14,16 +13,18 @@ import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService;
 import team.catgirl.collar.api.profiles.TexturePreference;
-import team.catgirl.collar.server.http.RequestContext;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
+import team.catgirl.collar.api.http.RequestContext;
 
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.push;
 
-public class ProfileService {
+public class ProfileServiceServer implements ProfileService {
 
     private static final String FIELD_ID = "_id";
     private static final String FIELD_PROFILE_ID = "profileId";
@@ -39,7 +40,7 @@ public class ProfileService {
     private final MongoCollection<Document> docs;
     private final PasswordHashing passwordHashing;
 
-    public ProfileService(MongoDatabase db, PasswordHashing passwordHashing) {
+    public ProfileServiceServer(MongoDatabase db, PasswordHashing passwordHashing) {
         this.docs = db.getCollection("profiles");
         Map<String, Object> index = new HashMap<>();
         index.put(FIELD_PROFILE_ID, 1);
@@ -48,6 +49,7 @@ public class ProfileService {
         this.passwordHashing = passwordHashing;
     }
 
+    @Override
     public CreateProfileResponse createProfile(RequestContext context, CreateProfileRequest req) {
         context.assertAnonymous();
         if (docs.find(eq(FIELD_EMAIL, req.email)).iterator().hasNext()) {
@@ -86,6 +88,7 @@ public class ProfileService {
         }
     }
 
+    @Override
     public GetProfileResponse getProfile(RequestContext context, GetProfileRequest req) {
         context.assertNotAnonymous();
         MongoCursor<Document> cursor;
@@ -103,6 +106,7 @@ public class ProfileService {
         return new GetProfileResponse(map(doc));
     }
 
+    @Override
     public UpdateProfileResponse updateProfile(RequestContext context, UpdateProfileRequest req) {
         context.assertNotAnonymous();
         UpdateResult result;
@@ -115,7 +119,7 @@ public class ProfileService {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_PRIVATE_IDENTITY_TOKEN, token)));
         } else if (req.cape != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), new Document("$set", new Document(FIELD_CAPE_TEXTURE, map(req.cape))));
-        } else if (req.addMinecraftAccount != null) {
+        } else if (req != null) {
             result = docs.updateOne(eq(FIELD_PROFILE_ID, req.profile), push(FIELD_KNOWN_ACCOUNTS, req.addMinecraftAccount));
         } else {
             throw new BadRequestException("bad request");
@@ -128,52 +132,6 @@ public class ProfileService {
             return new UpdateProfileResponse(map(first));
         } else {
             throw new ServerErrorException("could not update profile");
-        }
-    }
-
-    public static class CreateProfileRequest {
-        public final String email;
-        public final String password;
-        public final String name;
-
-        public CreateProfileRequest(String email, String password, String name) {
-            this.email = email;
-            this.password = password;
-            this.name = name;
-        }
-    }
-
-    public static class CreateProfileResponse {
-        public final Profile profile;
-
-        public CreateProfileResponse(Profile profile) {
-            this.profile = profile;
-        }
-    }
-
-    public static class GetProfileRequest {
-        public final UUID byId;
-        public final String byEmail;
-
-        public GetProfileRequest(UUID byId, String byEmail) {
-            this.byId = byId;
-            this.byEmail = byEmail;
-        }
-
-        public static GetProfileRequest byId(UUID uuid) {
-            return new GetProfileRequest(uuid, null);
-        }
-
-        public static GetProfileRequest byEmail(String email) {
-            return new GetProfileRequest(null, email);
-        }
-    }
-
-    public static class GetProfileResponse {
-        public final Profile profile;
-
-        public GetProfileResponse(Profile profile) {
-            this.profile = profile;
         }
     }
 
@@ -209,63 +167,5 @@ public class ProfileService {
         return new Document(Map.of(
             FIELD_CAPE_TEXTURE_ID, capeTexture.texture
         ));
-    }
-
-    public static final class UpdateProfileRequest {
-        @JsonProperty("profile")
-        public final UUID profile;
-        @JsonProperty("emailVerified")
-        public final Boolean emailVerified;
-        @JsonProperty("hashedPassword")
-        public final String hashedPassword;
-        @JsonProperty("privateIdentityToken")
-        public final byte[] privateIdentityToken;
-        @JsonProperty("cape")
-        public final TexturePreference cape;
-        @JsonProperty("addMinecraftAccount")
-        public final UUID addMinecraftAccount;
-
-        public UpdateProfileRequest(@JsonProperty("profile") UUID profile,
-                                    @JsonProperty("emailVerified") Boolean emailVerified,
-                                    @JsonProperty("hashedPassword") String hashedPassword,
-                                    @JsonProperty("privateIdentityToken") byte[] privateIdentityToken,
-                                    @JsonProperty("cape") TexturePreference cape,
-                                    @JsonProperty("addAccount") UUID addMinecraftAccount) {
-            this.profile = profile;
-            this.emailVerified = emailVerified;
-            this.hashedPassword = hashedPassword;
-            this.privateIdentityToken = privateIdentityToken;
-            this.cape = cape;
-            this.addMinecraftAccount = addMinecraftAccount;
-        }
-
-        public static UpdateProfileRequest emailVerified(UUID profile) {
-            return new UpdateProfileRequest(profile, true, null, null, null, null);
-        }
-
-        public static UpdateProfileRequest hashedPassword(UUID profile, String newPassword) {
-            return new UpdateProfileRequest(profile, null, newPassword, null, null, null);
-        }
-
-        public static UpdateProfileRequest privateIdentityToken(UUID profile, byte[] privateIdentityToken) {
-            return new UpdateProfileRequest(profile, null, null, privateIdentityToken, null, null);
-        }
-
-        public static UpdateProfileRequest capeTexturePreference(UUID profile, TexturePreference capeTexture) {
-            return new UpdateProfileRequest(profile, null, null, null, capeTexture, null);
-        }
-
-        public static UpdateProfileRequest addMinecraftAccount(UUID profile, UUID addAccount) {
-            return new UpdateProfileRequest(profile, null, null, null, null, addAccount);
-        }
-    }
-
-    public static final class UpdateProfileResponse {
-        @JsonProperty("profile")
-        public final Profile profile;
-
-        public UpdateProfileResponse(@JsonProperty("profile") Profile profile) {
-            this.profile = profile;
-        }
     }
 }

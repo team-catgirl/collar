@@ -14,7 +14,7 @@ import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.textures.TextureType;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 
 import java.util.*;
 import java.util.stream.Collectors;

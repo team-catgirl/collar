@@ -1,6 +1,6 @@
 package team.catgirl.collar.server.mail;
 
-import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.api.profiles.Profile;
 
 import java.util.Map;
 

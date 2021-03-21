@@ -4,7 +4,7 @@ import com.google.common.io.BaseEncoding;
 import okhttp3.*;
 import team.catgirl.collar.api.http.HttpException.UnmappedHttpException;
 import team.catgirl.collar.server.http.AppUrlProvider;
-import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.api.profiles.Profile;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;

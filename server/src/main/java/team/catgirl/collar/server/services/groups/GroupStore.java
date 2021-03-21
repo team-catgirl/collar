@@ -11,14 +11,13 @@ import org.bson.Document;
 import team.catgirl.collar.api.groups.*;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.session.Player;
-import team.catgirl.collar.server.http.RequestContext;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
+import team.catgirl.collar.api.http.RequestContext;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -164,7 +163,7 @@ public final class GroupStore {
         Player player = sessions.findPlayerByProfile(profileId).orElse(new Player(profileId, null));
         MembershipRole role = MembershipRole.valueOf(document.getString(FIELD_MEMBER_ROLE));
         MembershipState state = MembershipState.valueOf(document.getString(FIELD_MEMBER_STATE));
-        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileService.GetProfileRequest.byId(profileId)).profile.toPublic();
+        PublicProfile profile = profiles.getProfile(RequestContext.SERVER, ProfileServiceServer.GetProfileRequest.byId(profileId)).profile.toPublic();
         return new Member(player, profile, role, state);
     }
 

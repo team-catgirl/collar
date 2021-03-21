@@ -3,7 +3,7 @@ package team.catgirl.collar.server.mail;
 import spark.ModelAndView;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.HandlebarsTemplateEngine;
-import team.catgirl.collar.server.services.profiles.Profile;
+import team.catgirl.collar.api.profiles.Profile;
 
 import java.util.HashMap;
 import java.util.Map;

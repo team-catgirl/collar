@@ -7,12 +7,13 @@ import org.junit.Test;
 import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.ConflictException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
-import team.catgirl.collar.server.http.RequestContext;
+import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.server.junit.MongoDatabaseTestRule;
 import team.catgirl.collar.server.security.hashing.PasswordHashing;
-import team.catgirl.collar.server.services.profiles.Profile;
-import team.catgirl.collar.server.services.profiles.ProfileService;
-import team.catgirl.collar.server.services.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.api.profiles.Profile;
+import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 
 import static org.junit.Assert.fail;
 
@@ -23,7 +24,7 @@ public class ProfileServiceTest {
 
     @Before
     public void services() {
-        profiles = new ProfileService(dbRule.db, new PasswordHashing("VSZL*bR8-=r]r5P_"));
+        profiles = new ProfileServiceServer(dbRule.db, new PasswordHashing("VSZL*bR8-=r]r5P_"));
     }
 
     @Test
@@ -33,14 +34,14 @@ public class ProfileServiceTest {
             fail("Should not exist");
         } catch (NotFoundException ignored) {}
 
-        Profile profile = profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
+        Profile profile = profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
         Assert.assertEquals("bob@example.com", profile.email);
         Assert.assertNotEquals("password", profile.hashedPassword);
         Assert.assertEquals("Bob UwU", profile.name);
         Assert.assertNotNull(profile.id);
 
         try {
-            profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bob@example.com", "password", "Bob UwU"));
+            profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest("bob@example.com", "password", "Bob UwU"));
             fail("should not be able to create a duplicate profile");
         } catch (ConflictException ignored) {}
     }
@@ -53,7 +54,7 @@ public class ProfileServiceTest {
         } catch (NotFoundException ignored) {}
 
         try {
-            profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bad-romance", "password", "Bob UwU"));
+            profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest("bad-romance", "password", "Bob UwU"));
             fail();
         } catch (HttpException.BadRequestException e) {
             Assert.assertEquals("email address is invalid", e.getMessage());
@@ -62,7 +63,7 @@ public class ProfileServiceTest {
 
     @Test
     public void getByEmail() {
-        Profile savedProfile = profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
+        Profile savedProfile = profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
         Profile profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byEmail("bob@example.com")).profile;
         Assert.assertEquals("bob@example.com", profile.email);
         Assert.assertEquals("Bob UwU", profile.name);
@@ -72,7 +73,7 @@ public class ProfileServiceTest {
 
     @Test
     public void getById() {
-        Profile savedProfile = profiles.createProfile(RequestContext.ANON, new ProfileService.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
+        Profile savedProfile = profiles.createProfile(RequestContext.ANON, new ProfileServiceServer.CreateProfileRequest("bob@example.com", "password", "Bob UwU")).profile;
         Profile profile = profiles.getProfile(RequestContext.SERVER, GetProfileRequest.byId(savedProfile.id)).profile;
         Assert.assertEquals("bob@example.com", profile.email);
         Assert.assertEquals("Bob UwU", profile.name);

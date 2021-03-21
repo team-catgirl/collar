@@ -2,7 +2,6 @@ package team.catgirl.collar.server.services.authentication;
 
 import com.google.common.io.BaseEncoding;
 
-import javax.swing.text.html.Option;
 import java.io.*;
 import java.util.Date;
 import java.util.Optional;
@@ -11,7 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Used by the {@link AuthenticationService} for identifying users for password resets, etc.
+ * Used by the {@link ServerAuthenticationService} for identifying users for password resets, etc.
  */
 public final class VerificationToken {
 

@@ -17,7 +17,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println("Collar Administration Tool. Type `help` for commands.");
+        System.out.println("Collar Administration Tool (CAT). Type `help` for commands.");
         AdminTool adminTool = new AdminTool(Utils.jsonMapper(), Http.collar());
         CommandDispatcher<AdminTool> dispatcher = new CommandDispatcher<>();
         dispatcher.register(literal("use")

@@ -7,6 +7,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
 import org.apache.commons.lang3.NotImplementedException;
 import org.bson.BsonObjectId;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.Binary;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
@@ -58,7 +59,11 @@ public class TextureService {
         state.put(FIELD_TEXTURE_GROUP, request.group);
         InsertOneResult insertOneResult = docs.insertOne(new Document(state));
         if (insertOneResult.wasAcknowledged()) {
-            BsonObjectId id = Objects.requireNonNull(insertOneResult.getInsertedId()).asObjectId();
+            BsonValue insertedId = insertOneResult.getInsertedId();
+            if (insertedId == null || insertedId.asObjectId() == null) {
+                throw new ServerErrorException("could not get upsert id");
+            }
+            BsonObjectId id = insertedId.asObjectId();
             MongoCursor<Document> cursor = docs.find(eq(FIELD_ID, id.getValue())).iterator();
             if (cursor.hasNext()) {
                 return new CreateTextureResponse(map(cursor.next()));

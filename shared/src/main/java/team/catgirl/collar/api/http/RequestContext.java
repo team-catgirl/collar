@@ -12,8 +12,8 @@ import java.util.UUID;
 
 public final class RequestContext {
 
-    public static RequestContext ANON = new RequestContext(UUID.fromString("00000000-0000-0000-0000-000000000000"), ImmutableSet.of());
-    public static RequestContext SERVER = new RequestContext(UUID.fromString("99999999-9999-9999-9999-999999999999"), ImmutableSet.of());
+    public static final RequestContext ANON = new RequestContext(UUID.fromString("00000000-0000-0000-0000-000000000000"), ImmutableSet.of());
+    public static final RequestContext SERVER = new RequestContext(UUID.fromString("99999999-9999-9999-9999-999999999999"), ImmutableSet.of());
 
     public final UUID owner;
     public final Set<Role> roles;

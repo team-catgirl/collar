@@ -59,7 +59,12 @@ public final class ServerAuthentication {
             Request request = new Request.Builder().url(builder.toUrl()).build();
             try (Response response = http.newCall(request).execute()) {
                 if (response.code() == 200) {
-                    String string = response.body().string();
+                    ResponseBody body = response.body();
+                    if (body == null) {
+                        LOGGER.log(Level.SEVERE, "body was null");
+                        return false;
+                    }
+                    String string = body.string();
                     HasJoinedResponse hasJoinedResponse = Utils.jsonMapper().readValue(string, HasJoinedResponse.class);
                     return hasJoinedResponse.id.equals(toProfileId(session.id));
                 }

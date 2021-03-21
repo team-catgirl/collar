@@ -7,6 +7,7 @@ import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.bson.BsonObjectId;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.Binary;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
@@ -80,7 +81,11 @@ public class ProfileServiceServer implements ProfileService {
         state.put(FIELD_ROLES, List.of(Role.PLAYER.name()));
         InsertOneResult insertOneResult = docs.insertOne(new Document(state));
         if (insertOneResult.wasAcknowledged()) {
-            BsonObjectId id = Objects.requireNonNull(insertOneResult.getInsertedId()).asObjectId();
+            BsonValue insertedId = insertOneResult.getInsertedId();
+            if (insertedId == null || insertedId.asObjectId() == null) {
+                throw new ServerErrorException("could not get upsert id");
+            }
+            BsonObjectId id = insertedId.asObjectId();
             MongoCursor<Document> cursor = docs.find(eq(FIELD_ID, id.getValue())).iterator();
             if (cursor.hasNext()) {
                 return new CreateProfileResponse(map(cursor.next()));

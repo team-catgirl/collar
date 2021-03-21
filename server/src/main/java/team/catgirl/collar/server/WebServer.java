@@ -308,10 +308,6 @@ public class WebServer {
         return TEMPLATE_ENGINE.render(new ModelAndView(context, templatePath));
     }
 
-    private static String render(String templatePath) {
-        return render(new HashMap<>(), templatePath);
-    }
-
     /**
      * @param request http request
      * @throws IOException on token decoding

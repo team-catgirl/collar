@@ -28,7 +28,10 @@ public class LocalEmail extends AbstractEmail {
     }
 
     private void write(File file, String value) {
-        file.getParentFile().mkdirs();
+        File parent = file.getParentFile();
+        if (!parent.mkdirs()) {
+            throw new IllegalStateException("could not make dir " + parent);
+        };
         try {
             Files.write(value.getBytes(StandardCharsets.UTF_8), file);
         } catch (IOException e) {

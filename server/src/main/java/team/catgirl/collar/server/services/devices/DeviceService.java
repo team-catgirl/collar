@@ -5,11 +5,13 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import team.catgirl.collar.api.http.HttpException.BadRequestException;
 import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.UnauthorisedException;
+import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.http.RequestContext;
 
 import java.util.*;
@@ -61,7 +63,11 @@ public final class DeviceService {
         state.put(FIELD_DEVICE_ID, newDeviceId);
         state.put(FIELD_NAME, req.name);
         InsertOneResult result = docs.insertOne(new Document(state));
-        ObjectId value = Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue();
+        BsonValue insertedId = result.getInsertedId();
+        if (insertedId == null || insertedId.asObjectId() == null) {
+            throw new ServerErrorException("could not get upsert id");
+        }
+        ObjectId value = insertedId.asObjectId().getValue();
         Device device = docs.find(eq("_id", value)).map(DeviceService::map).first();
         if (device == null) {
             throw new NotFoundException("cannot find created device");

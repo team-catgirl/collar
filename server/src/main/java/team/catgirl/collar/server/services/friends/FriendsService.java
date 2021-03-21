@@ -6,6 +6,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import team.catgirl.collar.api.friends.Friend;
@@ -62,7 +63,11 @@ public final class FriendsService {
         if (!result.wasAcknowledged()) {
             throw new ServerErrorException("could not create friend");
         }
-        ObjectId value = Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue();
+        BsonValue insertedId = result.getInsertedId();
+        if (insertedId == null || insertedId.asObjectId() == null) {
+            throw new ServerErrorException("could not get upsert id");
+        }
+        ObjectId value = insertedId.asObjectId().getValue();
         Friend friend = docs.find(eq("_id", value)).map(this::mapFriend).first();
         if (friend == null) {
             throw new HttpException.NotFoundException("couldn't find friend");

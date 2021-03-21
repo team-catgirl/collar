@@ -86,8 +86,7 @@ public class Main {
                         String apiUrl = ctx.getArgument("apiUrl", String.class);
                         String email = ctx.getArgument("email", String.class);
                         String password = ctx.getArgument("password", String.class);
-                        adminTool.addConfig(name, apiUrl, email, password);
-                        return 1;
+                        return adminTool.addConfig(name, apiUrl, email, password);
         })))))));
 
         dispatcher.register(literal("exit")

@@ -110,6 +110,8 @@ public class FriendsApi extends AbstractApi<FriendsListener> {
             case DISCONNECTED:
                 friends.clear();
                 break;
+            default:
+                break;
         }
     }
 }

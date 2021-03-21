@@ -188,7 +188,7 @@ public final class CollarConfiguration {
                 return Location.UNKNOWN;
             });
             String yggdrasilBaseUrl = MoreObjects.firstNonNull(this.yggdrasilBaseUrl, "https://sessionserver.mojang.com/");
-            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, from, collarServerURL, listener, ticks, this.yggdrasilBaseUrl);
+            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, from, collarServerURL, listener, ticks, yggdrasilBaseUrl);
         }
     }
 }

@@ -9,6 +9,7 @@ import team.catgirl.collar.client.utils.Http;
 import team.catgirl.collar.utils.Utils;
 
 
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -98,7 +99,7 @@ public class Main {
                 return 1;
         }));
 
-        Scanner scanner = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
         while (true) {
             System.out.println();
             System.out.print("> ");

@@ -289,7 +289,11 @@ public final class Collar {
                 .build();
         try (Response response = Http.collar().newCall(request).execute()) {
             if (response.code() == 200) {
-                byte[] bytes = Objects.requireNonNull(response.body()).bytes();
+                ResponseBody body = response.body();
+                if (body == null) {
+                    throw new IllegalStateException("body is empty");
+                }
+                byte[] bytes = body.bytes();
                 return Utils.jsonMapper().readValue(bytes, aClass);
             } else {
                 throw new ConnectionException("Failed to connect to server " + url);

@@ -122,7 +122,10 @@ public final class AdminTool {
                 throw new IllegalStateException(e);
             }
         } else {
-            config.getParentFile().mkdirs();
+            File homeDir = config.getParentFile();
+            if (!homeDir.mkdirs()) {
+                throw new IllegalStateException("could not create " + homeDir);
+            }
         }
         return properties;
     }

@@ -37,6 +37,9 @@ public final class MapService {
     }
 
     public GetMapTileResponse getMapTile(RequestContext context, GetMapTileRequest req) {
+        if (!context.callerIs(req.profile) || !context.hasRole(Role.ADMINISTRATOR)) {
+            throw new ForbiddenException("caller is not same as request");
+        }
         Document first = docs.find(and(
                 eq(FIELD_OWER, req.profile),
                 eq(FIELD_DIMENSION, req.dimension.name()),

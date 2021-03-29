@@ -66,7 +66,7 @@ public final class Location {
     }
 
     public Point toPoint() {
-        return new Point(x.intValue(), y.intValue());
+        return new Point(x.intValue(), z.intValue());
     }
 
     @Override

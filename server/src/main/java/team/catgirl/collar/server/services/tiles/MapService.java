@@ -23,13 +23,14 @@ import static com.mongodb.client.model.Filters.eq;
 
 public final class MapService {
 
-    public static final String FIELD_OWER = "owner";
-    public static final String FIELD_DIMENSION = "dimension";
-    public static final String FIELD_COORDINATES = "location.coordinates";
-    public static final String FIELD_LOCATION = "location";
-    public static final String FIELD_LOCATION_TYPE = "type";
-    public static final String FIELD_LOCATION_COORDINATES = "coordinates";
-    public static final String FIELD_IMAGE = "image";
+    private static final String FIELD_OWNER = "owner";
+    private static final String FIELD_DIMENSION = "dimension";
+    private static final String FIELD_LOCATION = "location";
+    private static final String FIELD_LOCATION_TYPE = "type";
+    private static final String FIELD_LOCATION_COORDINATES = "coordinates";
+    private static final String FIELD_COORDINATES = FIELD_LOCATION + "." + FIELD_LOCATION_COORDINATES;
+    private static final String FIELD_IMAGE = "image";
+
     private final MongoCollection<Document> docs;
 
     public MapService(MongoDatabase db) {
@@ -41,7 +42,7 @@ public final class MapService {
             throw new ForbiddenException("caller is not same as request");
         }
         Document first = docs.find(and(
-                eq(FIELD_OWER, req.profile),
+                eq(FIELD_OWNER, req.profile),
                 eq(FIELD_DIMENSION, req.dimension.name()),
                 eq(FIELD_COORDINATES, List.of(req.point.x, req.point.y)))).first();
         if (first == null) {
@@ -59,13 +60,13 @@ public final class MapService {
                 FIELD_LOCATION_COORDINATES, List.of(req.point.x, req.point.y)
         );
         Map<String, Object> tile = Map.of(
-                FIELD_OWER, req.profile,
+                FIELD_OWNER, req.profile,
                 FIELD_DIMENSION, req.dimension.name(),
                 FIELD_LOCATION, new Document(location),
                 FIELD_IMAGE, new Binary(req.image)
         );
         UpdateResult result = docs.updateOne(and(
-                eq(FIELD_OWER, req.profile),
+                eq(FIELD_OWNER, req.profile),
                 eq(FIELD_DIMENSION, req.dimension.name()),
                 eq(FIELD_COORDINATES, List.of(req.point.x, req.point.y))), new Document(tile), new UpdateOptions().upsert(true)
         );

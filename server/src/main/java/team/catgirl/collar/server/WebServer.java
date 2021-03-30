@@ -32,7 +32,6 @@ import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.api.profiles.ProfileService.UpdateProfileRequest;
 import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.services.textures.TextureService.*;
-import team.catgirl.collar.server.services.tiles.MapService;
 import team.catgirl.collar.server.services.tiles.MapService.GetMapTileRequest;
 import team.catgirl.collar.utils.IO;
 import team.catgirl.collar.utils.Utils;
@@ -263,13 +262,14 @@ public class WebServer {
                     return "";
                 }, services.jsonMapper::writeValueAsString);
 
-                get("/map/tiles/:dimension/:x/:y", (request, response) -> {
+                get("/map/tiles/:server/:dimension/:x/:y", (request, response) -> {
                     RequestContext context = from(request);
                     context.assertNotAnonymous();
                     String dimension = request.params("dimension");
+                    String server = request.params("server");
                     String x = request.params("x");
                     String y = request.params("y");
-                    byte[] image = services.maps.getMapTile(context, new GetMapTileRequest(context.owner, Point.fromString(x + "," + y), Dimension.valueOf(dimension.toUpperCase()))).image;
+                    byte[] image = services.maps.getMapTile(context, new GetMapTileRequest(context.owner, server, Point.fromString(x + "," + y), Dimension.valueOf(dimension.toUpperCase()))).image;
                     response.header("Content-Type", "image/webp");
                     IO.writeBytes(response.raw().getOutputStream(), image);
                     return "";

@@ -24,6 +24,7 @@ import static com.mongodb.client.model.Filters.eq;
 public final class MapService {
 
     private static final String FIELD_OWNER = "owner";
+    private static final String FIELD_SERVER = "server";
     private static final String FIELD_DIMENSION = "dimension";
     private static final String FIELD_LOCATION = "location";
     private static final String FIELD_LOCATION_TYPE = "type";
@@ -44,6 +45,7 @@ public final class MapService {
         Document first = docs.find(and(
                 eq(FIELD_OWNER, req.profile),
                 eq(FIELD_DIMENSION, req.dimension.name()),
+                eq(FIELD_SERVER, req.server),
                 eq(FIELD_COORDINATES, List.of(req.point.x, req.point.y)))).first();
         if (first == null) {
             throw new NotFoundException("not found");
@@ -61,12 +63,14 @@ public final class MapService {
         );
         Map<String, Object> tile = Map.of(
                 FIELD_OWNER, req.profile,
+                FIELD_SERVER, req.server,
                 FIELD_DIMENSION, req.dimension.name(),
                 FIELD_LOCATION, new Document(location),
                 FIELD_IMAGE, new Binary(req.image)
         );
         UpdateResult result = docs.updateOne(and(
                 eq(FIELD_OWNER, req.profile),
+                eq(FIELD_SERVER, req.server),
                 eq(FIELD_DIMENSION, req.dimension.name()),
                 eq(FIELD_COORDINATES, List.of(req.point.x, req.point.y))), new Document(tile), new UpdateOptions().upsert(true)
         );
@@ -78,13 +82,16 @@ public final class MapService {
 
     public static class GetMapTileRequest {
         public final UUID profile;
+        public final String server;
         public final Point point;
         public final Dimension dimension;
 
         public GetMapTileRequest(UUID profile,
+                                 String server,
                                  Point point,
                                  Dimension dimension) {
             this.profile = profile;
+            this.server = server;
             this.point = point;
             this.dimension = dimension;
         }
@@ -100,15 +107,18 @@ public final class MapService {
 
     public static class UpsertMapTileRequest {
         public final UUID profile;
+        public final String server;
         public final Point point;
         public final Dimension dimension;
         public final byte[] image;
 
         public UpsertMapTileRequest(UUID profile,
+                                    String server,
                                     Point point,
                                     Dimension dimension,
                                     byte[] image) {
             this.profile = profile;
+            this.server = server;
             this.point = point;
             this.dimension = dimension;
             this.image = image;

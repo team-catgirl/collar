@@ -19,6 +19,18 @@ public final class IO {
     }
 
     /**
+     * Write bytes to {@link OutputStream}
+     * @param os to write to
+     * @param bytes to write
+     * @throws IOException on error
+     */
+    public static void writeBytes(OutputStream os, byte[] bytes) throws IOException {
+        for (byte b : bytes) {
+            os.write(b);
+        }
+    }
+
+    /**
      * Read byte structure from {@link DataInputStream}
      * @param is to read from
      * @return bytes

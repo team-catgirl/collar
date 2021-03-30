@@ -20,6 +20,7 @@ import team.catgirl.collar.api.profiles.ProfileService;
 import team.catgirl.collar.server.services.profiles.ProfileServiceServer;
 import team.catgirl.collar.server.services.profiles.storage.ProfileStorage;
 import team.catgirl.collar.server.services.textures.TextureService;
+import team.catgirl.collar.server.services.tiles.MapService;
 import team.catgirl.collar.server.session.SessionManager;
 import team.catgirl.collar.utils.Utils;
 
@@ -42,6 +43,7 @@ public final class Services {
     public final TextureService textures;
     public final FriendsService friends;
     public final WaypointService waypoints;
+    public final MapService maps;
 
     public Services(Configuration configuration) {
         this.jsonMapper = Utils.jsonMapper();
@@ -62,5 +64,6 @@ public final class Services {
         this.textures = new TextureService(configuration.database);
         this.friends = new FriendsService(configuration.database, profiles, sessions);
         this.waypoints = new WaypointService(profileStorage);
+        this.maps = new MapService(configuration.database);
     }
 }

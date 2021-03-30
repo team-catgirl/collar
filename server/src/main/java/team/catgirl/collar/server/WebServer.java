@@ -10,6 +10,9 @@ import team.catgirl.collar.api.groups.GroupType;
 import team.catgirl.collar.api.groups.MembershipRole;
 import team.catgirl.collar.api.http.*;
 import team.catgirl.collar.api.http.HttpException.*;
+import team.catgirl.collar.api.location.Dimension;
+import team.catgirl.collar.api.location.Layer;
+import team.catgirl.collar.api.location.Point;
 import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.profiles.Role;
 import team.catgirl.collar.api.session.Player;
@@ -30,6 +33,8 @@ import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.api.profiles.ProfileService.UpdateProfileRequest;
 import team.catgirl.collar.server.services.textures.TextureService;
 import team.catgirl.collar.server.services.textures.TextureService.*;
+import team.catgirl.collar.server.services.tiles.MapService.GetMapTileRequest;
+import team.catgirl.collar.utils.IO;
 import team.catgirl.collar.utils.Utils;
 
 import javax.servlet.ServletOutputStream;
@@ -257,6 +262,26 @@ public class WebServer {
                     }
                     return "";
                 }, services.jsonMapper::writeValueAsString);
+
+                get("/map/tiles/:server/:dimension/:x/:y/:layer", (request, response) -> {
+                    RequestContext context = from(request);
+                    context.assertNotAnonymous();
+                    String dimension = request.params("dimension");
+                    String server = request.params("server");
+                    String layer = request.params("layer");
+                    String x = request.params("x");
+                    String y = request.params("y");
+                    byte[] image = services.maps.getMapTile(context, new GetMapTileRequest(
+                            context.owner,
+                            server,
+                            Point.fromString(x + "," + y),
+                            Dimension.valueOf(dimension.toUpperCase()),
+                            Layer.valueOf(layer.toUpperCase()))
+                    ).image;
+                    response.header("Content-Type", "image/webp");
+                    IO.writeBytes(response.raw().getOutputStream(), image);
+                    return "";
+                });
             });
         });
 

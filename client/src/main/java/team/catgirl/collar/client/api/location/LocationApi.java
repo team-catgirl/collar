@@ -5,7 +5,7 @@ import com.google.common.hash.Hashing;
 import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.entities.EntityType;
 import team.catgirl.collar.api.groups.Group;
-import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.api.location.*;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.waypoints.Waypoint;
 import team.catgirl.collar.client.Collar;
@@ -26,9 +26,11 @@ import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.Key;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -199,6 +201,26 @@ public class LocationApi extends AbstractApi<LocationListener> {
         privateWaypoints.remove(waypoint.id);
         sender.accept(new RemoveWaypointRequest(identity(), waypoint.id));
         fireListener("onWaypointRemoved", listener -> listener.onWaypointRemoved(collar, this, null, waypoint));
+    }
+
+    /**
+     * Get a map tile from the server
+     * @param point of the tile
+     * @param dimension of the tile
+     * @param layer type of the tile
+     * @return future
+     */
+    public CompletableFuture<Optional<BufferedImage>> getTile(Point point, Dimension dimension, Layer layer) {
+        sender.accept(new GetMapTileRequest(identity(), point, dimension, layer));
+        return null;
+    }
+
+    /**
+     * Upload a map tile for storage on the server
+     * @param tile to upload
+     */
+    public void uploadTile(MapTile tile) {
+        sender.accept(new UploadMapTileRequest(identity(), tile));
     }
 
     private void stopSharingForGroup(Group group) {

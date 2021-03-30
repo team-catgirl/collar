@@ -11,6 +11,7 @@ import team.catgirl.collar.api.http.HttpException.NotFoundException;
 import team.catgirl.collar.api.http.HttpException.ServerErrorException;
 import team.catgirl.collar.api.http.RequestContext;
 import team.catgirl.collar.api.location.Dimension;
+import team.catgirl.collar.api.location.Layer;
 import team.catgirl.collar.api.location.Point;
 import team.catgirl.collar.api.profiles.Role;
 
@@ -26,6 +27,7 @@ public final class MapService {
     private static final String FIELD_OWNER = "owner";
     private static final String FIELD_SERVER = "server";
     private static final String FIELD_DIMENSION = "dimension";
+    private static final String FIELD_LAYER = "layer";
     private static final String FIELD_LOCATION = "location";
     private static final String FIELD_LOCATION_TYPE = "type";
     private static final String FIELD_LOCATION_COORDINATES = "coordinates";
@@ -45,6 +47,7 @@ public final class MapService {
         Document first = docs.find(and(
                 eq(FIELD_OWNER, req.profile),
                 eq(FIELD_DIMENSION, req.dimension.name()),
+                eq(FIELD_LAYER, req.layer.name()),
                 eq(FIELD_SERVER, req.server),
                 eq(FIELD_COORDINATES, List.of(req.point.x, req.point.y)))).first();
         if (first == null) {
@@ -65,6 +68,7 @@ public final class MapService {
                 FIELD_OWNER, req.profile,
                 FIELD_SERVER, req.server,
                 FIELD_DIMENSION, req.dimension.name(),
+                FIELD_LAYER, req.layer.name(),
                 FIELD_LOCATION, new Document(location),
                 FIELD_IMAGE, new Binary(req.image)
         );
@@ -72,6 +76,7 @@ public final class MapService {
                 eq(FIELD_OWNER, req.profile),
                 eq(FIELD_SERVER, req.server),
                 eq(FIELD_DIMENSION, req.dimension.name()),
+                eq(FIELD_LAYER, req.layer.name()),
                 eq(FIELD_COORDINATES, List.of(req.point.x, req.point.y))), new Document(tile), new UpdateOptions().upsert(true)
         );
         if (!result.wasAcknowledged() || result.getModifiedCount() <= 0) {
@@ -85,15 +90,18 @@ public final class MapService {
         public final String server;
         public final Point point;
         public final Dimension dimension;
+        public final Layer layer;
 
         public GetMapTileRequest(UUID profile,
                                  String server,
                                  Point point,
-                                 Dimension dimension) {
+                                 Dimension dimension,
+                                 Layer layer) {
             this.profile = profile;
             this.server = server;
             this.point = point;
             this.dimension = dimension;
+            this.layer = layer;
         }
     }
 
@@ -110,17 +118,20 @@ public final class MapService {
         public final String server;
         public final Point point;
         public final Dimension dimension;
+        public final Layer layer;
         public final byte[] image;
 
         public UpsertMapTileRequest(UUID profile,
                                     String server,
                                     Point point,
                                     Dimension dimension,
+                                    Layer layer,
                                     byte[] image) {
             this.profile = profile;
             this.server = server;
             this.point = point;
             this.dimension = dimension;
+            this.layer = layer;
             this.image = image;
         }
     }

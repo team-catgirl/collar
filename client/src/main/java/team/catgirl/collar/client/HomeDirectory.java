@@ -16,19 +16,23 @@ public final class HomeDirectory {
      * @throws IOException if directories could not be created
      */
     public File security() throws IOException {
-        File securityDir = new File(collarHome, "security");
-        if (!securityDir.exists() && !securityDir.mkdirs()) {
-            throw new IOException("could not make directory " + securityDir.getAbsolutePath());
-        }
-        return securityDir;
+        return createDirectory("security");
     }
 
     public File profile() throws IOException {
-        File securityDir = new File(collarHome, "profile");
-        if (!securityDir.exists() && !securityDir.mkdirs()) {
-            throw new IOException("could not make directory " + securityDir.getAbsolutePath());
+        return createDirectory("profile");
+    }
+
+    public File dhtState() throws IOException {
+        return createDirectory("dht");
+    }
+
+    private File createDirectory(String dht) throws IOException {
+        File dir = new File(collarHome, dht);
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IOException("could not make directory " + dir.getAbsolutePath());
         }
-        return securityDir;
+        return dir;
     }
 
     /**

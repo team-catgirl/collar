@@ -6,6 +6,8 @@ import team.catgirl.collar.utils.IO;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Objects;
 
 public final class Content {
 
@@ -27,12 +29,22 @@ public final class Content {
     @JsonProperty("type")
     public final Class<?> type;
 
+    @JsonProperty("version")
+    public final long version;
+
+    @JsonProperty("state")
+    public final State state;
+
     public Content(@JsonProperty("checksum") byte[] checksum,
                    @JsonProperty("bytes") byte[] bytes,
-                   @JsonProperty("type") Class<?> type) {
+                   @JsonProperty("type") Class<?> type,
+                   @JsonProperty("version") long version,
+                   @JsonProperty("state") State state) {
         this.checksum = checksum;
         this.bytes = bytes;
         this.type = type;
+        this.version = version;
+        this.state = state;
     }
 
     public Content(byte[] bytes) {
@@ -43,6 +55,8 @@ public final class Content {
                 type = this.getClass().getClassLoader().loadClass(clazz);
                 this.checksum = IO.readBytes(dataStream);
                 this.bytes = IO.readBytes(dataStream);
+                this.version = dataStream.readLong();
+                this.state = State.from(dataStream.readInt());
             }
         } catch (IOException | ClassNotFoundException e) {
             throw new IllegalStateException("could not read content", e);
@@ -54,6 +68,9 @@ public final class Content {
      * @return validity
      */
     public boolean isValid() {
+        if (bytes == null) {
+            return true;
+        }
         if (bytes.length > MAX_SIZE) {
             return false;
         }
@@ -77,7 +94,7 @@ public final class Content {
      * @return record
      */
     public Record toRecord(Key key) {
-        return new Record(key, checksum);
+        return new Record(key, checksum, version);
     }
 
     /**
@@ -89,7 +106,7 @@ public final class Content {
     public static Content from(byte[] bytes, Class<?> contentType) {
         assertSize(bytes);
         byte[] checksum = createChecksum(bytes);
-        return new Content(checksum, bytes, contentType);
+        return new Content(checksum, bytes, contentType, 1, State.EXTANT);
     }
 
     public byte[] serialize() {
@@ -99,6 +116,8 @@ public final class Content {
                 dataStream.writeUTF(this.type.getName());
                 IO.writeBytes(dataStream, checksum);
                 IO.writeBytes(dataStream, bytes);
+                dataStream.writeLong(version);
+                dataStream.writeInt(state.value);
             }
             return outputStream.toByteArray();
         } catch (IOException e) {
@@ -121,12 +140,13 @@ public final class Content {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Content content = (Content) o;
-        return Arrays.equals(checksum, content.checksum) && Arrays.equals(bytes, content.bytes);
+        return version == content.version && Arrays.equals(checksum, content.checksum) && Arrays.equals(bytes, content.bytes) && Objects.equals(type, content.type) && state == content.state;
     }
 
     @Override
     public int hashCode() {
-        int result = Arrays.hashCode(checksum);
+        int result = Objects.hash(type, version, state);
+        result = 31 * result + Arrays.hashCode(checksum);
         result = 31 * result + Arrays.hashCode(bytes);
         return result;
     }

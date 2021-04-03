@@ -86,7 +86,7 @@ public final class Collar {
     private final Ticks ticks;
     private final ContentCiphers recordCiphers;
 
-    private Collar(CollarConfiguration configuration) {
+    private Collar(CollarConfiguration configuration) throws IOException {
         this.configuration = configuration;
         changeState(State.DISCONNECTED);
         this.identityStoreSupplier = () -> identityStore;
@@ -94,7 +94,7 @@ public final class Collar {
         this.ticks = configuration.ticks;
         this.recordCiphers = new ContentCiphers();
         this.apis = new ArrayList<>();
-        this.sdhtApi = new SDHTApi(this, identityStoreSupplier, sender, recordCiphers, this.ticks);
+        this.sdhtApi = new SDHTApi(this, identityStoreSupplier, sender, recordCiphers, this.ticks, this.configuration.homeDirectory.dhtState());
         this.groupsApi = new GroupsApi(this, identityStoreSupplier, sender, sdhtApi);
         this.recordCiphers.register(new GroupContentCipher(groupsApi, identityStoreSupplier));
         this.locationApi = new LocationApi(this,
@@ -123,7 +123,11 @@ public final class Collar {
      * @param configuration of the client
      */
     public static Collar create(CollarConfiguration configuration) {
-        return new Collar(configuration);
+        try {
+            return new Collar(configuration);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**

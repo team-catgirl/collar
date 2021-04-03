@@ -1,13 +1,13 @@
 package team.catgirl.collar.sdht;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import team.catgirl.collar.sdht.memory.InMemoryDistributedHashTable;
+import team.catgirl.collar.sdht.impl.DefaultDistributedHashTable;
 
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Key for {@link Content} within the {@link InMemoryDistributedHashTable}
+ * Key for {@link Content} within the {@link DefaultDistributedHashTable}
  */
 public final class Key {
     @JsonProperty("ns")

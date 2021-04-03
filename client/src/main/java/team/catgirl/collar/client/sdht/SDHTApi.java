@@ -11,8 +11,10 @@ import team.catgirl.collar.protocol.sdht.SDHTEventResponse;
 import team.catgirl.collar.sdht.*;
 import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.sdht.events.Publisher;
-import team.catgirl.collar.sdht.memory.InMemoryDistributedHashTable;
+import team.catgirl.collar.sdht.impl.DHTNamespaceState;
+import team.catgirl.collar.sdht.impl.DefaultDistributedHashTable;
 
+import java.io.File;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -25,12 +27,18 @@ public class SDHTApi extends AbstractApi<SDHTListener> implements Ticks.TickList
 
     public final DistributedHashTable table;
 
-    public SDHTApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, ContentCipher cipher, Ticks ticks) {
+    public SDHTApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender, ContentCipher cipher, Ticks ticks, File dhtDir) {
         super(collar, identityStoreSupplier, sender);
         Publisher publisher = event -> {
             sender.accept(new SDHTEventRequest(identity(), event));
         };
-        table = new InMemoryDistributedHashTable(publisher, () -> identityStoreSupplier.get().currentIdentity(), cipher, new DistributedHashTableListenerImpl(this));
+        table = new DefaultDistributedHashTable(
+                publisher,
+                () -> identityStoreSupplier.get().currentIdentity(),
+                cipher,
+                new DHTNamespaceState(dhtDir),
+                new DistributedHashTableListenerImpl(this)
+        );
         ticks.subscribe(this);
     }
 

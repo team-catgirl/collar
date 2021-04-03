@@ -73,7 +73,11 @@ public final class DHTNamespaceState {
     }
 
     private ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> read(UUID namespaceId) {
-        try (DataInputStream dataStream = new DataInputStream(new FileInputStream(getNamespaceFile(namespaceId)))) {
+        File namespaceFile = getNamespaceFile(namespaceId);
+        if (!namespaceFile.exists()) {
+            return new ConcurrentHashMap<>();
+        }
+        try (DataInputStream dataStream = new DataInputStream(new FileInputStream(namespaceFile))) {
             int version = dataStream.readInt();
             if (version != VERSION) {
                 throw new IllegalStateException("DHT version " + version + " is too new");

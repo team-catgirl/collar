@@ -56,17 +56,17 @@ public class NearbyMessagingTest extends CollarTest {
 
     @Override
     protected Set<Entity> aliceEntities() {
-        return Set.of(new Entity(bobEntityId, bobPlayerId, EntityType.PLAYER), new Entity(aliceEntityId, alicePlayerId, EntityType.PLAYER));
+        return Set.of(new Entity(bobEntityId, EntityType.PLAYER), new Entity(aliceEntityId, EntityType.PLAYER));
     }
 
     @Override
     protected Set<Entity> bobEntities() {
-        return Set.of(new Entity(aliceEntityId, alicePlayerId, EntityType.PLAYER), new Entity(bobEntityId, bobPlayerId, EntityType.PLAYER));
+        return Set.of(new Entity(aliceEntityId, EntityType.PLAYER), new Entity(bobEntityId, EntityType.PLAYER));
     }
 
     @Override
     protected Set<Entity> eveEntities() {
         // Eve is evil and is trying to trick us into thinking she's in proximity to Alice
-        return Set.of(new Entity(aliceEntityId, alicePlayerId, EntityType.PLAYER), new Entity(eveEntityId, evePlayerId, EntityType.PLAYER));
+        return Set.of(new Entity(aliceEntityId, EntityType.PLAYER), new Entity(eveEntityId, EntityType.PLAYER));
     }
 }

@@ -43,7 +43,11 @@ public final class DHTNamespaceState {
         try {
             lock.lockInterruptibly();
             ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> result = new ConcurrentHashMap<>();
-            for (String fileName : Objects.requireNonNull(home.list())) {
+            String[] list = home.list();
+            if (list == null) {
+                return new ConcurrentHashMap<>();
+            }
+            for (String fileName : list) {
                 if (!fileName.endsWith(DHT_EXT)) {
                     continue;
                 }

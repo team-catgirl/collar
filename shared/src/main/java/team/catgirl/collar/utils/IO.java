@@ -39,7 +39,10 @@ public final class IO {
      * @throws IOException on error
      */
     public static void skipBytes(DataInputStream is) throws IOException {
-        is.skipBytes(is.readInt());
+        int size = is.readInt();
+        if (is.skipBytes(size) != size) {
+            throw new IOException("could not skip bytes because end of stream was reached");
+        }
     }
 
     /**

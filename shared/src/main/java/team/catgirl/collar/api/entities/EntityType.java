@@ -153,7 +153,8 @@ public enum EntityType {
 		this.identifier = lexiographicalID;
 	}
 
-	public final String getID() {
+	@Override
+	public String toString() {
 		return this.identifier;
 	}
 	

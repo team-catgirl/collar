@@ -15,6 +15,10 @@ public final class Entity {
         this.id = id;
         this.type = type;
     }
+    
+    public Entity(final int id, final EntityType type) {
+    	this(id, type.toString());
+    }
 
     @Override
     public boolean equals(Object o) {

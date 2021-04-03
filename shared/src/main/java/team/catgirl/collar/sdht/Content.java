@@ -8,6 +8,7 @@ import java.io.*;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public final class Content {
 
@@ -123,6 +124,15 @@ public final class Content {
         } catch (IOException e) {
             throw new IllegalStateException("cannot serialize content", e);
         }
+    }
+
+    /**
+     * Tests if the content is old and currently deleted
+     * @param content to test
+     * @return if it can be pruned or not
+     */
+    public static boolean isDead(Content content) {
+        return content.state == State.DELETED && System.currentTimeMillis() > (content.version + TimeUnit.DAYS.toMillis(30));
     }
 
     private static byte[] createChecksum(byte[] bytes) {

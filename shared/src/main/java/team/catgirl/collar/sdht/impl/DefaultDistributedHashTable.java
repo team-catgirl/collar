@@ -25,29 +25,30 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
 
     private static final int MAX_RECORDS = Short.MAX_VALUE;
 
-    private final ConcurrentMap<UUID, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>>> namespacedData;
+    private final ConcurrentMap<UUID, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>>> dhtContent;
     private final DHTNamespaceState state;
 
     public DefaultDistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, ContentCipher cipher, DHTNamespaceState state, DistributedHashTableListener listener) {
         super(publisher, owner, cipher, listener);
         this.state = state;
-        this.namespacedData = state.read();
+        this.dhtContent = state.read();
+        pruneDeadRecords();
     }
 
     @Override
     public void remove(UUID namespace) {
-        namespacedData.remove(namespace);
+        dhtContent.remove(namespace);
     }
 
     @Override
     public void removeAll() {
-        namespacedData.clear();
+        dhtContent.clear();
     }
 
     @Override
     public Set<Record> records() {
         ImmutableSet.Builder<Record> records = ImmutableSet.builder();
-        namespacedData.forEach((namespace, contentMap) -> {
+        dhtContent.forEach((namespace, contentMap) -> {
             contentMap.forEach((id, contents) -> {
                 contents.forEach(content -> {
                     records.add(new Record(new Key(namespace, id), content.checksum, content.version));
@@ -59,7 +60,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
 
     @Override
     public Set<Record> records(UUID namespace) {
-        ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentMap = namespacedData.get(namespace);
+        ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentMap = dhtContent.get(namespace);
         if (contentMap == null) {
             return ImmutableSet.of();
         }
@@ -74,7 +75,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
 
     @Override
     public Optional<Content> get(Key key) {
-        ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentMap = namespacedData.get(key.namespace);
+        ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentMap = dhtContent.get(key.namespace);
         if (contentMap == null) {
             return Optional.empty();
         }
@@ -91,11 +92,11 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
             return Optional.empty();
         }
         Record record = content.toRecord(key);
-        if (namespacedData.size() > MAX_RECORDS) {
+        if (dhtContent.size() > MAX_RECORDS) {
             throw new IllegalStateException("Maximum namespaces exceeds " + MAX_RECORDS);
         }
         AtomicReference<Content> computedContent = new AtomicReference<>();
-        namespacedData.compute(record.key.namespace, (namespace, contentMap) -> {
+        dhtContent.compute(record.key.namespace, (namespace, contentMap) -> {
             contentMap = contentMap == null ? new ConcurrentHashMap<>() : contentMap;
             if (contentMap.size() > MAX_RECORDS) {
                 throw new IllegalStateException("namespace " + namespace + " exceeded maximum records " + MAX_RECORDS);
@@ -125,7 +126,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
             LOGGER.log(Level.SEVERE, "Record " + record + " did not match the content");
             return;
         }
-        namespacedData.compute(record.key.namespace, (namespace, contentMap) -> {
+        dhtContent.compute(record.key.namespace, (namespace, contentMap) -> {
             contentMap = contentMap == null ? new ConcurrentHashMap<>() : contentMap;
             CopyOnWriteArraySet<Content> contents = new CopyOnWriteArraySet<>();
             contents.add(content);
@@ -138,7 +139,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     @Override
     public Optional<Content> delete(Key key) {
         AtomicReference<Content> removedContent = new AtomicReference<>();
-        namespacedData.compute(key.namespace, (namespaceId, contentMap) -> {
+        dhtContent.compute(key.namespace, (namespaceId, contentMap) -> {
             if (contentMap == null) {
                 return null;
             }
@@ -169,7 +170,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     @Override
     protected void remove(Record delete) {
         AtomicReference<Content> removedContent = new AtomicReference<>();
-        namespacedData.compute(delete.key.namespace, (namespace, contentMap) -> {
+        dhtContent.compute(delete.key.namespace, (namespace, contentMap) -> {
             if (contentMap == null || contentMap.isEmpty()) {
                 return null;
             }
@@ -188,7 +189,17 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     }
 
     private void sync() {
-        ForkJoinPool.commonPool().submit(() -> state.write(namespacedData));
+        pruneDeadRecords();
+        ForkJoinPool.commonPool().submit(() -> state.write(dhtContent));
+    }
+
+    private void pruneDeadRecords() {
+        dhtContent.values().forEach(map -> map.keySet().forEach(namespaceId -> map.computeIfPresent(namespaceId, (contentId, contents) -> {
+            if (contents.stream().anyMatch(Content::isDead)) {
+                return null;
+            }
+            return contents;
+        })));
     }
 
     private static Optional<Content> getLatestVersion(CopyOnWriteArraySet<Content> contents) {

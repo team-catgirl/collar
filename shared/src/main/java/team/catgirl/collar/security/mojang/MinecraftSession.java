@@ -30,7 +30,7 @@ public final class MinecraftSession {
             @JsonProperty("server") String server,
             @JsonProperty("mode") Mode mode,
             @JsonProperty("accessToken") String accessToken,
-            @JsonProperty("accessToken") int networkId) {
+            @JsonProperty("networkId") int networkId) {
         this.id = id;
         this.username = username;
         this.server = server;

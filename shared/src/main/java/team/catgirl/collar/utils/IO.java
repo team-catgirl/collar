@@ -34,6 +34,15 @@ public final class IO {
     }
 
     /**
+     * Read byte structure from {@link DataInputStream}
+     * @param is to read from
+     * @throws IOException on error
+     */
+    public static void skipBytes(DataInputStream is) throws IOException {
+        is.skipBytes(is.readInt());
+    }
+
+    /**
      * Write UUID to stream
      * @param os to write to
      * @param uuid to write

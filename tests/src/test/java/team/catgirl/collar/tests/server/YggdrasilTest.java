@@ -78,7 +78,7 @@ public class YggdrasilTest {
             .withListener(new CollarTest.ApprovingListener(aliceProfile, services, devicesConfirmed))
             .withPlayerLocation(() -> new Location(Utils.secureRandom().nextDouble(), Utils.secureRandom().nextDouble(), Utils.secureRandom().nextDouble(), Dimension.OVERWORLD))
             .withEntitiesSupplier(HashSet::new)
-            .withYggdrasilBaseUrl("http://localhost:3001/test/"), MinecraftSession.mojang(alicePlayerId, "alice", "2b2t.org", "mytoken"));
+            .withYggdrasilBaseUrl("http://localhost:3001/test/"), MinecraftSession.mojang(alicePlayerId, "alice", 1, "2b2t.org", "mytoken"));
 
     @Test
     public void authWithYggdrasil() {

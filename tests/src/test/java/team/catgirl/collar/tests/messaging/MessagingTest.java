@@ -37,7 +37,7 @@ public class MessagingTest extends CollarTest {
     public void aliceSendsNonCollarPlayerAnUwU() {
         MessagingListenerImpl aliceListener = new MessagingListenerImpl();
         alicePlayer.collar.messaging().subscribe(aliceListener);
-        alicePlayer.collar.messaging().sendPrivateMessage(new MinecraftPlayer(UUID.randomUUID(), "hypixel.net"), new TextMessage("UwU"));
+        alicePlayer.collar.messaging().sendPrivateMessage(new MinecraftPlayer(UUID.randomUUID(), "hypixel.net", 1), new TextMessage("UwU"));
         waitForCondition("Alice could not send private message", () -> {
             if (!(aliceListener.lastUntrustedMessage instanceof TextMessage)) {
                 return false;

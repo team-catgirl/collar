@@ -33,7 +33,7 @@ public final class CollarClientRule implements TestRule {
     }, "Collar Client Test Loop");
 
     public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder) {
-        this(playerId, builder, MinecraftSession.noJang(playerId, "cuteplayer", "hypixel.net"));
+        this(playerId, builder, MinecraftSession.noJang(playerId, "cuteplayer", 0, "hypixel.net"));
     }
     public CollarClientRule(UUID playerId, CollarConfiguration.Builder builder, MinecraftSession session) {
         this.ticks = new Ticks();

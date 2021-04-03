@@ -171,13 +171,6 @@ public final class SessionManager {
                 .map(sessionState -> sessionState.session);
     }
 
-    public Optional<MinecraftPlayer> findMinecraftPlayer(ClientIdentity identity, UUID player) {
-        return findMinecraftPlayer(identity).flatMap(me -> {
-            MinecraftPlayer candidate = new MinecraftPlayer(player, me.server);
-            return sessions.values().stream().filter(sessionState -> sessionState.minecraftPlayer.equals(candidate)).findFirst().map(sessionState -> sessionState.minecraftPlayer);
-        });
-    }
-
     public Optional<SessionState> getSessionStateByOwner(UUID owner) {
         return sessions.values().stream()
                 .filter(sessionState -> sessionState.identity.owner.equals(owner))

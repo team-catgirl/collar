@@ -13,7 +13,9 @@ public final class MinecraftPlayer {
     @JsonProperty("networkId")
     public final Integer networkId;
 
-    public MinecraftPlayer(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("networkId") Integer networkId) {
+    public MinecraftPlayer(@JsonProperty("id") UUID id,
+                           @JsonProperty("server") String server,
+                           @JsonProperty("networkId") Integer networkId) {
         this.id = id;
         this.server = server;
         this.networkId = networkId;
@@ -35,7 +37,7 @@ public final class MinecraftPlayer {
         MinecraftPlayer that = (MinecraftPlayer) o;
         return id.equals(that.id) &&
                 server.equals(that.server) &&
-                    networkId.equals(that.networkId);
+                networkId.equals(that.networkId);
     }
 
     @Override

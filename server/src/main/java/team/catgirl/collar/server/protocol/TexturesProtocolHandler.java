@@ -65,7 +65,7 @@ public class TexturesProtocolHandler extends ProtocolHandler {
                     sender.accept(request.identity, response);
                 }, () -> {
                     Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find the callers player"));
-                    Player requestedPlayer = new Player(null, new MinecraftPlayer(request.player, player.minecraftPlayer.server));
+                    Player requestedPlayer = new Player(null, new MinecraftPlayer(request.player, player.minecraftPlayer.server, player.minecraftPlayer.networkId));
                     // Send this back to complete any futures on the client
                     sender.accept(req.identity, new GetTextureResponse(serverIdentity, null, null, requestedPlayer, null, request.type));
                     LOGGER.log(Level.INFO, "Could not find player " + request.player + " when fetching texture " + request.type);

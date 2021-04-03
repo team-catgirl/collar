@@ -69,7 +69,11 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 identityOptional = Optional.empty();
             }
-            return identityOptional.map(identity -> new Player(identity.owner, new MinecraftPlayer(playerId, collar.player().minecraftPlayer.server)));
+            return identityOptional.map(identity -> new Player(identity.owner, new MinecraftPlayer(
+                    playerId,
+                    collar.player().minecraftPlayer.server,
+                    collar.player().minecraftPlayer.networkId))
+            );
         });
     }
 

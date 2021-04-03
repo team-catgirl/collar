@@ -30,7 +30,7 @@ public class GroupStoreTest {
         GroupStore store = new GroupStore(profiles, new SessionManager(Utils.messagePackMapper(), null), dbRule.db);
 
         UUID groupId = UUID.randomUUID();
-        Player owner = new Player(ownerProfile.id, new MinecraftPlayer(UUID.randomUUID(), "2b2t.org"));
+        Player owner = new Player(ownerProfile.id, new MinecraftPlayer(UUID.randomUUID(), "2b2t.org", 1));
 
         store.upsert(Group.newGroup(groupId, "The Spawnmasons", GroupType.GROUP, new MemberSource(owner, null), List.of()));
 

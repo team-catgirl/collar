@@ -12,9 +12,9 @@ import java.util.UUID;
 public class NearbyGroupsTest {
     @Test
     public void calculateGroup() {
-        Player alice = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute"));
-        Player bob = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute"));
-        Player eve = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute"));
+        Player alice = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute", 1));
+        Player bob = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute", 1));
+        Player eve = new Player(UUID.randomUUID(), new MinecraftPlayer(UUID.randomUUID(), "cute", 1));
 
         NearbyGroups groups = new NearbyGroups();
         NearbyGroups.Result result = groups.updateNearbyGroups(new MemberSource(alice, null), Set.of("alice", "bob"));

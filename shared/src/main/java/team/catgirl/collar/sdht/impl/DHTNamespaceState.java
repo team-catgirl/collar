@@ -19,9 +19,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public final class DHTNamespaceState {
 
     private static final int VERSION = 1;
+    private static final String DHT_EXT = ".dht";
 
     private final ReentrantLock lock = new ReentrantLock();
-    private static final String DHT_EXT = ".dht";
     private final File home;
 
     public DHTNamespaceState(File home) {

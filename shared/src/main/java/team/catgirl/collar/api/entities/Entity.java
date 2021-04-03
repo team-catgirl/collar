@@ -1,5 +1,6 @@
 package team.catgirl.collar.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
@@ -10,6 +11,7 @@ public final class Entity {
     @JsonProperty("type")
     public final String type;
 
+    @JsonCreator
     public Entity(@JsonProperty("id") Integer id,
                   @JsonProperty("type") String type) {
         this.id = id;
@@ -18,6 +20,15 @@ public final class Entity {
     
     public Entity(final int id, final EntityType type) {
     	this(id, type.toString());
+    }
+
+    /**
+     * Tests against the the known entity enum
+     * @param type of entity
+     * @return match
+     */
+    public boolean isTypeOf(EntityType type) {
+        return this.type.equals(type.toString());
     }
 
     @Override

@@ -10,10 +10,13 @@ public final class MinecraftPlayer {
     public final UUID id;
     @JsonProperty("server")
     public final String server;
+    @JsonProperty("networkId")
+    public final Integer networkId;
 
-    public MinecraftPlayer(@JsonProperty("id") UUID id, @JsonProperty("server") String server) {
+    public MinecraftPlayer(@JsonProperty("id") UUID id, @JsonProperty("server") String server, @JsonProperty("networkId") Integer networkId) {
         this.id = id;
         this.server = server;
+        this.networkId = networkId;
     }
 
     /**
@@ -31,16 +34,17 @@ public final class MinecraftPlayer {
         if (o == null || getClass() != o.getClass()) return false;
         MinecraftPlayer that = (MinecraftPlayer) o;
         return id.equals(that.id) &&
-                server.equals(that.server);
+                server.equals(that.server) &&
+                    networkId.equals(that.networkId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, server);
+        return Objects.hash(id, server, networkId);
     }
 
     @Override
     public String toString() {
-        return id.toString() + "@" + server;
+        return id.toString() + "@" + server + ":" + networkId;
     }
 }

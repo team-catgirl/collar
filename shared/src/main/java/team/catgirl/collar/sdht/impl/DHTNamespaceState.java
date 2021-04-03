@@ -39,10 +39,10 @@ public final class DHTNamespaceState {
      * Read DHT from the file system
      * @return dht contents
      */
-    public ConcurrentMap<UUID, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>>> read() {
+    public ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> read() {
         try {
             lock.lockInterruptibly();
-            ConcurrentMap<UUID, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>>> result = new ConcurrentHashMap<>();
+            ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> result = new ConcurrentHashMap<>();
             for (String fileName : Objects.requireNonNull(home.list())) {
                 if (!fileName.endsWith(DHT_EXT)) {
                     continue;
@@ -62,7 +62,7 @@ public final class DHTNamespaceState {
      * Write DHT to the file system
      * @param dht contents
      */
-    public void write(ConcurrentMap<UUID, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>>> dht) {
+    public void write(ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> dht) {
         try {
             lock.lockInterruptibly();
             dht.forEach(this::write);
@@ -73,7 +73,7 @@ public final class DHTNamespaceState {
         }
     }
 
-    private ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> read(UUID namespaceId) {
+    private ConcurrentMap<UUID, Content> read(UUID namespaceId) {
         File namespaceFile = getNamespaceFile(namespaceId);
         if (!namespaceFile.exists()) {
             return new ConcurrentHashMap<>();
@@ -83,16 +83,11 @@ public final class DHTNamespaceState {
             if (version != VERSION) {
                 throw new IllegalStateException("DHT version " + version + " is too new");
             }
-            ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> namespace = new ConcurrentHashMap<>();
+            ConcurrentMap<UUID, Content> namespace = new ConcurrentHashMap<>();
             int mapSize = dataStream.readInt();
             for (int m = 0; m < mapSize; m++) {
-                HashSet<Content> contents = new HashSet<>();
                 UUID contentId = IO.readUUID(dataStream);
-                int contentCount = dataStream.readInt();
-                for (int c = 0; c < contentCount; c++) {
-                    contents.add(new Content(IO.readBytes(dataStream)));
-                }
-                namespace.put(contentId, new CopyOnWriteArraySet<>(contents));
+                namespace.put(contentId, new Content(IO.readBytes(dataStream)));
             }
             return namespace;
         } catch (IOException e) {
@@ -105,18 +100,15 @@ public final class DHTNamespaceState {
      * @param namespace to write to file
      * @param contentsMap of the namespace
      */
-    private void write(UUID namespace, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentsMap) {
+    private void write(UUID namespace, ConcurrentMap<UUID, Content> contentsMap) {
         try (DataOutputStream dataStream = new DataOutputStream(new FileOutputStream(getNamespaceFile(namespace)))) {
             dataStream.writeInt(VERSION);
             dataStream.writeInt(contentsMap.size());
-            for (Map.Entry<UUID, CopyOnWriteArraySet<Content>> entry : contentsMap.entrySet()) {
+            for (Map.Entry<UUID, Content> entry : contentsMap.entrySet()) {
                 UUID uuid = entry.getKey();
-                CopyOnWriteArraySet<Content> contents = entry.getValue();
+                Content content = entry.getValue();
                 IO.writeUUID(dataStream, uuid);
-                dataStream.writeInt(contents.size());
-                for (Content content : contents) {
-                    IO.writeBytes(dataStream, content.serialize());
-                }
+                IO.writeBytes(dataStream, content.serialize());
             }
         } catch (IOException e) {
             throw new IllegalStateException("could not write namespace " + namespace + " to file", e);

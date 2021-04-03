@@ -17,6 +17,7 @@ import team.catgirl.collar.security.TokenGenerator;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 
 public class DistributedHashTableTest {
@@ -67,9 +68,9 @@ public class DistributedHashTableTest {
         Assert.assertEquals("has record in namespace", ImmutableSet.of(record), table.records(namespace));
         Assert.assertEquals("does not have a record in random namespace", ImmutableSet.of(), table.records(UUID.randomUUID()));
 
-        Content removedContent = table.delete(record.key).orElse(null);
-        Assert.assertEquals("Content can be removed", removedContent, content);
-        Assert.assertFalse("content was removed", table.delete(record.key).isPresent());
+        Optional<Content> delete = table.delete(record.key);
+        Content removedContent = delete.orElseThrow(() -> new IllegalStateException("not found"));
+        Assert.assertEquals("content was removed", removedContent.state, State.DELETED);
     }
 
     @Test

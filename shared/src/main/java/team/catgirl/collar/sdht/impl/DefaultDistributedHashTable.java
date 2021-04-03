@@ -25,7 +25,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
 
     private static final int MAX_RECORDS = Short.MAX_VALUE;
 
-    private final ConcurrentMap<UUID, ConcurrentMap<UUID, CopyOnWriteArraySet<Content>>> dhtContent;
+    private final ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> dhtContent;
     private final DHTNamespaceState state;
 
     public DefaultDistributedHashTable(Publisher publisher, Supplier<ClientIdentity> owner, ContentCipher cipher, DHTNamespaceState state, DistributedHashTableListener listener) {
@@ -48,42 +48,31 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     @Override
     public Set<Record> records() {
         ImmutableSet.Builder<Record> records = ImmutableSet.builder();
-        dhtContent.forEach((namespace, contentMap) -> {
-            contentMap.forEach((id, contents) -> {
-                contents.forEach(content -> {
-                    records.add(new Record(new Key(namespace, id), content.checksum, content.version));
-                });
-            });
+        dhtContent.forEach((namespaceId, contentMap) -> {
+            contentMap.forEach((id, content) -> records.add(new Record(new Key(namespaceId, id), content.checksum, content.version)));
         });
         return records.build();
     }
 
     @Override
     public Set<Record> records(UUID namespace) {
-        ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentMap = dhtContent.get(namespace);
+        ConcurrentMap<UUID, Content> contentMap = dhtContent.get(namespace);
         if (contentMap == null) {
             return ImmutableSet.of();
         }
         ImmutableSet.Builder<Record> records = ImmutableSet.builder();
-        contentMap.forEach((id, contents) -> {
-            contents.forEach(content -> {
-                records.add(new Record(new Key(namespace, id), content.checksum, content.version));
-            });
-        });
+        contentMap.forEach((id, content) -> records.add(new Record(new Key(namespace, id), content.checksum, content.version)));
         return records.build();
     }
 
     @Override
     public Optional<Content> get(Key key) {
-        ConcurrentMap<UUID, CopyOnWriteArraySet<Content>> contentMap = dhtContent.get(key.namespace);
+        ConcurrentMap<UUID, Content> contentMap = dhtContent.get(key.namespace);
         if (contentMap == null) {
             return Optional.empty();
         }
-        CopyOnWriteArraySet<Content> contents = contentMap.get(key.id);
-        if (contents == null || contents.isEmpty()) {
-            return Optional.empty();
-        }
-        return getLatestVersion(contents);
+        Content content = contentMap.get(key.id);
+        return content == null || !content.isValid() ? Optional.empty() : Optional.of(content);
     }
 
     @Override
@@ -106,9 +95,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
             }
             contentMap.computeIfAbsent(record.key.id, uuid -> {
                 computedContent.set(content);
-                CopyOnWriteArraySet<Content> contents = new CopyOnWriteArraySet<>();
-                contents.add(content);
-                return contents;
+                return content;
             });
             return contentMap;
         });
@@ -128,11 +115,10 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
         }
         dhtContent.compute(record.key.namespace, (namespace, contentMap) -> {
             contentMap = contentMap == null ? new ConcurrentHashMap<>() : contentMap;
-            CopyOnWriteArraySet<Content> contents = new CopyOnWriteArraySet<>();
-            contents.add(content);
-            contentMap.put(record.key.id, contents);
+            contentMap.put(record.key.id, content);
             return contentMap;
         });
+        sync();
         listener.onAdd(record.key, content);
     }
 
@@ -143,25 +129,22 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
             if (contentMap == null) {
                 return null;
             }
-            CopyOnWriteArraySet<Content> contents = contentMap.get(key.id);
-            if (contents != null) {
-                Optional<Content> optionalRemoved = getLatestVersion(contents);
-                if (optionalRemoved.isPresent()) {
-                    Content removed = optionalRemoved.get();
-                    removedContent.set(removed);
-                    Content deleted = deletedRecord();
-                    Record record = deleted.toRecord(key);
-                    contents.clear();
-                    contents.add(deleted);
+            Content content = contentMap.get(key.id);
+            if (content != null) {
+                Content removed = contentMap.get(key.id);
+                Content deleted = deletedRecord();
+                Record record = deleted.toRecord(key);
+                contentMap.put(key.id, deleted);
+                removedContent.set(deleted);
+                if (removed != null) {
                     publisher.publish(new DeleteRecordEvent(owner.get(), record));
                 }
             }
             return contentMap.isEmpty() ? null : contentMap;
         });
-        if (removedContent.get() != null && removedContent.get().state != State.DELETED) {
+        if (removedContent.get() != null) {
             Record record = removedContent.get().toRecord(key);
             publisher.publish(new DeleteRecordEvent(owner.get(), record));
-            sync();
             return Optional.of(removedContent.get());
         }
         return Optional.empty();
@@ -171,15 +154,14 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     protected void remove(Record delete) {
         AtomicReference<Content> removedContent = new AtomicReference<>();
         dhtContent.compute(delete.key.namespace, (namespace, contentMap) -> {
-            if (contentMap == null || contentMap.isEmpty()) {
+            if (contentMap == null) {
                 return null;
             }
-            CopyOnWriteArraySet<Content> contents = contentMap.get(delete.key.id);
-            if (contents == null || contents.isEmpty()) {
+            Content removed = contentMap.remove(delete.key.id);
+            removedContent.set(removed);
+            if (contentMap.isEmpty()) {
                 return null;
             }
-            contents.clear();
-            contents.add(deletedRecord());
             return contentMap;
         });
         if (removedContent.get() != null) {
@@ -194,12 +176,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     }
 
     private void pruneDeadRecords() {
-        dhtContent.values().forEach(map -> map.keySet().forEach(namespaceId -> map.computeIfPresent(namespaceId, (contentId, contents) -> {
-            if (contents.stream().anyMatch(Content::isDead)) {
-                return null;
-            }
-            return contents;
-        })));
+        dhtContent.values().forEach(map -> map.keySet().forEach(namespaceId -> map.computeIfPresent(namespaceId, (contentId, content) -> Content.isDead(content) ? null : content)));
     }
 
     private static Optional<Content> getLatestVersion(CopyOnWriteArraySet<Content> contents) {

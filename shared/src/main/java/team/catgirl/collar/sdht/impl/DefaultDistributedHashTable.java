@@ -23,6 +23,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultDistributedHashTable.class.getName());
 
+    private static final int MAX_NAMESPACES = Short.MAX_VALUE;
     private static final int MAX_RECORDS = Short.MAX_VALUE;
 
     private final ConcurrentMap<UUID, ConcurrentMap<UUID, Content>> dhtContent;
@@ -32,7 +33,7 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
         super(publisher, owner, cipher, listener);
         this.state = state;
         this.dhtContent = state.read();
-        pruneDeadRecords();
+        pruneAllNamespaces();
     }
 
     @Override
@@ -81,12 +82,18 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
             return Optional.empty();
         }
         Record record = content.toRecord(key);
-        if (dhtContent.size() > MAX_RECORDS) {
-            throw new IllegalStateException("Maximum namespaces exceeds " + MAX_RECORDS);
+        if (dhtContent.size() > MAX_NAMESPACES) {
+            pruneAllNamespaces();
+        }
+        if (dhtContent.size() > MAX_NAMESPACES) {
+            throw new IllegalStateException("Maximum namespaces exceeds " + MAX_NAMESPACES);
         }
         AtomicReference<Content> computedContent = new AtomicReference<>();
         dhtContent.compute(record.key.namespace, (namespace, contentMap) -> {
             contentMap = contentMap == null ? new ConcurrentHashMap<>() : contentMap;
+            if (contentMap.size() > MAX_RECORDS) {
+                pruneNamespace(contentMap);
+            }
             if (contentMap.size() > MAX_RECORDS) {
                 throw new IllegalStateException("namespace " + namespace + " exceeded maximum records " + MAX_RECORDS);
             }
@@ -171,12 +178,19 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
     }
 
     private void sync() {
-        pruneDeadRecords();
         ForkJoinPool.commonPool().submit(() -> state.write(dhtContent));
     }
 
-    private void pruneDeadRecords() {
-        dhtContent.values().forEach(map -> map.keySet().forEach(namespaceId -> map.computeIfPresent(namespaceId, (contentId, content) -> Content.isDead(content) ? null : content)));
+    private void pruneAllNamespaces() {
+        dhtContent.values().forEach(map -> map.keySet().forEach(namespaceId -> pruneNamespace(map)));
+    }
+
+    /**
+     * Prunes the namespace of dead entries
+     * @param namespaceContents of namespace
+     */
+    private void pruneNamespace(ConcurrentMap<UUID, Content> namespaceContents) {
+        namespaceContents.keySet().forEach(uuid -> namespaceContents.computeIfPresent(uuid, (uuid1, content) -> Content.isDead(content) ? null : content));
     }
 
     private static Optional<Content> getLatestVersion(CopyOnWriteArraySet<Content> contents) {

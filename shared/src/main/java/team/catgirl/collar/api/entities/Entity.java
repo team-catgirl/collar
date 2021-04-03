@@ -3,21 +3,16 @@ package team.catgirl.collar.api.entities;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
-import java.util.UUID;
 
 public final class Entity {
     @JsonProperty("id")
     public final Integer id;
-    @JsonProperty("playerId")
-    public final UUID playerId;
     @JsonProperty("type")
-    public final EntityType type;
+    public final String type;
 
     public Entity(@JsonProperty("id") Integer id,
-                  @JsonProperty("playerId") UUID playerId,
-                  @JsonProperty("type") EntityType type) {
+                  @JsonProperty("type") String type) {
         this.id = id;
-        this.playerId = playerId;
         this.type = type;
     }
 
@@ -26,11 +21,11 @@ public final class Entity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Entity entity = (Entity) o;
-        return id.equals(entity.id) && Objects.equals(playerId, entity.playerId) && type == entity.type;
+        return id.equals(entity.id) && type.equals(entity.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, playerId, type);
+        return Objects.hash(id, type);
     }
 }

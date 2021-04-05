@@ -206,7 +206,7 @@ public class CollarServer {
         try {
             ClientIdentity identity = services.sessions.getIdentity(session).orElse(null);
             ProtocolRequest packet = packetIO.decode(identity, message, ProtocolRequest.class);
-            if (packet.identity != null && !packet.identity.equals(identity)) {
+            if (packet.identity != null && identity != null && !packet.identity.equals(identity)) {
                 throw new IllegalStateException("Identity associated with this session was different to decoded packet");
             }
             return packet;

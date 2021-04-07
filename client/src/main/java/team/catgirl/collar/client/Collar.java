@@ -10,6 +10,7 @@ import org.whispersystems.libsignal.IdentityKey;
 import team.catgirl.collar.api.http.CollarFeature;
 import team.catgirl.collar.api.http.CollarVersion;
 import team.catgirl.collar.api.http.DiscoverResponse;
+import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.CollarException.ConnectionException;
 import team.catgirl.collar.client.CollarException.UnsupportedServerVersionException;
@@ -64,6 +65,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static team.catgirl.collar.http.Request.url;
 
 public final class Collar {
     private static final Logger LOGGER = Logger.getLogger(Collar.class.getName());
@@ -137,7 +140,7 @@ public final class Collar {
         checkServerCompatibility(configuration);
         String url = UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/1/listen").toString();
         LOGGER.log(Level.INFO, "Connecting to server " + url);
-        webSocket = Http.collar().newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
+        webSocket = new OkHttpClient().newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
         webSocket.request();
         changeState(State.CONNECTING);
     }
@@ -256,7 +259,12 @@ public final class Collar {
      * @param configuration of the client
      */
     private static void checkServerCompatibility(CollarConfiguration configuration) {
-        DiscoverResponse response = httpGet(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover").toString(), DiscoverResponse.class);
+        DiscoverResponse response;
+        try {
+            response = Http.collar().json(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")), DiscoverResponse.class);
+        } catch (HttpException e) {
+            throw new IllegalStateException(e);
+        }
         StringJoiner versions = new StringJoiner(",");
         response.versions.stream()
                 .peek(collarVersion -> versions.add(collarVersion.major + "." + collarVersion.minor))
@@ -285,27 +293,6 @@ public final class Collar {
         return response.features.stream()
                 .filter(collarFeature -> feature.equals(collarFeature.name))
                 .findFirst();
-    }
-
-    private static <T> T httpGet(String url, Class<T> aClass) {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        try (Response response = Http.collar().newCall(request).execute()) {
-            if (response.code() == 200) {
-                ResponseBody body = response.body();
-                if (body == null) {
-                    throw new IllegalStateException("body is empty");
-                }
-                byte[] bytes = body.bytes();
-                return Utils.jsonMapper().readValue(bytes, aClass);
-            } else {
-                throw new ConnectionException("Failed to connect to server " + url);
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Connection issue", e);
-            throw new ConnectionException("Failed to connect to server " + url, e);
-        }
     }
 
     /**

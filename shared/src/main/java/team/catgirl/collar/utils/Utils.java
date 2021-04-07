@@ -1,12 +1,9 @@
 package team.catgirl.collar.utils;
 
 import com.fasterxml.jackson.databind.*;
-import okhttp3.OkHttpClient;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
-import javax.net.ssl.*;
 import java.security.*;
-import java.util.Arrays;
 
 public final class Utils {
 

@@ -1,17 +1,18 @@
 package team.catgirl.collar.client.utils;
 
 import okhttp3.OkHttpClient;
+import team.catgirl.collar.http.HttpClient;
+import team.catgirl.collar.utils.Utils;
 
 import javax.net.ssl.*;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 
 public final class Http {
 
-    private static final OkHttpClient http;
-    private static final OkHttpClient external = new OkHttpClient();
+    private static final HttpClient http;
+    private static final HttpClient external;
 
     static {
         SSLContext sslContext;
@@ -28,19 +29,15 @@ public final class Http {
         } catch (NoSuchAlgorithmException | KeyStoreException e) {
             throw new IllegalStateException("could not load TrustManagerFactory", e);
         }
-        TrustManager trustManager = Arrays.stream(tmf.getTrustManagers())
-                .filter(candidate -> candidate instanceof X509TrustManager)
-                .findFirst().orElseThrow(() -> new IllegalStateException("could not find X509TrustManager"));
-        http = new OkHttpClient.Builder()
-                .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustManager)
-                .build();
+        http = new HttpClient(Utils.jsonMapper(), null);
+        external = new HttpClient(Utils.jsonMapper(), null);
     }
 
-    public static OkHttpClient collar() {
+    public static HttpClient collar() {
         return http;
     }
 
-    public static OkHttpClient external() {
+    public static HttpClient external() {
         return external;
     }
 

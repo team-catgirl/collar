@@ -1,7 +1,7 @@
 package team.catgirl.collar.server.configuration;
 
 import com.mongodb.client.MongoDatabase;
-import okhttp3.OkHttpClient;
+import team.catgirl.collar.http.HttpClient;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.server.http.CollarWebAppUrlProvider;
 import team.catgirl.collar.server.http.DefaultAppUrlProvider;
@@ -14,6 +14,7 @@ import team.catgirl.collar.server.security.mojang.MinecraftSessionVerifier;
 import team.catgirl.collar.server.security.mojang.MojangMinecraftSessionVerifier;
 import team.catgirl.collar.server.security.mojang.NojangMinecraftSessionVerifier;
 import team.catgirl.collar.server.services.authentication.TokenCrypter;
+import team.catgirl.collar.utils.Utils;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,7 +31,7 @@ public class Configuration {
     public final boolean enableWeb;
     public final int httpPort;
     public final Email email;
-    public final OkHttpClient http;
+    public final HttpClient http;
 
     public Configuration(MongoDatabase database,
                          AppUrlProvider appUrlProvider,
@@ -41,7 +42,7 @@ public class Configuration {
                          boolean enableWeb,
                          int httpPort,
                          Email email,
-                         OkHttpClient http
+                         HttpClient http
     ) {
         this.database = database;
         this.appUrlProvider = appUrlProvider;
@@ -84,7 +85,7 @@ public class Configuration {
             throw new IllegalStateException("MAILGUN_API_KEY not set");
         }
         AppUrlProvider appUrlProvider = new CollarWebAppUrlProvider(baseUrl);
-        OkHttpClient http = new OkHttpClient();
+        HttpClient http = new HttpClient(Utils.jsonMapper(), null);
         return new Configuration(
                 Mongo.database(),
                 appUrlProvider,
@@ -112,7 +113,7 @@ public class Configuration {
                 true,
                 httpPort(),
                 new LocalEmail(appUrlProvider),
-                new OkHttpClient());
+                new HttpClient(Utils.jsonMapper(), null));
     }
 
     public static Configuration testConfiguration(MongoDatabase db, MinecraftSessionVerifier sessionVerifier) {
@@ -128,7 +129,7 @@ public class Configuration {
                 false,
                 3001,
                 new LocalEmail(appUrlProvider),
-                new OkHttpClient());
+                new HttpClient(Utils.jsonMapper(), null));
     }
 
     private static int httpPort() {

@@ -8,6 +8,8 @@ import team.catgirl.collar.api.authentication.AuthenticationService.LoginRequest
 import team.catgirl.collar.api.authentication.AuthenticationService.LoginResponse;
 import team.catgirl.collar.api.profiles.Profile;
 import team.catgirl.collar.api.profiles.ProfileService;
+import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
+import team.catgirl.collar.http.HttpClient;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,12 +23,12 @@ import java.util.stream.Collectors;
 
 public final class AdminTool {
 
-    private final OkHttpClient http;
+    private final HttpClient http;
     private final ObjectMapper mapper;
     private CollarApi client;
     private String configName;
 
-    public AdminTool(ObjectMapper mapper, OkHttpClient http) {
+    public AdminTool(ObjectMapper mapper, HttpClient http) {
         this.mapper = mapper;
         this.http = http;
     }
@@ -54,7 +56,7 @@ public final class AdminTool {
     }
 
     public void resetIdentity(String email) {
-        Profile profile = client.getProfile(ProfileService.GetProfileRequest.byEmail(email)).profile;
+        Profile profile = client.getProfile(GetProfileRequest.byEmail(email)).profile;
         client.updateProfile(ProfileService.UpdateProfileRequest.privateIdentityToken(profile.id, new byte[0]));
         System.out.println("Reset identity for " + email);
     }

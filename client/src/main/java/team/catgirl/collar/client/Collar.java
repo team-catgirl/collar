@@ -261,7 +261,7 @@ public final class Collar {
     private static void checkServerCompatibility(CollarConfiguration configuration) {
         DiscoverResponse response;
         try {
-            response = Http.collar().json(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")), DiscoverResponse.class);
+            response = Http.collar().http(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")).get(), DiscoverResponse.class);
         } catch (HttpException e) {
             throw new IllegalStateException(e);
         }

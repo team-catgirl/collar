@@ -15,12 +15,12 @@ import team.catgirl.collar.api.http.HttpException.*;
 import javax.net.ssl.SSLException;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public final class HttpClient implements Closeable {
 
     private final EventLoopGroup group;
-    private final Bootstrap bootstrap;
     private final ObjectMapper mapper;
     private final SslContext sslContext;
 
@@ -36,27 +36,17 @@ public final class HttpClient implements Closeable {
             this.sslContext = sslContext;
         }
         group = new NioEventLoopGroup();
-        bootstrap = new Bootstrap();
-        bootstrap.group(group);
-        bootstrap.channel(NioSocketChannel.class);
-        bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-        bootstrap.handler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            public void initChannel(SocketChannel ch) {
-                ch.pipeline().addLast("encoder", new HttpRequestEncoder());
-            }
-        });
     }
 
     public byte[] bytes(Request request) throws IOException, UnauthorisedException {
-        ClientHandler clientHandler = json(request);
+        ClientHandler clientHandler = http(request);
         if (clientHandler.error != null) {
             throw new RuntimeException(clientHandler.error);
         } else {
             HttpResponseStatus resp = clientHandler.response.status();
             int status = resp.code();
             if (status >= 200 && status <= 299) {
-                return clientHandler.content.content().array();
+                return clientHandler.contentBuffer.array();
             } else {
                 switch (status) {
                     case 400:
@@ -78,8 +68,8 @@ public final class HttpClient implements Closeable {
         }
     }
 
-    public <T> T json(Request request, Class<T> aClass) {
-        ClientHandler clientHandler = json(request);
+    public <T> T http(Request request, Class<T> aClass) {
+        ClientHandler clientHandler = http(request);
         if (clientHandler.error != null) {
             throw new RuntimeException(clientHandler.error);
         } else {
@@ -87,8 +77,8 @@ public final class HttpClient implements Closeable {
             int status = resp.code();
             if (status >= 200 && status <= 299) {
                 try {
-                    return mapper.readValue(clientHandler.content.content().toString(StandardCharsets.UTF_8), aClass);
-                } catch (JsonProcessingException e) {
+                    return mapper.readValue(clientHandler.contentBuffer.array(), aClass);
+                } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             } else {
@@ -112,7 +102,7 @@ public final class HttpClient implements Closeable {
         }
     }
 
-    private ClientHandler json(Request request) {
+    private ClientHandler http(Request request) {
         String scheme = request.uri.getScheme() == null? "http" : request.uri.getScheme();
         int port = request.uri.getPort();
         if (port == -1) {
@@ -123,9 +113,18 @@ public final class HttpClient implements Closeable {
             }
         }
         ClientHandler clientHandler = new ClientHandler();
-        bootstrap.group(group)
-                .channel(NioSocketChannel.class)
-                .handler(new ClientInitializer(clientHandler, port == 433 ? sslContext : null));
+
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.group(group);
+        bootstrap.channel(NioSocketChannel.class);
+        bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+        bootstrap.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel ch) {
+                ch.pipeline().addLast("encoder", new HttpRequestEncoder());
+            }
+        });
+        bootstrap.handler(new ClientInitializer(clientHandler, port == 433 ? sslContext : null));
 
         Channel channel;
         try {
@@ -134,7 +133,7 @@ public final class HttpClient implements Closeable {
             throw new RuntimeException(e);
         }
 
-        HttpRequest httpRequest = request.create();
+        HttpRequest httpRequest = request.create(mapper);
         httpRequest.headers().set(HttpHeaderNames.HOST, request.uri.getHost());
         httpRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
@@ -177,7 +176,7 @@ public final class HttpClient implements Closeable {
 
     private static class ClientHandler extends SimpleChannelInboundHandler<HttpObject> {
         public HttpResponse response;
-        public HttpContent content;
+        public ByteBuffer contentBuffer = ByteBuffer.allocate(Short.MAX_VALUE);
         public Throwable error;
 
         @Override
@@ -186,7 +185,10 @@ public final class HttpClient implements Closeable {
                 response = (HttpResponse) o;
             }
             if (o instanceof HttpContent) {
-                content = (HttpContent) o;
+                HttpContent content = (HttpContent) o;
+                byte[] bytes = new byte[content.content().readableBytes()];
+                content.content().readBytes(bytes);
+                contentBuffer.put(bytes);
             }
         }
 

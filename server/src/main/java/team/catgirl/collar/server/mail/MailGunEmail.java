@@ -7,7 +7,6 @@ import team.catgirl.collar.http.Request;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.api.profiles.Profile;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,7 +44,7 @@ public class MailGunEmail extends AbstractEmail {
             Request request = Request.url("https://api.mailgun.net/v3/" + domain + " /messages")
                     .addHeader("Authorization", "Basic " + auth)
                     .post(formBody);
-            http.json(request, Void.class);
+            http.http(request, Void.class);
             LOGGER.log(Level.INFO, "Sent " + templateName + " email to " + profile.email);
         } catch (HttpException e) {
             LOGGER.log(Level.SEVERE, "Connection issue", e);

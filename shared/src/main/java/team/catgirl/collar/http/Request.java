@@ -1,8 +1,14 @@
 package team.catgirl.collar.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mikael.urlbuilder.UrlBuilder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import team.catgirl.collar.security.mojang.ServerAuthentication;
 
 import java.net.URI;
@@ -15,7 +21,7 @@ public final class Request {
     public final URI uri;
     private HttpMethod method;
     Object content;
-    Map<String, Object> form;
+    Map<String, String> form;
 
     private Request(URI uri) {
         this.uri = uri;
@@ -26,7 +32,7 @@ public final class Request {
         return this;
     }
 
-    public Request post(Map<String, Object> form) {
+    public Request post(Map<String, String> form) {
         this.method = HttpMethod.POST;
         this.form = form;
         return this;
@@ -43,12 +49,38 @@ public final class Request {
         return this;
     }
 
-    HttpRequest create() {
+    HttpRequest create(ObjectMapper mapper) {
         if (method == null) {
             throw new IllegalStateException("method not set");
         }
-        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, uri.toString(), Unpooled.EMPTY_BUFFER);
+        ByteBuf byteBuf;
+        try {
+            byteBuf = this.content == null ? Unpooled.EMPTY_BUFFER : Unpooled.copiedBuffer(mapper.writeValueAsBytes(content));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, uri.toString(), byteBuf);
         headers.forEach((name, value) -> request.headers().add(name, value));
+        if (form != null) {
+            HttpPostRequestEncoder encoder;
+            try {
+                encoder = new HttpPostRequestEncoder(request, false);
+            } catch (ErrorDataEncoderException e) {
+                throw new IllegalStateException(e);
+            }
+            form.forEach((name, value) -> {
+                try {
+                    encoder.addBodyAttribute(name, value);
+                } catch (ErrorDataEncoderException e) {
+                    throw new IllegalArgumentException(e);
+                }
+            });
+            try {
+                return encoder.finalizeRequest();
+            } catch (ErrorDataEncoderException e) {
+                throw new IllegalStateException(e);
+            }
+        }
         return request;
     }
 

@@ -15,20 +15,20 @@ public final class Http {
     private static final HttpClient external;
 
     static {
-        SSLContext sslContext;
-        try {
-            sslContext = Certificates.load();
-        } catch (Throwable e) {
-            throw new IllegalStateException(e);
-        }
-        final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-        TrustManagerFactory tmf;
-        try {
-            tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init((KeyStore) null);
-        } catch (NoSuchAlgorithmException | KeyStoreException e) {
-            throw new IllegalStateException("could not load TrustManagerFactory", e);
-        }
+//        SSLContext sslContext;
+//        try {
+//            sslContext = Certificates.load();
+//        } catch (Throwable e) {
+//            throw new IllegalStateException(e);
+//        }
+//        final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+//        TrustManagerFactory tmf;
+//        try {
+//            tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+//            tmf.init((KeyStore) null);
+//        } catch (NoSuchAlgorithmException | KeyStoreException e) {
+//            throw new IllegalStateException("could not load TrustManagerFactory", e);
+//        }
         http = new HttpClient(Utils.jsonMapper(), null);
         external = new HttpClient(Utils.jsonMapper(), null);
     }

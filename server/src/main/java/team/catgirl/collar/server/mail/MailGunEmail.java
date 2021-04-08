@@ -4,6 +4,7 @@ import com.google.common.io.BaseEncoding;
 import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.http.HttpClient;
 import team.catgirl.collar.http.Request;
+import team.catgirl.collar.http.Response;
 import team.catgirl.collar.server.http.AppUrlProvider;
 import team.catgirl.collar.api.profiles.Profile;
 
@@ -44,7 +45,7 @@ public class MailGunEmail extends AbstractEmail {
             Request request = Request.url("https://api.mailgun.net/v3/" + domain + " /messages")
                     .addHeader("Authorization", "Basic " + auth)
                     .post(formBody);
-            http.http(request, Void.class);
+            http.execute(request, Response.noContent());
             LOGGER.log(Level.INFO, "Sent " + templateName + " email to " + profile.email);
         } catch (HttpException e) {
             LOGGER.log(Level.SEVERE, "Connection issue", e);

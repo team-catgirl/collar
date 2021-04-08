@@ -6,6 +6,7 @@ import io.mikael.urlbuilder.UrlBuilder;
 import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.http.HttpClient;
 import team.catgirl.collar.http.Request;
+import team.catgirl.collar.http.Response;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
@@ -31,7 +32,7 @@ public final class ServerAuthentication {
     public boolean joinServer(MinecraftSession session) {
         try {
             JoinRequest joinReq = new JoinRequest(session.accessToken, toProfileId(session.id), session.server);
-            http.http(Request.url(baseUrl + "session/minecraft/join").post(joinReq), Void.class);
+            http.execute(Request.url(baseUrl + "session/minecraft/join").post(joinReq), Response.noContent());
             return true;
         } catch (HttpException e) {
             LOGGER.log(Level.SEVERE, "Could not start verification with Mojang",e);
@@ -44,7 +45,7 @@ public final class ServerAuthentication {
             UrlBuilder builder = UrlBuilder.fromString(baseUrl + "session/minecraft/hasJoined")
                     .addParameter("username", session.username)
                     .addParameter("serverId", ServerAuthentication.genServerIDHash());
-            HasJoinedResponse hasJoinedResponse = http.http(Request.url(builder).get(), HasJoinedResponse.class);
+            HasJoinedResponse hasJoinedResponse = http.execute(Request.url(builder).get(), Response.json(HasJoinedResponse.class));
             return hasJoinedResponse.id.equals(toProfileId(session.id));
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();

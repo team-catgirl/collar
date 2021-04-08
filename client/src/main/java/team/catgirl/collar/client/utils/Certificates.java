@@ -1,5 +1,6 @@
 package team.catgirl.collar.client.utils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 
 import javax.net.ssl.SSLContext;
@@ -14,10 +15,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 class Certificates {
 
-    public static SSLContext load() throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException, KeyManagementException {
+    public static X509Certificate[] load() throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException, KeyManagementException {
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
         ks.load(null, null);
 
@@ -27,12 +29,7 @@ class Certificates {
         X509Certificate prod = load("api.collarmc.com.cer");
         ks.setCertificateEntry("api.collarmc.com", prod);
 
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        tmf.init(ks);
-
-        SSLContext context = SSLContext.getInstance("TLS");
-        context.init(null, tmf.getTrustManagers(), null);
-        return context;
+        return new X509Certificate[] { dev, prod };
     }
 
     private static X509Certificate load(String name) throws CertificateException, IOException {

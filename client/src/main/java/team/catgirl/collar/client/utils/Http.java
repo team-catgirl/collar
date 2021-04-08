@@ -1,40 +1,30 @@
 package team.catgirl.collar.client.utils;
 
-import okhttp3.OkHttpClient;
+import io.netty.handler.ssl.SslContextBuilder;
 import team.catgirl.collar.http.HttpClient;
-import team.catgirl.collar.utils.Utils;
 
-import javax.net.ssl.*;
-import java.security.KeyStore;
+import java.io.IOException;
+import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 
 public final class Http {
 
-    private static final HttpClient http;
+    private static final HttpClient collar;
     private static final HttpClient external;
 
     static {
-//        SSLContext sslContext;
-//        try {
-//            sslContext = Certificates.load();
-//        } catch (Throwable e) {
-//            throw new IllegalStateException(e);
-//        }
-//        final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-//        TrustManagerFactory tmf;
-//        try {
-//            tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-//            tmf.init((KeyStore) null);
-//        } catch (NoSuchAlgorithmException | KeyStoreException e) {
-//            throw new IllegalStateException("could not load TrustManagerFactory", e);
-//        }
-        http = new HttpClient(Utils.jsonMapper(), null);
-        external = new HttpClient(Utils.jsonMapper(), null);
+        try {
+            collar = new HttpClient(SslContextBuilder.forClient().trustManager(Certificates.load()).build());
+        } catch (NoSuchAlgorithmException | KeyStoreException | IOException | CertificateException | KeyManagementException e) {
+            throw new RuntimeException(e);
+        }
+        external = new HttpClient(null);
     }
 
     public static HttpClient collar() {
-        return http;
+        return collar;
     }
 
     public static HttpClient external() {

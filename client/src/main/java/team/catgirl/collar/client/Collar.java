@@ -32,6 +32,7 @@ import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
 import team.catgirl.collar.client.utils.Http;
+import team.catgirl.collar.http.Response;
 import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -261,9 +262,9 @@ public final class Collar {
     private static void checkServerCompatibility(CollarConfiguration configuration) {
         DiscoverResponse response;
         try {
-            response = Http.collar().http(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")).get(), DiscoverResponse.class);
+            response = Http.collar().execute(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")).get(), Response.json(DiscoverResponse.class));
         } catch (HttpException e) {
-            throw new IllegalStateException(e);
+            throw new ConnectionException("Problem connecting to collar", e);
         }
         StringJoiner versions = new StringJoiner(",");
         response.versions.stream()
@@ -320,7 +321,7 @@ public final class Collar {
         }
 
         @Override
-        public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+        public void onOpen(@NotNull WebSocket webSocket, @NotNull okhttp3.Response response) {
             // Create the sender delegate
             sender = request -> {
                 if (state != State.CONNECTED) {
@@ -368,7 +369,7 @@ public final class Collar {
         }
 
         @Override
-        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable okhttp3.Response response) {
             LOGGER.log(Level.SEVERE, "Socket failure", t);
             t.printStackTrace();
             if (state != State.DISCONNECTED) {

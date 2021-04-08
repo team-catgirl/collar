@@ -1,6 +1,5 @@
 package team.catgirl.collar.http;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -14,18 +13,14 @@ import team.catgirl.collar.api.http.HttpException.*;
 
 import javax.net.ssl.SSLException;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public final class HttpClient implements Closeable {
 
     private final EventLoopGroup group;
-    private final ObjectMapper mapper;
     private final SslContext sslContext;
 
-    public HttpClient(ObjectMapper mapper, SslContext sslContext) {
-        this.mapper = mapper;
+    public HttpClient(SslContext sslContext) {
         if (sslContext == null) {
             try {
                 this.sslContext = SslContextBuilder.forClient().build();
@@ -38,15 +33,15 @@ public final class HttpClient implements Closeable {
         group = new NioEventLoopGroup();
     }
 
-    public byte[] bytes(Request request) throws IOException, UnauthorisedException {
-        ClientHandler clientHandler = http(request);
+    public <T> T execute(Request request, Response<T> response) {
+        ClientHandler clientHandler = makeRequest(request);
         if (clientHandler.error != null) {
             throw new RuntimeException(clientHandler.error);
         } else {
             HttpResponseStatus resp = clientHandler.response.status();
             int status = resp.code();
             if (status >= 200 && status <= 299) {
-                return clientHandler.contentBuffer.array();
+                return response.apply(clientHandler.contentBuffer.array());
             } else {
                 switch (status) {
                     case 400:
@@ -68,41 +63,7 @@ public final class HttpClient implements Closeable {
         }
     }
 
-    public <T> T http(Request request, Class<T> aClass) {
-        ClientHandler clientHandler = http(request);
-        if (clientHandler.error != null) {
-            throw new RuntimeException(clientHandler.error);
-        } else {
-            HttpResponseStatus resp = clientHandler.response.status();
-            int status = resp.code();
-            if (status >= 200 && status <= 299) {
-                try {
-                    return mapper.readValue(clientHandler.contentBuffer.array(), aClass);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                switch (status) {
-                    case 400:
-                        throw new BadRequestException(resp.reasonPhrase());
-                    case 401:
-                        throw new UnauthorisedException(resp.reasonPhrase());
-                    case 403:
-                        throw new ForbiddenException(resp.reasonPhrase());
-                    case 404:
-                        throw new NotFoundException(resp.reasonPhrase());
-                    case 409:
-                        throw new ConflictException(resp.reasonPhrase());
-                    case 500:
-                        throw new ServerErrorException(resp.reasonPhrase());
-                    default:
-                        throw new UnmappedHttpException(resp.code(), resp.reasonPhrase());
-                }
-            }
-        }
-    }
-
-    private ClientHandler http(Request request) {
+    private ClientHandler makeRequest(Request request) {
         String scheme = request.uri.getScheme() == null? "http" : request.uri.getScheme();
         int port = request.uri.getPort();
         if (port == -1) {
@@ -133,7 +94,7 @@ public final class HttpClient implements Closeable {
             throw new RuntimeException(e);
         }
 
-        HttpRequest httpRequest = request.create(mapper);
+        HttpRequest httpRequest = request.create();
         httpRequest.headers().set(HttpHeaderNames.HOST, request.uri.getHost());
         httpRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);

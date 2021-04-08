@@ -9,6 +9,7 @@ import team.catgirl.collar.api.profiles.ProfileService;
 import team.catgirl.collar.api.profiles.ProfileService.GetProfileRequest;
 import team.catgirl.collar.api.profiles.ProfileService.GetProfileResponse;
 import team.catgirl.collar.http.HttpClient;
+import team.catgirl.collar.http.Response;
 import team.catgirl.collar.http.Request;
 
 public final class CollarApi {
@@ -25,21 +26,21 @@ public final class CollarApi {
     }
 
     public LoginResponse login(LoginRequest req) {
-        return http.http(Request.url(baseURL + "/auth/login").post(req), LoginResponse.class);
+        return http.execute(Request.url(baseURL + "/auth/login").post(req), Response.json(LoginResponse.class));
     }
 
     public void resetPassword(RequestPasswordResetRequest req) {
-        http.http(Request.url(baseURL + "/auth/reset/request").post(req), Void.class);
+        http.execute(Request.url(baseURL + "/auth/reset/request").post(req), Response.noContent());
     }
 
     public void updateProfile(ProfileService.UpdateProfileRequest req) {
-        http.http(Request.url(baseURL + "/auth/reset/request").post(req), Void.class);
+        http.execute(Request.url(baseURL + "/auth/reset/request").post(req), Response.noContent());
     }
 
     public GetProfileResponse getProfile(GetProfileRequest req) {
         UrlBuilder url = UrlBuilder.fromString(baseURL + "/profile")
                 .addParameter("email", req.byEmail);
-        return http.http(Request.url(url).get(), GetProfileResponse.class);
+        return http.execute(Request.url(url).get(), Response.json(GetProfileResponse.class));
     }
 
     public void setToken(String token) {

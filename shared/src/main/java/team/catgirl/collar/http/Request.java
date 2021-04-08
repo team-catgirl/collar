@@ -4,58 +4,42 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mikael.urlbuilder.UrlBuilder;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
-import team.catgirl.collar.security.mojang.ServerAuthentication;
+import team.catgirl.collar.utils.Utils;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class Request {
-    public final Map<String, String> headers = new HashMap<>();
+
+    public final HttpMethod method;
     public final URI uri;
-    private HttpMethod method;
-    Object content;
-    Map<String, String> form;
+    public final Object content;
+    public final Map<String, String> headers;
+    public final Map<String, String> form;
 
-    private Request(URI uri) {
+    public Request(HttpMethod method, URI uri, Object content, Map<String, String> headers, Map<String, String> form) {
+        this.method = method;
         this.uri = uri;
-    }
-
-    public Request get() {
-        this.method = HttpMethod.GET;
-        return this;
-    }
-
-    public Request post(Map<String, String> form) {
-        this.method = HttpMethod.POST;
-        this.form = form;
-        return this;
-    }
-
-    public Request post(Object content) {
-        this.method = HttpMethod.POST;
         this.content = content;
-        return this;
+        this.headers = headers;
+        this.form = form;
     }
 
-    public Request addHeader(String name, String value) {
-        headers.put(name, value);
-        return this;
-    }
-
-    HttpRequest create(ObjectMapper mapper) {
+    HttpRequest create() {
         if (method == null) {
             throw new IllegalStateException("method not set");
         }
         ByteBuf byteBuf;
         try {
-            byteBuf = this.content == null ? Unpooled.EMPTY_BUFFER : Unpooled.copiedBuffer(mapper.writeValueAsBytes(content));
+            byteBuf = this.content == null ? Unpooled.EMPTY_BUFFER : Unpooled.copiedBuffer(Utils.jsonMapper().writeValueAsBytes(content));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -84,15 +68,37 @@ public final class Request {
         return request;
     }
 
-    public static Request url(UrlBuilder builder) {
-        return new Request(builder.toUri());
+    public static Builder url(UrlBuilder builder) {
+        return new Builder(builder.toUri());
     }
 
-    public static Request url(String url) {
-        try {
-            return new Request(new URI(url));
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e);
+    public static Builder url(String url) {
+        return url(UrlBuilder.fromString(url));
+    }
+
+    public static class Builder {
+        private final Map<String, String> headers = new HashMap<>();
+        private final URI uri;
+
+        private Builder(URI uri) {
+            this.uri = uri;
+        }
+
+        public Builder addHeader(String name, String value) {
+            headers.put(name, value);
+            return this;
+        }
+
+        public Request get() {
+            return new Request(HttpMethod.GET, uri, null, headers, null);
+        }
+
+        public Request post(Map<String, String> form) {
+            return new Request(HttpMethod.POST, uri, null, headers, form);
+        }
+
+        public Request post(Object content) {
+            return new Request(HttpMethod.POST, uri, content, headers, null);
         }
     }
 }

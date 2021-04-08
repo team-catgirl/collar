@@ -85,7 +85,7 @@ public class Configuration {
             throw new IllegalStateException("MAILGUN_API_KEY not set");
         }
         AppUrlProvider appUrlProvider = new CollarWebAppUrlProvider(baseUrl);
-        HttpClient http = new HttpClient(Utils.jsonMapper(), null);
+        HttpClient http = new HttpClient(null);
         return new Configuration(
                 Mongo.database(),
                 appUrlProvider,
@@ -113,7 +113,7 @@ public class Configuration {
                 true,
                 httpPort(),
                 new LocalEmail(appUrlProvider),
-                new HttpClient(Utils.jsonMapper(), null));
+                new HttpClient(null));
     }
 
     public static Configuration testConfiguration(MongoDatabase db, MinecraftSessionVerifier sessionVerifier) {
@@ -129,7 +129,7 @@ public class Configuration {
                 false,
                 3001,
                 new LocalEmail(appUrlProvider),
-                new HttpClient(Utils.jsonMapper(), null));
+                new HttpClient(null));
     }
 
     private static int httpPort() {

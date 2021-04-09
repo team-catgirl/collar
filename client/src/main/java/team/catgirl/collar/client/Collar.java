@@ -2,9 +2,6 @@ package team.catgirl.collar.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mikael.urlbuilder.UrlBuilder;
-import okio.ByteString;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKey;
 import team.catgirl.collar.api.http.CollarFeature;
 import team.catgirl.collar.api.http.CollarVersion;
@@ -323,7 +320,7 @@ public final class Collar {
         }
 
         @Override
-        public void onOpen(@NotNull WebSocket webSocket) {
+        public void onOpen(WebSocket webSocket) {
             // Create the sender delegate
             sender = request -> {
                 if (state != State.CONNECTED) {

@@ -1,13 +1,15 @@
 package team.catgirl.collar.tests.junit;
 
 import com.mongodb.client.MongoDatabase;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import spark.Spark;
+import team.catgirl.collar.api.http.HttpException;
+import team.catgirl.collar.client.utils.Http;
+import team.catgirl.collar.http.HttpClient;
+import team.catgirl.collar.http.Request;
+import team.catgirl.collar.http.Response;
 import team.catgirl.collar.server.Services;
 import team.catgirl.collar.server.WebServer;
 import team.catgirl.collar.server.configuration.Configuration;
@@ -19,7 +21,7 @@ import java.util.function.Consumer;
 
 public final class CollarServerRule implements TestRule {
 
-    private static final OkHttpClient http = new OkHttpClient();
+    private static final HttpClient http = new HttpClient();
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final Consumer<Services> setupState;
     private Thread serverThread;
@@ -71,12 +73,10 @@ public final class CollarServerRule implements TestRule {
     }
 
     public boolean isServerStarted() {
-        Request request = new Request.Builder()
-                .url("http://localhost:3001/api/discover")
-                .build();
-        try (Response response = http.newCall(request).execute()) {
-            return response.code() == 200;
-        } catch (IOException e) {
+        try {
+            http.execute(Request.url("http://localhost:3001/api/discover").get(), Response.noContent());
+            return true;
+        } catch (HttpException ignored) {
             return false;
         }
     }

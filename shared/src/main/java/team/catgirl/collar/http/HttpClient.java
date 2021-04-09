@@ -15,11 +15,22 @@ import javax.net.ssl.SSLException;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 
+/**
+ * Simple Netty based HTTP client
+ */
 public final class HttpClient implements Closeable {
 
     private final EventLoopGroup group;
     private final SslContext sslContext;
 
+    public HttpClient() {
+        this(null);
+    }
+
+    /**
+     * Create a HttpClient with a specific SSL configuration
+     * @param sslContext to use
+     */
     public HttpClient(SslContext sslContext) {
         if (sslContext == null) {
             try {
@@ -33,6 +44,13 @@ public final class HttpClient implements Closeable {
         group = new NioEventLoopGroup();
     }
 
+    /**
+     * Executes a {@link Request}
+     * @param request to execute
+     * @param response of the request
+     * @param <T> return data type
+     * @return response
+     */
     public <T> T execute(Request request, Response<T> response) {
         ClientHandler clientHandler = makeRequest(request);
         if (clientHandler.error != null) {
@@ -41,7 +59,7 @@ public final class HttpClient implements Closeable {
             HttpResponseStatus resp = clientHandler.response.status();
             int status = resp.code();
             if (status >= 200 && status <= 299) {
-                return response.apply(clientHandler.contentBuffer.array());
+                return response.map(clientHandler.contentBuffer.array());
             } else {
                 switch (status) {
                     case 400:
@@ -63,6 +81,11 @@ public final class HttpClient implements Closeable {
         }
     }
 
+    /**
+     * Makes the HTTP request
+     * @param request to make
+     * @return response handler
+     */
     private ClientHandler makeRequest(Request request) {
         String scheme = request.uri.getScheme() == null? "http" : request.uri.getScheme();
         int port = request.uri.getPort();
@@ -74,7 +97,6 @@ public final class HttpClient implements Closeable {
             }
         }
         ClientHandler clientHandler = new ClientHandler();
-
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group);
         bootstrap.channel(NioSocketChannel.class);
@@ -86,19 +108,17 @@ public final class HttpClient implements Closeable {
             }
         });
         bootstrap.handler(new ClientInitializer(clientHandler, port == 433 ? sslContext : null));
-
+        String host = request.uri.getHost();
         Channel channel;
         try {
-            channel = bootstrap.connect(request.uri.getHost(), port).sync().channel();
+            channel = bootstrap.connect(host, port).sync().channel();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-
         HttpRequest httpRequest = request.create();
-        httpRequest.headers().set(HttpHeaderNames.HOST, request.uri.getHost());
+        httpRequest.headers().set(HttpHeaderNames.HOST, host);
         httpRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-
         channel.writeAndFlush(httpRequest);
         try {
             channel.closeFuture().sync();

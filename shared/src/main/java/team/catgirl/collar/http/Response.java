@@ -1,26 +1,40 @@
 package team.catgirl.collar.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
-import java.util.function.Function;
 
-public abstract class Response<T> implements Function<byte[], T> {
+/**
+ * Http response
+ * @param <T> response type
+ */
+public abstract class Response<T> {
 
+    abstract T map(byte[] contents);
+
+    /**
+     * No content response
+     * @return void response
+     */
     public static Response<Void> noContent() {
         return new Response<Void>() {
             @Override
-            public Void apply(byte[] bytes) {
+            Void map(byte[] contents) {
                 return null;
             }
         };
     }
 
+    /**
+     * Map a response to a JSON object
+     * @param tClass to map to
+     * @param <T> type to map to
+     * @return response
+     */
     public static <T> Response<T> json(Class<T> tClass) {
         return new Response<T>() {
             @Override
-            public T apply(byte[] bytes) {
+            public T map(byte[] bytes) {
                 try {
                     return Utils.jsonMapper().readValue(bytes, tClass);
                 } catch (IOException e) {
@@ -30,10 +44,14 @@ public abstract class Response<T> implements Function<byte[], T> {
         };
     }
 
+    /**
+     * Map the raw byte data
+     * @return response
+     */
     public static Response<byte[]> bytes() {
         return new Response<byte[]>() {
             @Override
-            public byte[] apply(byte[] bytes) {
+            public byte[] map(byte[] bytes) {
                 return bytes;
             }
         };

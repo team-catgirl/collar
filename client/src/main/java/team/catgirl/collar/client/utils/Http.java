@@ -20,7 +20,7 @@ public final class Http {
         } catch (NoSuchAlgorithmException | KeyStoreException | IOException | CertificateException | KeyManagementException e) {
             throw new RuntimeException(e);
         }
-        external = new HttpClient(null);
+        external = new HttpClient();
     }
 
     public static HttpClient collar() {

@@ -1,7 +1,6 @@
 package team.catgirl.collar.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mikael.urlbuilder.UrlBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -68,10 +67,20 @@ public final class Request {
         return request;
     }
 
+    /**
+     * Create a new request builder from a url
+     * @param builder url
+     * @return builder
+     */
     public static Builder url(UrlBuilder builder) {
         return new Builder(builder.toUri());
     }
 
+    /**
+     * Create a new request builder from a url
+     * @param url of request
+     * @return builder
+     */
     public static Builder url(String url) {
         return url(UrlBuilder.fromString(url));
     }
@@ -84,19 +93,39 @@ public final class Request {
             this.uri = uri;
         }
 
+        /**
+         * Specify a request header
+         * @param name of header
+         * @param value of header
+         * @return builder
+         */
         public Builder addHeader(String name, String value) {
             headers.put(name, value);
             return this;
         }
 
+        /**
+         * Create GET request
+         * @return request
+         */
         public Request get() {
             return new Request(HttpMethod.GET, uri, null, headers, null);
         }
 
+        /**
+         * Create a form POST request
+         * @param form data
+         * @return request
+         */
         public Request post(Map<String, String> form) {
             return new Request(HttpMethod.POST, uri, null, headers, form);
         }
 
+        /**
+         * Create a JSON POST request
+         * @param content to map to json
+         * @return request
+         */
         public Request post(Object content) {
             return new Request(HttpMethod.POST, uri, content, headers, null);
         }

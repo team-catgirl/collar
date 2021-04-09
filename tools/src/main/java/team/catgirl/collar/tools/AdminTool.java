@@ -22,12 +22,10 @@ import java.util.stream.Collectors;
 public final class AdminTool {
 
     private final HttpClient http;
-    private final ObjectMapper mapper;
     private CollarApi client;
     private String configName;
 
-    public AdminTool(ObjectMapper mapper, HttpClient http) {
-        this.mapper = mapper;
+    public AdminTool(HttpClient http) {
         this.http = http;
     }
 
@@ -37,7 +35,7 @@ public final class AdminTool {
             return -1;
         }
         this.configName = configName;
-        client = new CollarApi(config.get("apiUrl") + "/api/1/", mapper, http);
+        client = new CollarApi(config.get("apiUrl") + "/api/1/", http);
         LoginResponse response = client.login(new LoginRequest(config.get("email"), config.get("password")));
         client.setToken(response.token);
         System.out.println("logged in as " + response.profile.name);

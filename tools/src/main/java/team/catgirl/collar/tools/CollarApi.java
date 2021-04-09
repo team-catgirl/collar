@@ -15,26 +15,36 @@ import team.catgirl.collar.http.Request;
 public final class CollarApi {
 
     private final String baseURL;
-    private final ObjectMapper mapper;
     private final HttpClient http;
     private String token;
 
-    public CollarApi(String baseURL, ObjectMapper mapper, HttpClient http) {
+    public CollarApi(String baseURL, HttpClient http) {
         this.baseURL = baseURL;
-        this.mapper = mapper;
         this.http = http;
     }
 
     public LoginResponse login(LoginRequest req) {
-        return http.execute(Request.url(baseURL + "/auth/login").post(req), Response.json(LoginResponse.class));
+        Request.Builder url = Request.url(baseURL + "/auth/login");
+        if (token != null) {
+            url = url.addHeader("Authorization", "Bearer " + token);
+        }
+        return http.execute(url.post(req), Response.json(LoginResponse.class));
     }
 
     public void resetPassword(RequestPasswordResetRequest req) {
-        http.execute(Request.url(baseURL + "/auth/reset/request").post(req), Response.noContent());
+        Request.Builder url = Request.url(baseURL + "/auth/reset/request");
+        if (token != null) {
+            url = url.addHeader("Authorization", "Bearer " + token);
+        }
+        http.execute(url.post(req), Response.noContent());
     }
 
     public void updateProfile(ProfileService.UpdateProfileRequest req) {
-        http.execute(Request.url(baseURL + "/auth/reset/request").post(req), Response.noContent());
+        Request.Builder url = Request.url(baseURL + "/auth/reset/request");
+        if (token != null) {
+            url = url.addHeader("Authorization", "Bearer " + token);
+        }
+        http.execute(url.post(req), Response.noContent());
     }
 
     public GetProfileResponse getProfile(GetProfileRequest req) {

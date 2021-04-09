@@ -89,6 +89,18 @@
                             <shadedPattern>team.catgirl.collar.libs.org.fasterxml</shadedPattern>
                         </relocation>
                         <relocation>
+                            <pattern>edu.umd.cs.findbugs</pattern>
+                            <shadedPattern>team.catgirl.collar.libs.edu.umd.cs.findbugs</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>net.jcip.annotations</pattern>
+                            <shadedPattern>team.catgirl.collar.libs.net.jcip.annotations</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>javax.annotation</pattern>
+                            <shadedPattern>team.catgirl.collar.libs.javax.annotation</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>name.neuhalfen.projects</pattern>
                             <shadedPattern>team.catgirl.collar.libs.name.neuhalfen.projects</shadedPattern>
                         </relocation>

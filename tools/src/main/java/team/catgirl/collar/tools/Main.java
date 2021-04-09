@@ -19,7 +19,7 @@ public class Main {
 
     public static void main(String[] args) {
         System.out.println("Collar Administration Tool (CAT). Type `help` for commands.");
-        AdminTool adminTool = new AdminTool(Utils.jsonMapper(), Http.collar());
+        AdminTool adminTool = new AdminTool(Http.collar());
         CommandDispatcher<AdminTool> dispatcher = new CommandDispatcher<>();
         dispatcher.register(literal("use")
                 .then(argument("config", string())

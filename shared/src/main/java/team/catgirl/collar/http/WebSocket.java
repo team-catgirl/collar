@@ -23,11 +23,19 @@ public final class WebSocket {
         this.channel = channel;
     }
 
+    /**
+     * Send message to server
+     * @param message to send
+     */
     public void send(ByteBuffer message) {
         assertWritable();
         channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(message)));
     }
 
+    /**
+     * Send message to server
+     * @param message to send
+     */
     public void send(String message) {
         assertWritable();
         channel.writeAndFlush(new TextWebSocketFrame(message));

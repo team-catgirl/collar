@@ -1,6 +1,5 @@
 package team.catgirl.collar.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -17,7 +16,6 @@ import team.catgirl.collar.api.http.HttpException.*;
 
 import javax.net.ssl.SSLException;
 import java.io.Closeable;
-import java.nio.ByteBuffer;
 
 /**
  * Simple Netty based HTTP client
@@ -71,6 +69,9 @@ public final class HttpClient implements Closeable {
                     @Override
                     public void initChannel(SocketChannel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
+                        if (sslContext != null) {
+                            pipeline.addLast("ssl", sslContext.newHandler(ch.alloc()));
+                        }
                         pipeline.addLast("http-codec", new HttpClientCodec());
                         pipeline.addLast("decompressor", new HttpContentDecompressor());
                         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
@@ -101,14 +102,14 @@ public final class HttpClient implements Closeable {
      * @throws HttpException on non-200 range response
      */
     public <T> T execute(Request request, Response<T> response) {
-        ClientHandler clientHandler = makeRequest(request);
-        if (clientHandler.error != null) {
-            throw new RuntimeException(clientHandler.error);
+        HttpClientHandler httpClientHandler = makeRequest(request);
+        if (httpClientHandler.error != null) {
+            throw new RuntimeException(httpClientHandler.error);
         } else {
-            HttpResponseStatus resp = clientHandler.response.status();
+            HttpResponseStatus resp = httpClientHandler.response.status();
             int status = resp.code();
             if (status >= 200 && status <= 299) {
-                return response.map(clientHandler.contentBuffer.array());
+                return response.map(httpClientHandler.contentBuffer.array());
             } else {
                 switch (status) {
                     case 400:
@@ -135,9 +136,9 @@ public final class HttpClient implements Closeable {
      * @param request to make
      * @return response handler
      */
-    private ClientHandler makeRequest(Request request) {
+    private HttpClientHandler makeRequest(Request request) {
         int port = getPort(request);
-        ClientHandler clientHandler = new ClientHandler();
+        HttpClientHandler httpClientHandler = new HttpClientHandler();
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group);
         bootstrap.channel(NioSocketChannel.class);
@@ -148,7 +149,7 @@ public final class HttpClient implements Closeable {
                 ch.pipeline().addLast("encoder", new HttpRequestEncoder());
             }
         });
-        bootstrap.handler(new ClientInitializer(clientHandler, port == 433 ? sslContext : null));
+        bootstrap.handler(new HttpClientInitializer(httpClientHandler, port == 433 ? sslContext : null));
         String host = request.uri.getHost();
         Channel channel;
         try {
@@ -166,7 +167,7 @@ public final class HttpClient implements Closeable {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        return clientHandler;
+        return httpClientHandler;
     }
 
     private int getPort(Request request) {
@@ -187,50 +188,4 @@ public final class HttpClient implements Closeable {
         group.shutdownGracefully();
     }
 
-    private static class ClientInitializer extends ChannelInitializer<SocketChannel> {
-
-        private final ClientHandler clientHandler;
-        private final SslContext sslContext;
-
-        public ClientInitializer(ClientHandler clientHandler, SslContext sslContext) {
-            this.clientHandler = clientHandler;
-            this.sslContext = sslContext;
-        }
-
-        @Override
-        public void initChannel(SocketChannel ch) {
-            ChannelPipeline p = ch.pipeline();
-            if (sslContext != null) {
-                p.addLast(sslContext.newHandler(ch.alloc()));
-            }
-            p.addLast(new HttpClientCodec());
-            p.addLast(new HttpContentDecompressor());
-            p.addLast(clientHandler);
-        }
-    }
-
-    private static class ClientHandler extends SimpleChannelInboundHandler<HttpObject> {
-        public HttpResponse response;
-        public ByteBuffer contentBuffer = ByteBuffer.allocate(Short.MAX_VALUE);
-        public Throwable error;
-
-        @Override
-        public void channelRead0(ChannelHandlerContext ctx, HttpObject o) {
-            if (o instanceof HttpResponse) {
-                response = (HttpResponse) o;
-            }
-            if (o instanceof HttpContent) {
-                HttpContent content = (HttpContent) o;
-                byte[] bytes = new byte[content.content().readableBytes()];
-                content.content().readBytes(bytes);
-                contentBuffer.put(bytes);
-            }
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            this.error = cause;
-            ctx.close();
-        }
-    }
 }

@@ -69,7 +69,7 @@ public final class HttpClient implements Closeable {
                     @Override
                     public void initChannel(SocketChannel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
-                        if (sslContext != null) {
+                        if (sslContext != null && request.isSecure()) {
                             pipeline.addLast("ssl", sslContext.newHandler(ch.alloc()));
                         }
                         pipeline.addLast("http-codec", new HttpClientCodec());
@@ -149,7 +149,7 @@ public final class HttpClient implements Closeable {
                 ch.pipeline().addLast("encoder", new HttpRequestEncoder());
             }
         });
-        bootstrap.handler(new HttpClientInitializer(httpClientHandler, port == 433 ? sslContext : null));
+        bootstrap.handler(new HttpClientInitializer(httpClientHandler, request.isSecure() ? sslContext : null));
         String host = request.uri.getHost();
         Channel channel;
         try {
@@ -171,13 +171,12 @@ public final class HttpClient implements Closeable {
     }
 
     private int getPort(Request request) {
-        String scheme = request.uri.getScheme() == null? "http" : request.uri.getScheme();
         int port = request.uri.getPort();
         if (port == -1) {
-            if ("http".equalsIgnoreCase(scheme)) {
+            if (request.isSecure()) {
+                return 444;
+            } else {
                 port = 80;
-            } else if ("https".equalsIgnoreCase(scheme)) {
-                port = 443;
             }
         }
         return port;

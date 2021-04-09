@@ -32,6 +32,14 @@ public final class Request {
         this.form = form;
     }
 
+    /**
+     * Test if request will be secure (e.g. Https)
+     * @return secure
+     */
+    public boolean isSecure() {
+        return "https".equals(uri.getScheme().toLowerCase());
+    }
+
     HttpRequest create() {
         if (method == null) {
             throw new IllegalStateException("method not set");

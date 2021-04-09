@@ -129,5 +129,13 @@ public final class Request {
         public Request post(Object content) {
             return new Request(HttpMethod.POST, uri, content, headers, null);
         }
+
+        /**
+         * Create a WebSocket request
+         * @return request
+         */
+        public Request ws() {
+            return new Request(null, uri, null, headers, null);
+        }
     }
 }

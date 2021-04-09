@@ -2,7 +2,6 @@ package team.catgirl.collar.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mikael.urlbuilder.UrlBuilder;
-import okhttp3.*;
 import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +31,10 @@ import team.catgirl.collar.client.security.ProfileState;
 import team.catgirl.collar.client.security.signal.ResettableClientIdentityStore;
 import team.catgirl.collar.client.security.signal.SignalClientIdentityStore;
 import team.catgirl.collar.client.utils.Http;
+import team.catgirl.collar.http.Request;
 import team.catgirl.collar.http.Response;
+import team.catgirl.collar.http.WebSocket;
+import team.catgirl.collar.http.WebSocketListener;
 import team.catgirl.collar.protocol.PacketIO;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
@@ -61,6 +63,7 @@ import team.catgirl.collar.client.utils.Crypto;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -141,8 +144,7 @@ public final class Collar {
         checkServerCompatibility(configuration);
         String url = UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/1/listen").toString();
         LOGGER.log(Level.INFO, "Connecting to server " + url);
-        webSocket = new OkHttpClient().newWebSocket(new Request.Builder().url(url).build(), new CollarWebSocket(this));
-        webSocket.request();
+        webSocket = Http.collar().webSocket(Request.url(url).ws(), new CollarWebSocket(this));
         changeState(State.CONNECTING);
     }
 
@@ -152,7 +154,7 @@ public final class Collar {
     public void disconnect() {
         if (this.webSocket != null) {
             LOGGER.log(Level.INFO, "Disconnected");
-            this.webSocket.cancel();
+            this.webSocket.close();
             this.webSocket = null;
             if (this.identityStore != null) {
                 this.identityStore.clearAllGroupSessions();
@@ -310,7 +312,7 @@ public final class Collar {
         }
     }
 
-    class CollarWebSocket extends WebSocketListener {
+    class CollarWebSocket implements WebSocketListener {
         private final ObjectMapper mapper = Utils.messagePackMapper();
         private final Collar collar;
         private KeepAlive keepAlive;
@@ -321,7 +323,7 @@ public final class Collar {
         }
 
         @Override
-        public void onOpen(@NotNull WebSocket webSocket, @NotNull okhttp3.Response response) {
+        public void onOpen(@NotNull WebSocket webSocket) {
             // Create the sender delegate
             sender = request -> {
                 if (state != State.CONNECTED) {
@@ -359,27 +361,28 @@ public final class Collar {
         }
 
         @Override
-        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            super.onClosed(webSocket, code, reason);
-            LOGGER.log(Level.SEVERE, "Closed socket: " + reason);
-            this.keepAlive.stop();
+        public void onClose(WebSocket webSocket, int code, String message) {
+            LOGGER.log(Level.SEVERE, "Closed socket: " + message);
+            if (this.keepAlive != null) {
+                this.keepAlive.stop();
+            }
             if (state != State.DISCONNECTED) {
                 collar.changeState(State.DISCONNECTED);
             }
         }
 
         @Override
-        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable okhttp3.Response response) {
-            LOGGER.log(Level.SEVERE, "Socket failure", t);
-            t.printStackTrace();
+        public void onFailure(WebSocket webSocket, Throwable throwable) {
+            LOGGER.log(Level.SEVERE, "Socket failure", throwable);
+            throwable.printStackTrace();
             if (state != State.DISCONNECTED) {
                 collar.changeState(State.DISCONNECTED);
             }
         }
 
         @Override
-        public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString message) {
-            ProtocolResponse resp = readResponse(message.toByteArray());
+        public void onMessage(WebSocket webSocket, ByteBuffer messageBuffer) {
+            ProtocolResponse resp = readResponse(messageBuffer);
             LOGGER.log(Level.INFO, resp.getClass().getSimpleName() + " from " + resp.identity);
             ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
             if (resp instanceof IdentifyResponse) {
@@ -456,10 +459,10 @@ public final class Collar {
             }
         }
 
-        private ProtocolResponse readResponse(byte[] bytes) {
+        private ProtocolResponse readResponse(ByteBuffer buffer) {
             PacketIO packetIO = new PacketIO(mapper, identityStore == null ? null : identityStore.createCypher());
             try {
-                return packetIO.decode(serverIdentity, bytes, ProtocolResponse.class);
+                return packetIO.decode(serverIdentity, buffer, ProtocolResponse.class);
             } catch (IOException e) {
                 throw new IllegalStateException("Read error ", e);
             }
@@ -484,7 +487,7 @@ public final class Collar {
                     throw new IllegalStateException(e);
                 }
             }
-            webSocket.send(ByteString.of(bytes));
+            webSocket.send(ByteBuffer.wrap(bytes));
         }
     }
 

@@ -7,6 +7,9 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import team.catgirl.collar.api.http.HttpException;
@@ -43,6 +46,50 @@ public final class HttpClient implements Closeable {
             this.sslContext = sslContext;
         }
         group = new NioEventLoopGroup();
+    }
+
+    /**
+     * Create a WebSocket connection
+     * @param request to make
+     * @param listener to received messages from the socket
+     * @return WebSocket reference
+     */
+    public WebSocket webSocket(Request request, WebSocketListener listener) {
+        int port = getPort(request);
+        WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+                request.uri,
+                WebSocketVersion.V13,
+                null,
+                false,
+                EmptyHttpHeaders.INSTANCE,
+                Short.MAX_VALUE);
+        WebSocketClientHandler handler = new WebSocketClientHandler(request, handshaker, listener);
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.group(group)
+                .channel(NioSocketChannel.class)
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("http-codec", new HttpClientCodec());
+                        pipeline.addLast("decompressor", new HttpContentDecompressor());
+                        pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
+                        pipeline.addLast("ws-handler", handler);
+                    }
+                });
+
+        Channel channel;
+        try {
+            channel = bootstrap.connect(request.uri.getHost(), port).sync().channel();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            handler.handshakeFuture().sync();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return new WebSocket(request, channel);
     }
 
     /**
@@ -89,15 +136,7 @@ public final class HttpClient implements Closeable {
      * @return response handler
      */
     private ClientHandler makeRequest(Request request) {
-        String scheme = request.uri.getScheme() == null? "http" : request.uri.getScheme();
-        int port = request.uri.getPort();
-        if (port == -1) {
-            if ("http".equalsIgnoreCase(scheme)) {
-                port = 80;
-            } else if ("https".equalsIgnoreCase(scheme)) {
-                port = 443;
-            }
-        }
+        int port = getPort(request);
         ClientHandler clientHandler = new ClientHandler();
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group);
@@ -128,6 +167,19 @@ public final class HttpClient implements Closeable {
             throw new RuntimeException(e);
         }
         return clientHandler;
+    }
+
+    private int getPort(Request request) {
+        String scheme = request.uri.getScheme() == null? "http" : request.uri.getScheme();
+        int port = request.uri.getPort();
+        if (port == -1) {
+            if ("http".equalsIgnoreCase(scheme)) {
+                port = 80;
+            } else if ("https".equalsIgnoreCase(scheme)) {
+                port = 443;
+            }
+        }
+        return port;
     }
 
     @Override

@@ -1,11 +1,13 @@
 package team.catgirl.collar.protocol;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import team.catgirl.collar.io.ByteBufferInputStream;
 import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.utils.IO;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 /**
  * Encodes and decodes packets for/from the wire, handling encryption and different types of signal messages
@@ -27,37 +29,35 @@ public final class PacketIO {
     }
 
     public <T> T decode(Identity sender, InputStream is, Class<T> type) throws IOException {
-        return decode(sender, IO.toByteArray(is), type);
+        return decode(sender, IO.toByteBuffer(is), type);
     }
 
-    public <T> T decode(Identity sender, byte[] bytes, Class<T> type) throws IOException {
+    public <T> T decode(Identity sender, ByteBuffer buffer, Class<T> type) throws IOException {
         T decoded;
-        try (ByteArrayInputStream is = new ByteArrayInputStream(bytes)) {
-            int packetType;
-            try (DataInputStream objectStream = new DataInputStream(is)) {
-                int packetMarker = objectStream.readInt();
-                if (packetMarker != PACKET_MARKER) {
-                    throw new IllegalStateException("not a collar packet");
+        int packetType;
+        try (DataInputStream objectStream = new DataInputStream(new ByteBufferInputStream(buffer))) {
+            int packetMarker = objectStream.readInt();
+            if (packetMarker != PACKET_MARKER) {
+                throw new IllegalStateException("not a collar packet " + Integer.toHexString(packetMarker));
+            }
+            int version = objectStream.readInt();
+            if (version != VERSION) {
+                throw new IllegalStateException("unknown packet version " + version);
+            }
+            packetType = objectStream.readInt();
+            byte[] remainingBytes = IO.toByteArray(objectStream);
+            if (packetType == MODE_PLAIN) {
+                checkPacketSize(remainingBytes);
+                decoded = mapper.readValue(remainingBytes, type);
+            } else if (packetType == MODE_ENCRYPTED) {
+                if (sender == null) {
+                    throw new IllegalStateException("Cannot read encrypted packets with no sender");
                 }
-                int version = objectStream.readInt();
-                if (version != VERSION) {
-                    throw new IllegalStateException("unknown packet version " + version);
-                }
-                packetType = objectStream.readInt();
-                byte[] remainingBytes = IO.toByteArray(objectStream);
-                if (packetType == MODE_PLAIN) {
-                    checkPacketSize(remainingBytes);
-                    decoded = mapper.readValue(remainingBytes, type);
-                } else if (packetType == MODE_ENCRYPTED) {
-                    if (sender == null) {
-                        throw new IllegalStateException("Cannot read encrypted packets with no sender");
-                    }
-                    remainingBytes = cipher.decrypt(sender, remainingBytes);
-                    checkPacketSize(remainingBytes);
-                    decoded = mapper.readValue(remainingBytes, type);
-                } else {
-                    throw new IllegalStateException("unknown packet type " + packetType);
-                }
+                remainingBytes = cipher.decrypt(sender, remainingBytes);
+                checkPacketSize(remainingBytes);
+                decoded = mapper.readValue(remainingBytes, type);
+            } else {
+                throw new IllegalStateException("unknown packet type " + packetType);
             }
         }
         return decoded;

@@ -1,8 +1,8 @@
 package team.catgirl.collar.client;
 
-import okhttp3.WebSocket;
 import team.catgirl.collar.client.Collar.CollarWebSocket;
 import team.catgirl.collar.client.CollarException.ConnectionException;
+import team.catgirl.collar.http.WebSocket;
 import team.catgirl.collar.protocol.keepalive.KeepAliveRequest;
 import team.catgirl.collar.security.ClientIdentity;
 

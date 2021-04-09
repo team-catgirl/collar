@@ -1,6 +1,7 @@
 package team.catgirl.collar.utils;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.UUID;
 
@@ -105,6 +106,21 @@ public final class IO {
             os.write(buf, 0, n);
         }
         return os.toByteArray();
+    }
+
+    /**
+     * Copy stream to byte array
+     * @param input to copy
+     * @return contents
+     * @throws IOException if stream failed to be read
+     */
+    public static ByteBuffer toByteBuffer(InputStream input) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(Short.MAX_VALUE);
+        byte[] buf = new byte[1024];
+        for (int n = input.read(buf); n != -1; n = input.read(buf)) {
+            buffer.put(buf, 0, n);
+        }
+        return buffer;
     }
 
     public IO() {}

@@ -120,6 +120,7 @@ public final class IO {
         for (int n = input.read(buf); n != -1; n = input.read(buf)) {
             buffer.put(buf, 0, n);
         }
+        buffer.flip();
         return buffer;
     }
 

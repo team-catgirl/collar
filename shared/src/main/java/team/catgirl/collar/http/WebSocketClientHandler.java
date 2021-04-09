@@ -67,9 +67,7 @@ class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
             listener.onClose(webSocket, closeFrame.statusCode(), closeFrame.reasonText());
         } else if (frame instanceof BinaryWebSocketFrame) {
             BinaryWebSocketFrame binaryFrame = (BinaryWebSocketFrame) frame;
-            ByteBuffer buffer = ByteBuffer.allocate(frame.content().capacity());
-            binaryFrame.content().getBytes(0, buffer);
-            buffer.flip();
+            ByteBuffer buffer = binaryFrame.content().nioBuffer();
             listener.onMessage(webSocket, buffer);
         }
     }

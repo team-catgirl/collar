@@ -9,6 +9,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.http.HttpException.*;
 
 import javax.net.ssl.SSLException;
@@ -50,6 +51,7 @@ public final class HttpClient implements Closeable {
      * @param response of the request
      * @param <T> return data type
      * @return response
+     * @throws HttpException on non-200 range response
      */
     public <T> T execute(Request request, Response<T> response) {
         ClientHandler clientHandler = makeRequest(request);

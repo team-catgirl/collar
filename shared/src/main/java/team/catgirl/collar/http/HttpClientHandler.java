@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 
 class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
     public HttpResponse response;
-    public ByteBuffer contentBuffer = ByteBuffer.allocate(Short.MAX_VALUE);
+    public ByteBuffer contentBuffer = ByteBuffer.allocate(2000000);
     public Throwable error;
 
     @Override

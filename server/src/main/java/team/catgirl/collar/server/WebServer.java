@@ -251,12 +251,15 @@ public class WebServer {
                     String idAsString = request.params("id");
                     UUID uuid = UUID.fromString(idAsString);
                     byte[] bytes = services.textures.getTextureContent(new GetTextureContentRequest(uuid)).content.bytes;
-                    response.header("Content-Type", "image/png");
-                    try (ServletOutputStream outputStream = response.raw().getOutputStream()) {
-                        outputStream.write(bytes);
-                    }
-                    return "";
-                }, services.jsonMapper::writeValueAsString);
+                    response.raw().setStatus(200);
+                    response.raw().addHeader("Content-Type", "image/png");
+                    response.raw().setContentLength(bytes.length);
+                    ServletOutputStream outputStream = response.raw().getOutputStream();
+                    outputStream.write(bytes);
+                    outputStream.flush();
+                    outputStream.close();
+                    return response.raw();
+                });
             });
         });
 

@@ -16,6 +16,7 @@ import team.catgirl.collar.api.http.HttpException.*;
 
 import javax.net.ssl.SSLException;
 import java.io.Closeable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Simple Netty based HTTP client
@@ -146,6 +147,7 @@ public final class HttpClient implements Closeable {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group);
         bootstrap.channel(NioSocketChannel.class);
+        bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int)TimeUnit.SECONDS.toMillis(10));
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -178,7 +180,7 @@ public final class HttpClient implements Closeable {
         int port = request.uri.getPort();
         if (port == -1) {
             if (request.isSecure()) {
-                return 444;
+                port = 444;
             } else {
                 port = 80;
             }

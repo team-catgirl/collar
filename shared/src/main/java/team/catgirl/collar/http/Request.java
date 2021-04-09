@@ -13,6 +13,8 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEnc
 import team.catgirl.collar.utils.Utils;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -82,6 +84,19 @@ public final class Request {
      */
     public static Builder url(UrlBuilder builder) {
         return new Builder(builder.toUri());
+    }
+
+    /**
+     * Create a new request from a url
+     * @param url url
+     * @return builder
+     */
+    public static Builder url(URL url) {
+        try {
+            return new Builder(url.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     /**

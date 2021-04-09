@@ -1,8 +1,6 @@
 package team.catgirl.collar.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.OkHttpClient;
-import org.jetbrains.annotations.NotNull;
 import team.catgirl.collar.api.authentication.AuthenticationService;
 import team.catgirl.collar.api.authentication.AuthenticationService.LoginRequest;
 import team.catgirl.collar.api.authentication.AuthenticationService.LoginResponse;
@@ -132,7 +130,6 @@ public final class AdminTool {
         return properties;
     }
 
-    @NotNull
     private static File getFile() {
         String home = System.getenv("HOME");
         if (home == null) {

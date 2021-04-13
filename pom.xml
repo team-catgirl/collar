@@ -33,6 +33,33 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.0.0-M3</version>
+                <executions>
+                    <execution>
+                        <id>enforce-banned-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <includes>
+                                        <!-- kotlin is banned -->
+                                        <include>org.jetbrains.kotlin:kotlin-stdlib</include>
+                                        <include>org.jetbrains.kotlin:kotlin-stdlib-jdk8</include>
+                                        <include>org.jetbrains.kotlin:kotlin-stdlib-jdk7</include>
+                                        <include>org.jetbrains.kotlin:kotlin-stdlib-common</include>
+                                    </includes>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.6</version>

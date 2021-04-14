@@ -6,7 +6,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import team.catgirl.collar.client.utils.Http;
-import team.catgirl.collar.utils.Utils;
 
 
 import java.nio.charset.StandardCharsets;
@@ -19,7 +18,7 @@ public class Main {
 
     public static void main(String[] args) {
         System.out.println("Collar Administration Tool (CAT). Type `help` for commands.");
-        AdminTool adminTool = new AdminTool(Http.collar());
+        AdminTool adminTool = new AdminTool(Http.client());
         CommandDispatcher<AdminTool> dispatcher = new CommandDispatcher<>();
         dispatcher.register(literal("use")
                 .then(argument("config", string())

@@ -1,6 +1,5 @@
 package team.catgirl.collar.client.api.textures;
 
-import team.catgirl.collar.api.http.HttpException;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.api.textures.TextureType;
 import team.catgirl.collar.client.utils.Http;
@@ -10,7 +9,6 @@ import team.catgirl.collar.http.Response;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.net.URL;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,7 +43,7 @@ public final class Texture {
     public void loadImage(Consumer<Optional<BufferedImage>> onLoad) {
         ForkJoinPool.commonPool().submit(() -> {
             try {
-                byte[] bytes = Http.collar().execute(Request.url(url).get(), Response.bytes());
+                byte[] bytes = Http.client().execute(Request.url(url).get(), Response.bytes());
                 BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
                 onLoad.accept(Optional.of(image));
             } catch (Throwable e) {

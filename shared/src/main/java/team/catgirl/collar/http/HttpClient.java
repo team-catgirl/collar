@@ -16,7 +16,11 @@ import team.catgirl.collar.api.http.HttpException.*;
 
 import javax.net.ssl.SSLException;
 import java.io.Closeable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Simple Netty based HTTP client
@@ -58,7 +62,8 @@ public final class HttpClient implements Closeable {
     public WebSocket webSocket(Request request, WebSocketListener listener) {
         int port = getPort(request);
         DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.set(HttpHeaderNames.HOST, request.uri.getHost());
+        String host = request.uri.getHost();
+        headers.set(HttpHeaderNames.HOST, host);
         headers.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
         request.headers.forEach(headers::add);
         WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
@@ -77,7 +82,7 @@ public final class HttpClient implements Closeable {
                     public void initChannel(SocketChannel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
                         if (sslContext != null && request.isSecure()) {
-                            pipeline.addLast("ssl", sslContext.newHandler(ch.alloc()));
+                            pipeline.addLast("ssl", sslContext.newHandler(ch.alloc(), host, port));
                         }
                         pipeline.addLast("http-codec", new HttpClientCodec());
                         pipeline.addLast("decompressor", new HttpContentDecompressor());
@@ -88,7 +93,7 @@ public final class HttpClient implements Closeable {
 
         Channel channel;
         try {
-            channel = bootstrap.connect(request.uri.getHost(), port).sync().channel();
+            channel = bootstrap.connect(host, port).sync().channel();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -109,33 +114,44 @@ public final class HttpClient implements Closeable {
      * @throws HttpException on non-200 range response
      */
     public <T> T execute(Request request, Response<T> response) {
-        HttpClientHandler httpClientHandler = makeRequest(request);
-        if (httpClientHandler.error != null) {
-            throw new RuntimeException(httpClientHandler.error);
-        } else {
-            HttpResponseStatus resp = httpClientHandler.response.status();
-            int status = resp.code();
-            if (status >= 200 && status <= 299) {
-                return response.map(httpClientHandler.contentBuffer.array());
-            } else {
-                switch (status) {
-                    case 400:
-                        throw new BadRequestException(resp.reasonPhrase());
-                    case 401:
-                        throw new UnauthorisedException(resp.reasonPhrase());
-                    case 403:
-                        throw new ForbiddenException(resp.reasonPhrase());
-                    case 404:
-                        throw new NotFoundException(resp.reasonPhrase());
-                    case 409:
-                        throw new ConflictException(resp.reasonPhrase());
-                    case 500:
-                        throw new ServerErrorException(resp.reasonPhrase());
-                    default:
-                        throw new UnmappedHttpException(resp.code(), resp.reasonPhrase());
+        AtomicReference<T> httpResp = new AtomicReference<>();
+        try {
+            makeRequest(request).thenAccept(httpClientHandler -> {
+                if (httpClientHandler.error != null) {
+                    throw new RuntimeException(httpClientHandler.error);
+                } else {
+                    HttpResponseStatus resp = httpClientHandler.response.status();
+                    int status = resp.code();
+                    if (status >= 200 && status <= 299) {
+                        httpResp.set(response.map(httpClientHandler.contentBuffer.array()));
+                    } else {
+                        switch (status) {
+                            case 400:
+                                throw new BadRequestException(resp.reasonPhrase());
+                            case 401:
+                                throw new UnauthorisedException(resp.reasonPhrase());
+                            case 403:
+                                throw new ForbiddenException(resp.reasonPhrase());
+                            case 404:
+                                throw new NotFoundException(resp.reasonPhrase());
+                            case 409:
+                                throw new ConflictException(resp.reasonPhrase());
+                            case 500:
+                                throw new ServerErrorException(resp.reasonPhrase());
+                            default:
+                                throw new UnmappedHttpException(resp.code(), resp.reasonPhrase());
+                        }
+                    }
                 }
+            }).get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            if (e.getCause() instanceof HttpException) {
+                throw (HttpException)e.getCause();
+            } else {
+                throw new RuntimeException(e);
             }
         }
+        return httpResp.get();
     }
 
     /**
@@ -143,9 +159,10 @@ public final class HttpClient implements Closeable {
      * @param request to make
      * @return response handler
      */
-    private HttpClientHandler makeRequest(Request request) {
+    private CompletableFuture<HttpClientHandler> makeRequest(Request request) {
+        CompletableFuture<HttpClientHandler> future = new CompletableFuture<>();
         int port = getPort(request);
-        HttpClientHandler httpClientHandler = new HttpClientHandler();
+        HttpClientHandler httpClientHandler = new HttpClientHandler(future);
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group);
         bootstrap.channel(NioSocketChannel.class);
@@ -157,8 +174,8 @@ public final class HttpClient implements Closeable {
                 ch.pipeline().addLast("encoder", new HttpRequestEncoder());
             }
         });
-        bootstrap.handler(new HttpClientInitializer(httpClientHandler, request.isSecure() ? sslContext : null));
         String host = request.uri.getHost();
+        bootstrap.handler(new HttpClientInitializer(httpClientHandler, request.isSecure() ? sslContext : null, host, port));
         Channel channel;
         try {
             channel = bootstrap.connect(host, port).sync().channel();
@@ -175,7 +192,7 @@ public final class HttpClient implements Closeable {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        return httpClientHandler;
+        return future;
     }
 
     private int getPort(Request request) {

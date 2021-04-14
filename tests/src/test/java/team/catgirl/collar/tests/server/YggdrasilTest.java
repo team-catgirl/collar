@@ -71,7 +71,7 @@ public class YggdrasilTest {
                 return new HasJoinedResponse(alicePlayerId.toString().replace("-", ""), "alice");
             }
         });
-    }, Configuration.testConfiguration(Mongo.getTestingDatabase(), new MojangMinecraftSessionVerifier(Http.external(), "http://localhost:3001/test/")));
+    }, Configuration.testConfiguration(Mongo.getTestingDatabase(), new MojangMinecraftSessionVerifier(Http.client(), "http://localhost:3001/test/")));
 
     @Rule
     public CollarClientRule aliceClient = new CollarClientRule(alicePlayerId, new CollarConfiguration.Builder()

@@ -1,5 +1,0 @@
-echo -n | /usr/local/Cellar/openssl@1.1/1.1.1g/bin/openssl s_client -connect api.collarmc.com:443 \
-    | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > ~/code/mc/collar/shared/src/main/resources/certs/api.collarmc.com.cert
-
-echo -n | /usr/local/Cellar/openssl@1.1/1.1.1g/bin/openssl s_client -connect dev.api.collarmc.com:443 \
-    | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > ~/code/mc/collar/shared/src/main/resources/certs/dev.api.collarmc.com.cert

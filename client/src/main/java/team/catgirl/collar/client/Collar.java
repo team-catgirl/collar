@@ -141,7 +141,7 @@ public final class Collar {
         checkServerCompatibility(configuration);
         String url = UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/1/listen").toString();
         LOGGER.log(Level.INFO, "Connecting to server " + url);
-        webSocket = Http.collar().webSocket(Request.url(url).ws(), new CollarWebSocket(this));
+        webSocket = Http.client().webSocket(Request.url(url).ws(), new CollarWebSocket(this));
         changeState(State.CONNECTING);
     }
 
@@ -261,7 +261,7 @@ public final class Collar {
     private static void checkServerCompatibility(CollarConfiguration configuration) {
         DiscoverResponse response;
         try {
-            response = Http.collar().execute(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")).get(), Response.json(DiscoverResponse.class));
+            response = Http.client().execute(url(UrlBuilder.fromUrl(configuration.collarServerURL).withPath("/api/discover")).get(), Response.json(DiscoverResponse.class));
         } catch (HttpException e) {
             throw new ConnectionException("Problem connecting to collar", e);
         }
@@ -389,7 +389,7 @@ public final class Collar {
                 }
                 MinecraftSession session = configuration.sessionSupplier.get();
                 if (session.mode == MinecraftSession.Mode.MOJANG) {
-                    ServerAuthentication authentication = new ServerAuthentication(Http.external(), configuration.yggdrasilBaseUrl);
+                    ServerAuthentication authentication = new ServerAuthentication(Http.client(), configuration.yggdrasilBaseUrl);
                     if (!authentication.joinServer(session)) {
                         throw new ConnectionException("could start session with Mojang");
                     }

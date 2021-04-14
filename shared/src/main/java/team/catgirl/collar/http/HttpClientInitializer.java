@@ -11,17 +11,21 @@ class HttpClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final HttpClientHandler httpClientHandler;
     private final SslContext sslContext;
+    private final String server;
+    private final int port;
 
-    public HttpClientInitializer(HttpClientHandler httpClientHandler, SslContext sslContext) {
+    public HttpClientInitializer(HttpClientHandler httpClientHandler, SslContext sslContext, String server, int port) {
         this.httpClientHandler = httpClientHandler;
         this.sslContext = sslContext;
+        this.server = server;
+        this.port = port;
     }
 
     @Override
     public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         if (sslContext != null) {
-            p.addLast(sslContext.newHandler(ch.alloc()));
+            p.addLast(sslContext.newHandler(ch.alloc(), server, port));
         }
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpContentDecompressor());

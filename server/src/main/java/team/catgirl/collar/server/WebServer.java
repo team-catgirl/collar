@@ -103,14 +103,7 @@ public class WebServer {
         }, Object::toString);
 
         before((request, response) -> {
-            LOGGER.log(Level.INFO, "Recieving request" + request.pathInfo());
-        });
-
-        after((request, response) -> {
-            LOGGER.log(Level.INFO, "Sending response" + request.pathInfo());
-        });
-
-        before((request, response) -> {
+            response.header("Server", "Collar");
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Credentials", "true");
         });

@@ -83,6 +83,7 @@ public final class HttpClient implements Closeable {
         WebSocketClientHandler handler = new WebSocketClientHandler(request, handshaker, listener);
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group)
+                .option(ChannelOption.SO_KEEPALIVE, false)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override

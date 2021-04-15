@@ -60,6 +60,9 @@ public final class HttpClient implements Closeable {
      * @return WebSocket reference
      */
     public WebSocket webSocket(Request request, WebSocketListener listener) {
+        if (request.method != null) {
+            throw new IllegalStateException("method should not be set for websocket");
+        }
         int port = getPort(request);
         DefaultHttpHeaders headers = new DefaultHttpHeaders();
         String host = request.uri.getHost();

@@ -103,7 +103,11 @@ public class WebServer {
         }, Object::toString);
 
         before((request, response) -> {
-            LOGGER.log(Level.INFO, "GOT MESSAGE " + request.pathInfo());
+            LOGGER.log(Level.INFO, "Recieving request" + request.pathInfo());
+        });
+
+        after((request, response) -> {
+            LOGGER.log(Level.INFO, "Sending response" + request.pathInfo());
         });
 
         before((request, response) -> {

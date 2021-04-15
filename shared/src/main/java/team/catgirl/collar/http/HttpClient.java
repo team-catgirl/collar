@@ -92,7 +92,7 @@ public final class HttpClient implements Closeable {
                             pipeline.addLast("ssl", sslContext.newHandler(ch.alloc(), host, port));
                         }
                         pipeline.addLast("http-codec", new HttpClientCodec());
-                        pipeline.addLast("decompressor", new HttpContentDecompressor());
+//                        pipeline.addLast("decompressor", new HttpContentDecompressor());
                         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
                         pipeline.addLast("ws-handler", handler);
                     }

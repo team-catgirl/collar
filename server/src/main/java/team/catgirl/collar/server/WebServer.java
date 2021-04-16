@@ -61,6 +61,10 @@ public class WebServer {
         // Services
         Services services = new Services(configuration);
 
+        // Setup WebSockets
+        webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
+        webSocket("/api/1/listen", new CollarServer(services));
+
         // Always serialize objects returned as JSON
         exception(HttpException.class, (e, request, response) -> {
             response.status(e.code);
@@ -81,10 +85,6 @@ public class WebServer {
             }
             LOGGER.log(Level.SEVERE, request.pathInfo(), e);
         });
-
-        // Setup WebSockets
-        webSocketIdleTimeoutMillis((int) TimeUnit.SECONDS.toMillis(60));
-        webSocket("/api/1/listen", new CollarServer(services));
 
         staticFiles.location("/public");
 

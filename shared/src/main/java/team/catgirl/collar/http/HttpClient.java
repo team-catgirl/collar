@@ -69,9 +69,6 @@ public final class HttpClient implements Closeable {
         int port = getPort(request);
         DefaultHttpHeaders headers = new DefaultHttpHeaders();
         String host = request.uri.getHost();
-        headers.set(HttpHeaderNames.HOST, host);
-        headers.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-        headers.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, BaseEncoding.base64().encode(TokenGenerator.byteToken(16)));
         request.headers.forEach(headers::add);
         WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
                 request.uri,

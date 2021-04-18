@@ -15,11 +15,13 @@ public final class Waypoint {
     public final UUID id;
     public final String name;
     public final Location location;
+    public final String server;
 
-    public Waypoint(UUID id, String name, Location location) {
+    public Waypoint(UUID id, String name, Location location, String server) {
         this.id = id;
         this.name = name;
         this.location = location;
+        this.server = server;
     }
 
     public Waypoint(byte[] bytes) {
@@ -36,6 +38,7 @@ public final class Waypoint {
                             locationBytes[i] = dataStream.readByte();
                         }
                         location = new Location(locationBytes);
+                        server = dataStream.readUTF();
                         break;
                     default:
                         throw new IllegalStateException("Unsupported Waypoint version " + serializedVersion);
@@ -57,6 +60,7 @@ public final class Waypoint {
                 for (byte locationByte : locationBytes) {
                     dataStream.writeByte(locationByte);
                 }
+                dataStream.writeUTF(server);
             }
             return outputStream.toByteArray();
         } catch (IOException e) {

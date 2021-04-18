@@ -143,7 +143,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * @param location of the waypoint
      */
     public void addWaypoint(Group group, String name, Location location) {
-        Waypoint waypoint = new Waypoint(UUID.randomUUID(), name, location);
+        Waypoint waypoint = new Waypoint(UUID.randomUUID(), name, location, collar.player().minecraftPlayer.server);
         groupWaypoints.compute(group.id, (groupId, waypointMap) -> {
             waypointMap = waypointMap == null ? new ConcurrentHashMap<>() : waypointMap;
             waypointMap.computeIfAbsent(waypoint.id, waypointId -> waypoint);
@@ -184,7 +184,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
      * @param location of the waypoint
      */
     public void addWaypoint(String name, Location location) {
-        Waypoint waypoint = privateWaypoints.computeIfAbsent(UUID.randomUUID(), uuid -> new Waypoint(uuid, name, location));
+        Waypoint waypoint = privateWaypoints.computeIfAbsent(UUID.randomUUID(), uuid -> new Waypoint(uuid, name, location, collar.player().minecraftPlayer.server));
         byte[] bytes = waypoint.serialize();
         byte[] encryptedBytes = identityStore().createCypher().crypt(bytes);
         sender.accept(new CreateWaypointRequest(identity(), waypoint.id, encryptedBytes));
@@ -265,6 +265,7 @@ public class LocationApi extends AbstractApi<LocationListener> {
             if (!response.waypoints.isEmpty()) {
                 Map<UUID, Waypoint> waypoints = response.waypoints.stream()
                         .map(encryptedWaypoint -> identityStore().createCypher().decrypt(encryptedWaypoint.waypoint)).map(Waypoint::new)
+                        .filter(waypoint -> waypoint.server.equals(collar.player().minecraftPlayer.server))
                         .collect(Collectors.toMap(o -> o.id, o -> o));
                 privateWaypoints.putAll(waypoints);
                 fireListener("onPrivateWaypointsReceived", listener -> listener.onPrivateWaypointsReceived(collar, this, ImmutableSet.copyOf(waypoints.values())));

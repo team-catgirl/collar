@@ -1,5 +1,6 @@
 package team.catgirl.collar.client.api.groups;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import team.catgirl.collar.api.friends.Status;
 import team.catgirl.collar.api.groups.*;
@@ -11,6 +12,7 @@ import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.groups.*;
+import team.catgirl.collar.utils.Utils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -274,6 +276,11 @@ public final class GroupsApi extends AbstractApi<GroupsListener> {
         } else if (resp instanceof UpdateGroupMemberResponse) {
             synchronized (this) {
                 UpdateGroupMemberResponse response = (UpdateGroupMemberResponse) resp;
+                try {
+                    System.err.println(Utils.jsonMapper().writeValueAsString(response));;
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
                 Group group = groups.get(response.groupId);
                 if (group != null) {
                     Group updatedGroup;

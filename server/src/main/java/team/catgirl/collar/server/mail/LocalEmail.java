@@ -29,7 +29,7 @@ public class LocalEmail extends AbstractEmail {
 
     private void write(File file, String value) {
         File parent = file.getParentFile();
-        if (!parent.mkdirs()) {
+        if (!parent.exists() && !parent.mkdirs()) {
             throw new IllegalStateException("could not make dir " + parent);
         }
         try {

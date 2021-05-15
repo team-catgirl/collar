@@ -153,6 +153,18 @@ public class ClientSessionStore implements SessionStore {
         }
     }
 
+    public void writeState() throws IOException {
+        ReentrantReadWriteLock.WriteLock lock = this.lock.writeLock();
+        try {
+            lock.lockInterruptibly();
+            mapper.writeValue(file, state);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private static class State {
         @JsonProperty("sessions")
         public final Map<StateKey, byte[]> sessions;
@@ -160,11 +172,6 @@ public class ClientSessionStore implements SessionStore {
         public State(@JsonProperty("sessions") Map<StateKey, byte[]> sessions) {
             this.sessions = sessions;
         }
-    }
-
-
-    private void writeState() throws IOException {
-        mapper.writeValue(file, state);
     }
 
     public static ClientSessionStore from(HomeDirectory homeDirectory, ObjectMapper mapper) throws IOException {

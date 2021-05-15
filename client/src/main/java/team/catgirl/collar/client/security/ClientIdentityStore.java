@@ -102,4 +102,9 @@ public interface ClientIdentityStore {
      * @throws IOException when store could not be recreated
      */
     void reset() throws IOException;
+
+    /**
+     * Save state
+     */
+    void save() throws IOException;
 }

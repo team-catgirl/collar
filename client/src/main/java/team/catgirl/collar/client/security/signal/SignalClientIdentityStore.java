@@ -48,7 +48,11 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     private final File file;
     private final ReentrantReadWriteLock lock;
 
-    public SignalClientIdentityStore(UUID owner, Supplier<PrivateIdentity> privateIdentitySupplier, ClientSignalProtocolStore store, State state, File file) {
+    public SignalClientIdentityStore(UUID owner,
+                                     Supplier<PrivateIdentity> privateIdentitySupplier,
+                                     ClientSignalProtocolStore store,
+                                     State state,
+                                     File file) {
         this.owner = owner;
         this.privateIdentitySupplier = privateIdentitySupplier;
         this.store = store;
@@ -65,7 +69,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     @Override
     public ClientIdentity currentIdentity() {
         IdentityKeyPair identityKeyPair = this.store.getIdentityKeyPair();
-        return new ClientIdentity(owner, new PublicKey(identityKeyPair.getPublicKey().serialize()), state.deviceId);
+        return new ClientIdentity(owner, new PublicKey(identityKeyPair.getPublicKey().serialize()), getDeviceId());
     }
 
     @Override
@@ -121,24 +125,22 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public int getDeviceId() {
-        // TODO: add read lock
-        return state.deviceId;
-    }
-
-    @Override
-    public SendPreKeysRequest createSendPreKeysRequest(DeviceRegisteredResponse response) {
-        if (state.deviceId == null || state.deviceId < 1) {
-            throw new IllegalStateException("deviceId has not been negotiated");
-        }
-        int deviceId;
         ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
         try {
             readLock.lockInterruptibly();
-            deviceId = state.deviceId;
+            return state.deviceId;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
             readLock.unlock();
+        }
+    }
+
+    @Override
+    public SendPreKeysRequest createSendPreKeysRequest(DeviceRegisteredResponse response) {
+        int deviceId = getDeviceId();
+        if (deviceId < 1) {
+            throw new IllegalStateException("deviceId has not been negotiated");
         }
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(response.profile.id.toString(), deviceId), store);
         try {
@@ -157,7 +159,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
 
     @Override
     public CreateTrustRequest createSendPreKeysRequest(ClientIdentity recipient, long id) {
-        PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(currentIdentity().id().toString(), currentIdentity().deviceId), store);
+        PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(currentIdentity().id().toString(), getDeviceId()), store);
         try {
             return new CreateTrustRequest(currentIdentity(), id, recipient, PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {
@@ -216,6 +218,17 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         store.delete();
     }
 
+    @Override
+    public void reset() throws IOException {
+        store.delete();
+    }
+
+    @Override
+    public void save() throws IOException {
+        writeState(file, state);
+        store.writeState();
+    }
+
     private SignalProtocolAddress signalProtocolAddressFrom(Identity identity) {
         ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
         try {
@@ -255,16 +268,14 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
         }
     }
 
-    @Override
-    public void reset() throws IOException {
-        store.delete();
-    }
-
     public static boolean hasIdentityStore(HomeDirectory homeDirectory) {
         return ProfileState.exists(homeDirectory);
     }
 
-    public static SignalClientIdentityStore from(UUID profileId, HomeDirectory homeDirectory, Consumer<SignalProtocolStore> onInstall, Consumer<ClientSignalProtocolStore> onReady) {
+    public static SignalClientIdentityStore from(UUID profileId,
+                                                 HomeDirectory homeDirectory,
+                                                 Consumer<SignalProtocolStore> onInstall,
+                                                 Consumer<ClientSignalProtocolStore> onReady) {
         Supplier<PrivateIdentity> privateIdentitySupplier = () -> PrivateIdentity.getOrCreate(homeDirectory);
         ClientSignalProtocolStore store;
         try {

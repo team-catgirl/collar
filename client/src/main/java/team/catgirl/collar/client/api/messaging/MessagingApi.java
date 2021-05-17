@@ -35,9 +35,9 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
      * @param player to send the message to
      * @param message the player
      */
-    public void sendPrivateMessage(MinecraftPlayer player, Message message) {
+    public void sendPrivateMessage(Player player, Message message) {
         IdentityApi identityApi = collar.identities();
-        identityApi.identify(player.id)
+        identityApi.identify(player.minecraftPlayer.id)
                 .thenCompose(identityApi::createTrust)
                 .thenAccept(sender -> {
                     if (sender.isPresent()) {
@@ -50,12 +50,12 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                         }
                         this.sender.accept(new SendMessageRequest(collar.identity(), sender.get(), null, messageBytes));
                         fireListener("onPrivateMessageSent", listener -> {
-                            listener.onPrivateMessageSent(collar, this, new Player(sender.get().id(), player), message);
+                            listener.onPrivateMessageSent(collar, this, player, message);
                         });
                     } else {
                         LOGGER.log(Level.INFO, collar.identity() + " could not locate identity for " + player + ". The private message was not sent.");
                         fireListener("onPrivateMessageRecipientIsUntrusted", listener -> {
-                            listener.onPrivateMessageRecipientIsUntrusted(collar, this, player, message);
+                            listener.onPrivateMessageRecipientIsUntrusted(collar, this, player.minecraftPlayer, message);
                         });
                     }
                 });

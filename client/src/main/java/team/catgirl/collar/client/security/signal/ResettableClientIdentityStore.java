@@ -97,4 +97,9 @@ public class ResettableClientIdentityStore implements ClientIdentityStore {
         currentIdentityStore.delete();
         currentIdentityStore = supplier.get();
     }
+
+    @Override
+    public void save() throws IOException {
+        currentIdentityStore.save();
+    }
 }

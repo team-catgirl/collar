@@ -56,10 +56,11 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftSession;
-import team.catgirl.collar.security.mojang.ServerAuthentication;
+import team.catgirl.collar.security.mojang.Mojang;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Consumer;
@@ -120,6 +121,7 @@ public final class Collar {
         this.apis.add(identityApi);
         this.apis.add(messagingApi);
         this.apis.add(sdhtApi);
+        addStateSavingShutdownHook(this);
     }
 
     /**
@@ -160,6 +162,13 @@ public final class Collar {
                 return;
             }
             changeState(State.DISCONNECTED);
+            if (identityStore != null) {
+                try {
+                    identityStore.save();
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Could not save Collar signal state", e);
+                }
+            }
         }
     }
 
@@ -262,6 +271,21 @@ public final class Collar {
     }
 
     /**
+     * The current player
+     * @return player
+     */
+    public Player player() {
+        assertConnected();
+        return new Player(identity().id(), configuration.sessionSupplier.get().toPlayer());
+    }
+
+    private void assertConnected() {
+        if (state != State.CONNECTED) {
+            throw new IllegalStateException("Cannot use the API until client is CONNECTED");
+        }
+    }
+
+    /**
      * Test that the client version is supported by the server and that the client is configured correctly for its features
      * @param configuration of the client
      */
@@ -303,18 +327,21 @@ public final class Collar {
     }
 
     /**
-     * The current player
-     * @return player
+     * Saves signal store state on shutdown
+     * @param collar instance
      */
-    public Player player() {
-        assertConnected();
-        return new Player(identity().id(), configuration.sessionSupplier.get().toPlayer());
-    }
-
-    private void assertConnected() {
-        if (state != State.CONNECTED) {
-            throw new IllegalStateException("Cannot use the API until client is CONNECTED");
-        }
+    private static void addStateSavingShutdownHook(Collar collar) {
+        WeakReference<Collar> collarWeakRef = new WeakReference<>(collar);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Collar instance = collarWeakRef.get();
+            if (instance != null) {
+                try {
+                    instance.identityStore.save();
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Could not save Collar signal state to disk", e);
+                }
+            }
+        }));
     }
 
     class CollarWebSocket implements WebSocketListener {
@@ -397,7 +424,7 @@ public final class Collar {
                 }
                 MinecraftSession session = configuration.sessionSupplier.get();
                 if (session.mode == MinecraftSession.Mode.MOJANG) {
-                    ServerAuthentication authentication = new ServerAuthentication(Http.client(), configuration.yggdrasilBaseUrl);
+                    Mojang authentication = new Mojang(Http.client(), configuration.yggdrasilBaseUrl);
                     if (!authentication.joinServer(session)) {
                         throw new ConnectionException("could start session with Mojang");
                     }

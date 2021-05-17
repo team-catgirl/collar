@@ -52,7 +52,7 @@ public final class ClientPreKeyStore implements PreKeyStore {
         try {
             writeLock.lockInterruptibly();
             state.preKeyRecords.put(preKeyId, record.serialize());
-            saveState();
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -82,7 +82,7 @@ public final class ClientPreKeyStore implements PreKeyStore {
         try {
             writeLock.lockInterruptibly();
             state.preKeyRecords.remove(preKeyId);
-            saveState();
+            writeState();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -101,12 +101,20 @@ public final class ClientPreKeyStore implements PreKeyStore {
             state = new State(new HashMap<>());
         }
         ClientPreKeyStore clientPreKeyStore = new ClientPreKeyStore(file, state, mapper);
-        clientPreKeyStore.saveState();
+        clientPreKeyStore.writeState();
         return clientPreKeyStore;
     }
 
-    private void saveState() throws IOException {
-        mapper.writeValue(file, state);
+    public void writeState() throws IOException {
+        ReentrantReadWriteLock.WriteLock lock = this.lock.writeLock();
+        try {
+            lock.lockInterruptibly();
+            mapper.writeValue(file, state);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void delete() throws IOException {

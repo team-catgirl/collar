@@ -210,4 +210,12 @@ public class ClientSignalProtocolStore implements SignalProtocolStore, SenderKey
     public void deleteGroupSession(UUID groupId, ClientIdentity sender) {
         this.clientSenderKeyStore.removeGroupSession(new SenderKeyName(groupId.toString(), new SignalProtocolAddress(sender.id().toString(), sender.deviceId())));
     }
+
+    public void writeState() throws IOException {
+        identityKeyStore.writeState();
+        clientPreKeyStore.writeState();
+        clientSessionStore.writeState();
+        clientSignedPreKeyStore.writeState();
+        clientSenderKeyStore.writeState();
+    }
 }

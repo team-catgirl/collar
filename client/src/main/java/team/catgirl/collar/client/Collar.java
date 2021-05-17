@@ -56,7 +56,7 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftSession;
-import team.catgirl.collar.security.mojang.ServerAuthentication;
+import team.catgirl.collar.security.mojang.Mojang;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -397,7 +397,7 @@ public final class Collar {
                 }
                 MinecraftSession session = configuration.sessionSupplier.get();
                 if (session.mode == MinecraftSession.Mode.MOJANG) {
-                    ServerAuthentication authentication = new ServerAuthentication(Http.client(), configuration.yggdrasilBaseUrl);
+                    Mojang authentication = new Mojang(Http.client(), configuration.yggdrasilBaseUrl);
                     if (!authentication.joinServer(session)) {
                         throw new ConnectionException("could start session with Mojang");
                     }

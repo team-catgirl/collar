@@ -128,7 +128,7 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     @Override
     public SendPreKeysRequest createSendPreKeysRequest(DeviceRegisteredResponse response) {
         if (state.deviceId == null || state.deviceId < 1) {
-            throw new IllegalStateException("deviceId has not been negotated");
+            throw new IllegalStateException("deviceId has not been negotiated");
         }
         int deviceId;
         ReentrantReadWriteLock.ReadLock readLock = lock.readLock();

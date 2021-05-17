@@ -68,7 +68,7 @@ public class CollarServer {
         protocolHandlers.add(new GroupsProtocolHandler(services.groups));
         protocolHandlers.add(new LocationProtocolHandler(services.playerLocations, services.waypoints, services.identityStore.getIdentity()));
         protocolHandlers.add(new TexturesProtocolHandler(services.identityStore.getIdentity(), services.profileCache, services.sessions, services.textures));
-        protocolHandlers.add(new IdentityProtocolHandler(services.sessions, services.identityStore.getIdentity()));
+        protocolHandlers.add(new IdentityProtocolHandler(services.sessions, services.profiles, services.identityStore.getIdentity()));
         protocolHandlers.add(new MessagingProtocolHandler(services.sessions, services.groups, services.identityStore.getIdentity()));
         protocolHandlers.add(new SDHTProtocolHandler(services.groups, services.sessions, services.identityStore.getIdentity()));
         protocolHandlers.add(new FriendsProtocolHandler(services.identityStore.getIdentity(), services.profileCache, services.friends, services.sessions));

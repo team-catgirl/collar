@@ -128,8 +128,16 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         }
     }
 
-    private void writeState() throws IOException {
-        mapper.writeValue(file, state);
+    public void writeState() throws IOException {
+        WriteLock lock = this.lock.writeLock();
+        try {
+            lock.lockInterruptibly();
+            mapper.writeValue(file, state);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void delete() throws IOException {

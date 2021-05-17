@@ -1,29 +1,28 @@
 package team.catgirl.collar.client.api.identity;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.LoadingCache;
 import com.stoyanr.evictor.ConcurrentMapWithTimedEviction;
 import com.stoyanr.evictor.map.ConcurrentHashMapWithTimedEviction;
 import com.stoyanr.evictor.map.EvictibleEntry;
 import com.stoyanr.evictor.scheduler.RegularTaskEvictionScheduler;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.api.session.Player;
 import team.catgirl.collar.client.Collar;
 import team.catgirl.collar.client.api.AbstractApi;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.protocol.ProtocolRequest;
 import team.catgirl.collar.protocol.ProtocolResponse;
-import team.catgirl.collar.protocol.identity.CreateTrustRequest;
-import team.catgirl.collar.protocol.identity.CreateTrustResponse;
-import team.catgirl.collar.protocol.identity.GetIdentityRequest;
-import team.catgirl.collar.protocol.identity.GetIdentityResponse;
+import team.catgirl.collar.protocol.identity.*;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.TokenGenerator;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -51,6 +50,19 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
 
     private final ConcurrentMapWithTimedEviction<Long, CompletableFuture<Optional<ClientIdentity>>> identifyFutures = new ConcurrentHashMapWithTimedEviction<>(identifyFuturesScheduler);
 
+    private final Cache<UUID, CompletableFuture<Optional<PublicProfile>>> profileFutures = CacheBuilder.newBuilder()
+            .expireAfterWrite(1, TimeUnit.SECONDS)
+            .removalListener(removalNotification -> {
+        if (removalNotification.wasEvicted()) {
+            CompletableFuture<Optional<PublicProfile>> future = (CompletableFuture<Optional<PublicProfile>>)removalNotification.getValue();
+            future.complete(Optional.empty());
+        }
+    }).build();
+
+    private final Cache<UUID, PublicProfile> profiles = CacheBuilder.newBuilder()
+            .expireAfterAccess(10, TimeUnit.MINUTES)
+            .build();
+
     public IdentityApi(Collar collar, Supplier<ClientIdentityStore> identityStoreSupplier, Consumer<ProtocolRequest> sender) {
         super(collar, identityStoreSupplier, sender);
     }
@@ -74,6 +86,23 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
                     collar.player().minecraftPlayer.networkId))
             );
         });
+    }
+
+    /**
+     * Resolve a players profile using the player object
+     * @param player to find the profile of
+     * @return profile
+     */
+    public CompletableFuture<Optional<PublicProfile>> resolveProfile(Player player) {
+        PublicProfile profile = profiles.getIfPresent(player.profile);
+        if (profile == null) {
+            CompletableFuture<Optional<PublicProfile>> future = new CompletableFuture<>();
+            profileFutures.put(player.profile, future);
+            sender.accept(new GetProfileRequest(identity(), player.profile));
+            return future;
+        } else {
+            return CompletableFuture.completedFuture(Optional.of(profile));
+        }
     }
 
     /**
@@ -115,6 +144,7 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
         }
     }
 
+    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     @Override
     public boolean handleResponse(ProtocolResponse resp) {
         if (resp instanceof GetIdentityResponse) {
@@ -135,6 +165,18 @@ public class IdentityApi extends AbstractApi<IdentityListener> {
             } else {
                 LOGGER.log(Level.INFO, "Finished creating trust with " + response.sender + " and id " + response.id);
                 removed.complete(response.sender == null ? Optional.empty() : Optional.of(response.sender));
+            }
+            return true;
+        } else if (resp instanceof GetProfileResponse) {
+            GetProfileResponse response = (GetProfileResponse) resp;
+            CompletableFuture<Optional<PublicProfile>> future = profileFutures.getIfPresent(response.profile.id);
+            profileFutures.invalidate(response.id);
+            if (future != null) {
+                if (response.profile == null) {
+                    future.complete(Optional.empty());
+                } else {
+                    future.complete(Optional.of(response.profile));
+                }
             }
             return true;
         }

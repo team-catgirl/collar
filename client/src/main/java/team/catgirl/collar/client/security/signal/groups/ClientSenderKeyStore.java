@@ -90,8 +90,16 @@ public class ClientSenderKeyStore implements SenderKeyStore {
         return new Key(senderKeyName.getGroupId(), senderKeyName.getSender().getName(), senderKeyName.getSender().getDeviceId());
     }
 
-    private void writeState() throws IOException {
-        mapper.writeValue(file, state);
+    public void writeState() throws IOException {
+        ReentrantReadWriteLock.WriteLock lock = this.lock.writeLock();
+        try {
+            lock.lockInterruptibly();
+            mapper.writeValue(file, state);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void delete() throws IOException {

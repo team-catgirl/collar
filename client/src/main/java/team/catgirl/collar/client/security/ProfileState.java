@@ -2,6 +2,7 @@ package team.catgirl.collar.client.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.io.AtomicFile;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.File;
@@ -21,7 +22,7 @@ public final class ProfileState {
 
     public void write(HomeDirectory home) {
         try {
-            Utils.messagePackMapper().writeValue(new File(home.profile(), "profile"), this);
+            AtomicFile.write(getProfileFile(home), file -> Utils.messagePackMapper().writeValue(file, this));
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -29,7 +30,7 @@ public final class ProfileState {
 
     public static ProfileState read(HomeDirectory home)  {
         try {
-            return Utils.messagePackMapper().readValue(new File(home.profile(), "profile"), ProfileState.class);
+            return Utils.messagePackMapper().readValue(getProfileFile(home), ProfileState.class);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -37,9 +38,13 @@ public final class ProfileState {
 
     public static boolean exists(HomeDirectory home) {
         try {
-            return new File(home.profile(), "profile").exists();
+            return getProfileFile(home).exists();
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private static File getProfileFile(HomeDirectory home) throws IOException {
+        return new File(home.profile(), "profile");
     }
 }

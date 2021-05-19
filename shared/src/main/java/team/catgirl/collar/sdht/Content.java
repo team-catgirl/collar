@@ -2,7 +2,7 @@ package team.catgirl.collar.sdht;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.hash.Hashing;
-import team.catgirl.collar.utils.IO;
+import team.catgirl.collar.io.IO;
 
 import java.io.*;
 import java.util.Arrays;

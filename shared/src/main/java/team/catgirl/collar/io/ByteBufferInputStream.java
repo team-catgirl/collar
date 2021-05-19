@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+/**
+ * Treat a {@link ByteBuffer} like an {@link InputStream}
+ */
 public final class ByteBufferInputStream extends InputStream {
 
     private final ByteBuffer byteBuffer;

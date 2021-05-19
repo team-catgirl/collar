@@ -15,8 +15,8 @@ import team.catgirl.collar.utils.Utils;
 import java.io.*;
 import java.util.List;
 
-import static team.catgirl.collar.utils.IO.readBytes;
-import static team.catgirl.collar.utils.IO.writeBytes;
+import static team.catgirl.collar.io.IO.readBytes;
+import static team.catgirl.collar.io.IO.writeBytes;
 
 public final class PreKeys {
 

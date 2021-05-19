@@ -6,6 +6,7 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.io.AtomicFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -157,7 +158,7 @@ public class ClientSessionStore implements SessionStore {
         ReentrantReadWriteLock.WriteLock lock = this.lock.writeLock();
         try {
             lock.lockInterruptibly();
-            mapper.writeValue(file, state);
+            AtomicFile.write(file, theFile -> mapper.writeValue(theFile, state));
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {

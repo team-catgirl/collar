@@ -6,6 +6,7 @@ import org.whispersystems.libsignal.groups.SenderKeyName;
 import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.groups.state.SenderKeyStore;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.io.AtomicFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,7 +95,7 @@ public class ClientSenderKeyStore implements SenderKeyStore {
         ReentrantReadWriteLock.WriteLock lock = this.lock.writeLock();
         try {
             lock.lockInterruptibly();
-            mapper.writeValue(file, state);
+            AtomicFile.write(file, theFile -> mapper.writeValue(theFile, state));
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {

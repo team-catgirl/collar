@@ -1,8 +1,9 @@
 package team.catgirl.collar.client.security;
 
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.io.AtomicFile;
 import team.catgirl.collar.security.TokenGenerator;
-import team.catgirl.collar.utils.IO;
+import team.catgirl.collar.io.IO;
 import team.catgirl.collar.utils.Utils;
 
 import javax.crypto.*;
@@ -82,7 +83,11 @@ public final class PrivateIdentity {
             byte[] token = TokenGenerator.byteToken(128);
             PrivateIdentity privateIdentity = new PrivateIdentity(generator.generateKey(), token);
             byte[] serialized = privateIdentity.serialize();
-            IO.writeBytesToFile(file, serialized);
+            try {
+                AtomicFile.write(file, theFile -> IO.writeBytesToFile(theFile, serialized));
+            } catch (IOException e) {
+                throw new IllegalStateException("could not write private identity", e);
+            }
             return privateIdentity;
         }
     }

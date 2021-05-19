@@ -1,7 +1,7 @@
 package team.catgirl.collar.api.waypoints;
 
 import team.catgirl.collar.api.location.Location;
-import team.catgirl.collar.utils.IO;
+import team.catgirl.collar.io.IO;
 
 import java.io.*;
 import java.util.Objects;

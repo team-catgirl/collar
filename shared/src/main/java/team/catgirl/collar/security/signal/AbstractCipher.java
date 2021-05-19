@@ -15,7 +15,7 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.cipher.Cipher;
-import team.catgirl.collar.utils.IO;
+import team.catgirl.collar.io.IO;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

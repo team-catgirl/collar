@@ -1,7 +1,7 @@
 package team.catgirl.collar.sdht.impl;
 
 import team.catgirl.collar.sdht.Content;
-import team.catgirl.collar.utils.IO;
+import team.catgirl.collar.io.IO;
 
 import java.io.*;
 import java.util.Map;

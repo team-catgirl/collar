@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import team.catgirl.collar.io.ByteBufferInputStream;
 import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.cipher.Cipher;
-import team.catgirl.collar.utils.IO;
+import team.catgirl.collar.io.IO;
 
 import java.io.*;
 import java.nio.ByteBuffer;

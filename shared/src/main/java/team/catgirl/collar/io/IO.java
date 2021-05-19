@@ -1,10 +1,13 @@
-package team.catgirl.collar.utils;
+package team.catgirl.collar.io;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.UUID;
 
+/**
+ * Cute IO utility
+ */
 public final class IO {
     /**
      * Write byte structure to {@link DataOutputStream}

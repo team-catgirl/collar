@@ -16,6 +16,7 @@ import team.catgirl.collar.client.security.ClientCipher;
 import team.catgirl.collar.client.security.ClientIdentityStore;
 import team.catgirl.collar.client.security.PrivateIdentity;
 import team.catgirl.collar.client.security.ProfileState;
+import team.catgirl.collar.io.AtomicFile;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
@@ -327,6 +328,6 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
     }
 
     private static void writeState(File file, State state) throws IOException {
-        Utils.messagePackMapper().writeValue(file, state);
+        AtomicFile.write(file, theFile -> Utils.messagePackMapper().writeValue(theFile, state));
     }
 }

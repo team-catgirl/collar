@@ -9,6 +9,7 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.IdentityKeyStore;
 import org.whispersystems.libsignal.util.KeyHelper;
 import team.catgirl.collar.client.HomeDirectory;
+import team.catgirl.collar.io.AtomicFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -132,7 +133,7 @@ public final class ClientIdentityKeyStore implements IdentityKeyStore {
         WriteLock lock = this.lock.writeLock();
         try {
             lock.lockInterruptibly();
-            mapper.writeValue(file, state);
+            AtomicFile.write(file, theFile -> mapper.writeValue(theFile, state));
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {

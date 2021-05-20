@@ -9,6 +9,7 @@ import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.session.SessionFailedResponse.SessionErrorResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.security.cipher.CipherException;
 import team.catgirl.collar.server.security.ServerIdentityStore;
 
 import javax.annotation.Nonnull;
@@ -53,9 +54,10 @@ public final class SessionManager {
         return getIdentity(session).isPresent();
     }
 
+
     public void stopSession(Session session,
                             String reason,
-                            IOException e,
+                            Throwable e,
                             BiConsumer<ClientIdentity, Player> callback) {
         // Run callback
         SessionState state = sessions.get(session);
@@ -69,8 +71,8 @@ public final class SessionManager {
             if (session.isOpen()) {
                 try {
                     send(session, sessionState.identity, new SessionErrorResponse(store.getIdentity(), reason));
-                } catch (IOException ioException) {
-                    throw new IllegalStateException("Couldn't send SessionErrorResponse", e);
+                } catch (IOException | CipherException ex) {
+                    throw new IllegalStateException("Couldn't send SessionErrorResponse", ex);
                 }
             }
         } else {
@@ -78,7 +80,7 @@ public final class SessionManager {
         }
     }
 
-    public void send(Session session, ClientIdentity recipient, ProtocolResponse resp) throws IOException {
+    public void send(Session session, ClientIdentity recipient, ProtocolResponse resp) throws IOException, CipherException {
         PacketIO packetIO = new PacketIO(messagePack, store.createCypher());
         ByteBuffer buffer;
         if (isIdentified(session)) {

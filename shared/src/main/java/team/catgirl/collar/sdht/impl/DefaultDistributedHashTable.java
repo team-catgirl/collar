@@ -8,6 +8,7 @@ import team.catgirl.collar.sdht.events.CreateEntryEvent;
 import team.catgirl.collar.sdht.events.DeleteRecordEvent;
 import team.catgirl.collar.sdht.events.Publisher;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.cipher.CipherException;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -107,7 +108,11 @@ public final class DefaultDistributedHashTable extends DistributedHashTable {
             return contentMap;
         });
         if (computedContent.get() != null) {
-            publisher.publish(new CreateEntryEvent(owner.get(), null, record, this.cipher.crypt(owner.get(), key.namespace, computedContent.get())));
+            try {
+                publisher.publish(new CreateEntryEvent(owner.get(), null, record, this.cipher.crypt(owner.get(), key.namespace, computedContent.get())));
+            } catch (CipherException e) {
+                throw new IllegalStateException(e);
+            }
             sync();
             return Optional.of(computedContent.get());
         }

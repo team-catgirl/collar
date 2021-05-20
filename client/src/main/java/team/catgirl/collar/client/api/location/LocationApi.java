@@ -25,6 +25,7 @@ import team.catgirl.collar.protocol.waypoints.GetWaypointsResponse;
 import team.catgirl.collar.protocol.waypoints.RemoveWaypointRequest;
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.Key;
+import team.catgirl.collar.security.cipher.CipherException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -186,7 +187,12 @@ public class LocationApi extends AbstractApi<LocationListener> {
     public void addWaypoint(String name, Location location) {
         Waypoint waypoint = privateWaypoints.computeIfAbsent(UUID.randomUUID(), uuid -> new Waypoint(uuid, name, location, collar.player().minecraftPlayer.server));
         byte[] bytes = waypoint.serialize();
-        byte[] encryptedBytes = identityStore().createCypher().crypt(bytes);
+        byte[] encryptedBytes;
+        try {
+            encryptedBytes = identityStore().createCypher().crypt(bytes);
+        } catch (CipherException e) {
+            throw new IllegalStateException(e);
+        }
         sender.accept(new CreateWaypointRequest(identity(), waypoint.id, encryptedBytes));
         fireListener("onWaypointCreated", listener -> listener.onWaypointCreated(collar, this, null, waypoint));
     }
@@ -216,7 +222,12 @@ public class LocationApi extends AbstractApi<LocationListener> {
             byte[] bytes = location.serialize();
             groupsSharingWith.forEach(groupId -> {
                 collar.groups().findGroupById(groupId).ifPresent(group -> {
-                    byte[] encryptedBytes = identityStore().createCypher().crypt(identity(), group, bytes);
+                    byte[] encryptedBytes;
+                    try {
+                        encryptedBytes = identityStore().createCypher().crypt(identity(), group, bytes);
+                    } catch (CipherException e) {
+                        throw new IllegalStateException(e);
+                    }
                     sender.accept(new UpdateLocationRequest(identity(), groupId, encryptedBytes));
                 });
             });
@@ -242,10 +253,10 @@ public class LocationApi extends AbstractApi<LocationListener> {
                         // Stopped sharing
                         location = Location.UNKNOWN;
                     } else {
-                        byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.location);
                         try {
+                            byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.location);
                             location = new Location(decryptedBytes);
-                        } catch (IOException e) {
+                        } catch (IOException | CipherException e) {
                             throw new IllegalStateException("could not decrypt location sent by " + response.sender);
                         }
                     }
@@ -264,7 +275,13 @@ public class LocationApi extends AbstractApi<LocationListener> {
             GetWaypointsResponse response = (GetWaypointsResponse) resp;
             if (!response.waypoints.isEmpty()) {
                 Map<UUID, Waypoint> waypoints = response.waypoints.stream()
-                        .map(encryptedWaypoint -> identityStore().createCypher().decrypt(encryptedWaypoint.waypoint)).map(Waypoint::new)
+                        .map(encryptedWaypoint -> {
+                            try {
+                                return identityStore().createCypher().decrypt(encryptedWaypoint.waypoint);
+                            } catch (CipherException e) {
+                                throw new IllegalStateException(e);
+                            }
+                        }).map(Waypoint::new)
                         .filter(waypoint -> waypoint.server.equals(collar.player().minecraftPlayer.server))
                         .collect(Collectors.toMap(o -> o.id, o -> o));
                 privateWaypoints.putAll(waypoints);

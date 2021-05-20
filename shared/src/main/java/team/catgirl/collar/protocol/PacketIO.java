@@ -5,6 +5,7 @@ import team.catgirl.collar.io.ByteBufferInputStream;
 import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.io.IO;
+import team.catgirl.collar.security.cipher.CipherException;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -28,11 +29,11 @@ public final class PacketIO {
         this.cipher = cipher;
     }
 
-    public <T> T decode(Identity sender, InputStream is, Class<T> type) throws IOException {
+    public <T> T decode(Identity sender, InputStream is, Class<T> type) throws IOException, CipherException {
         return decode(sender, IO.toByteBuffer(is), type);
     }
 
-    public <T> T decode(Identity sender, ByteBuffer buffer, Class<T> type) throws IOException {
+    public <T> T decode(Identity sender, ByteBuffer buffer, Class<T> type) throws IOException, CipherException {
         T decoded;
         int packetType;
         try (DataInputStream objectStream = new DataInputStream(new ByteBufferInputStream(buffer))) {
@@ -78,7 +79,7 @@ public final class PacketIO {
         }
     }
 
-    public byte[] encodeEncrypted(Identity recipient, Object object) throws IOException {
+    public byte[] encodeEncrypted(Identity recipient, Object object) throws IOException, CipherException {
         byte[] rawBytes = mapper.writeValueAsBytes(object);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             try (DataOutputStream objectStream = new DataOutputStream(outputStream)) {

@@ -21,6 +21,7 @@ import team.catgirl.collar.protocol.session.SessionFailedResponse.MojangVerifica
 import team.catgirl.collar.protocol.session.SessionFailedResponse.PrivateIdentityMismatchResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
+import team.catgirl.collar.protocol.signal.ResendPreKeysResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
@@ -29,7 +30,9 @@ import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsTrust
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipResponse.IsUntrustedRelationshipResponse;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.ServerIdentity;
+import team.catgirl.collar.security.cipher.CipherException.InvalidCipherSessionException;
 import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.security.cipher.CipherException;
 import team.catgirl.collar.server.protocol.*;
 import team.catgirl.collar.server.services.profiles.ProfileCache;
 
@@ -41,6 +44,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
@@ -108,72 +112,74 @@ public class CollarServer {
     }
 
     private void processMessage(Session session, InputStream is) {
-        ProtocolRequest req = read(session, is);
-        LOGGER.log(Level.INFO, req.getClass().getSimpleName() + " from " + req.identity);
-        ServerIdentity serverIdentity = services.identityStore.getIdentity();
-        if (req instanceof KeepAliveRequest) {
-            LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
-            sendPlain(session, new KeepAliveResponse(serverIdentity));
-        } else if (req instanceof IdentifyRequest) {
-            IdentifyRequest request = (IdentifyRequest)req;
-            if (request.identity == null) {
-                LOGGER.log(Level.INFO, "Signaling client to register");
-                String token = services.deviceRegistration.createDeviceRegistrationToken(session);
-                String url = services.urlProvider.deviceVerificationUrl(token);
-                sendPlain(session, new RegisterDeviceResponse(serverIdentity, url, token));
+        Optional<ProtocolRequest> requestOptional = read(session, is);
+        requestOptional.ifPresent(req -> {
+            LOGGER.log(Level.INFO, req.getClass().getSimpleName() + " from " + req.identity);
+            ServerIdentity serverIdentity = services.identityStore.getIdentity();
+            if (req instanceof KeepAliveRequest) {
+                LOGGER.log(Level.INFO, "KeepAliveRequest received. Sending KeepAliveRequest.");
+                sendPlain(session, new KeepAliveResponse(serverIdentity));
+            } else if (req instanceof IdentifyRequest) {
+                IdentifyRequest request = (IdentifyRequest)req;
+                if (request.identity == null) {
+                    LOGGER.log(Level.INFO, "Signaling client to register");
+                    String token = services.deviceRegistration.createDeviceRegistrationToken(session);
+                    String url = services.urlProvider.deviceVerificationUrl(token);
+                    sendPlain(session, new RegisterDeviceResponse(serverIdentity, url, token));
+                } else {
+                    profileCache.getById(req.identity.id()).ifPresentOrElse(profile -> {
+                        if (processPrivateIdentityToken(profile, request)) {
+                            LOGGER.log(Level.INFO, "Profile found for " + req.identity.id());
+                            sendPlain(session, new IdentifyResponse(serverIdentity, profile.toPublic()));
+                        } else {
+                            sendPlain(session, new PrivateIdentityMismatchResponse(serverIdentity, services.urlProvider.resetPrivateIdentity()));
+                        }
+                    }, () -> {
+                        LOGGER.log(Level.SEVERE, "Profile " + request.identity.id() + " does not exist but the client thinks it should.");
+                        sendPlain(session, new IsUntrustedRelationshipResponse(serverIdentity));
+                        services.sessions.stopSession(session, "Identity " + request.identity.id() + " was not found", null, null);
+                    });
+                }
+            } else if (req instanceof SendPreKeysRequest) {
+                SendPreKeysRequest request = (SendPreKeysRequest) req;
+                services.identityStore.trustIdentity(request);
+                SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
+                sendPlain(session, response);
+            } else if (req instanceof StartSessionRequest) {
+                LOGGER.log(Level.INFO, "Starting session with " + req.identity);
+                StartSessionRequest request = (StartSessionRequest)req;
+                if (services.minecraftSessionVerifier.verify(request.session)) {
+                    MinecraftPlayer minecraftPlayer = request.session.toPlayer();
+                    services.sessions.identify(session, req.identity, minecraftPlayer);
+                    services.profiles.updateProfile(RequestContext.SERVER, UpdateProfileRequest.addMinecraftAccount(req.identity.id(), request.session.id));
+                    sendPlain(session, new StartSessionResponse(serverIdentity));
+                } else {
+                    sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
+                    services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
+                }
+            } else if (req instanceof CheckTrustRelationshipRequest) {
+                LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
+                if (services.identityStore.isTrustedIdentity(req.identity)) {
+                    LOGGER.log(Level.INFO, req.identity + " is trusted. Signaling client to start encryption. ");
+                    CheckTrustRelationshipResponse response = new IsTrustedRelationshipResponse(serverIdentity);
+                    sendPlain(session, response);
+                    services.sessions.findPlayer(req.identity).ifPresent(player -> {
+                        sessionStarted.accept(req.identity, new Player(req.identity.id(), player.minecraftPlayer));
+                    });
+                } else {
+                    LOGGER.log(Level.INFO, req.identity + " is NOT trusted. Signaling client to restart registration.");
+                    CheckTrustRelationshipResponse response = new IsUntrustedRelationshipResponse(serverIdentity);
+                    sendPlain(session, response);
+                    services.sessions.stopSession(session, req.identity + " identity is not trusted", null, null);
+                }
             } else {
-                profileCache.getById(req.identity.id()).ifPresentOrElse(profile -> {
-                    if (processPrivateIdentityToken(profile, request)) {
-                        LOGGER.log(Level.INFO, "Profile found for " + req.identity.id());
-                        sendPlain(session, new IdentifyResponse(serverIdentity, profile.toPublic()));
-                    } else {
-                        sendPlain(session, new PrivateIdentityMismatchResponse(serverIdentity, services.urlProvider.resetPrivateIdentity()));
+                for (ProtocolHandler handler : protocolHandlers) {
+                    if (handler.handleRequest(this, req, createSender())) {
+                        break;
                     }
-                }, () -> {
-                    LOGGER.log(Level.SEVERE, "Profile " + request.identity.id() + " does not exist but the client thinks it should.");
-                    sendPlain(session, new IsUntrustedRelationshipResponse(serverIdentity));
-                    services.sessions.stopSession(session, "Identity " + request.identity.id() + " was not found", null, null);
-                });
-            }
-        } else if (req instanceof SendPreKeysRequest) {
-            SendPreKeysRequest request = (SendPreKeysRequest) req;
-            services.identityStore.trustIdentity(request);
-            SendPreKeysResponse response = services.identityStore.createSendPreKeysResponse();
-            sendPlain(session, response);
-        } else if (req instanceof StartSessionRequest) {
-            LOGGER.log(Level.INFO, "Starting session with " + req.identity);
-            StartSessionRequest request = (StartSessionRequest)req;
-            if (services.minecraftSessionVerifier.verify(request.session)) {
-                MinecraftPlayer minecraftPlayer = request.session.toPlayer();
-                services.sessions.identify(session, req.identity, minecraftPlayer);
-                services.profiles.updateProfile(RequestContext.SERVER, UpdateProfileRequest.addMinecraftAccount(req.identity.id(), request.session.id));
-                sendPlain(session, new StartSessionResponse(serverIdentity));
-            } else {
-                sendPlain(session, new MojangVerificationFailedResponse(serverIdentity, ((StartSessionRequest) req).session));
-                services.sessions.stopSession(session, "Minecraft session invalid", null, sessionStopped);
-            }
-        } else if (req instanceof CheckTrustRelationshipRequest) {
-            LOGGER.log(Level.INFO, "Checking if client/server have a trusted relationship");
-            if (services.identityStore.isTrustedIdentity(req.identity)) {
-                LOGGER.log(Level.INFO, req.identity + " is trusted. Signaling client to start encryption. ");
-                CheckTrustRelationshipResponse response = new IsTrustedRelationshipResponse(serverIdentity);
-                sendPlain(session, response);
-                services.sessions.findPlayer(req.identity).ifPresent(player -> {
-                    sessionStarted.accept(req.identity, new Player(req.identity.id(), player.minecraftPlayer));
-                });
-            } else {
-                LOGGER.log(Level.INFO, req.identity + " is NOT trusted. Signaling client to restart registration.");
-                CheckTrustRelationshipResponse response = new IsUntrustedRelationshipResponse(serverIdentity);
-                sendPlain(session, response);
-                services.sessions.stopSession(session, req.identity + " identity is not trusted", null, null);
-            }
-        } else {
-            for (ProtocolHandler handler : protocolHandlers) {
-                if (handler.handleRequest(this, req, createSender())) {
-                    break;
                 }
             }
-        }
+        });
     }
 
     private boolean processPrivateIdentityToken(Profile profile, IdentifyRequest req) {
@@ -197,16 +203,19 @@ public class CollarServer {
     }
 
     @Nonnull
-    public ProtocolRequest read(@Nonnull Session session, @Nonnull InputStream message) {
+    public Optional<ProtocolRequest> read(@Nonnull Session session, @Nonnull InputStream message) {
         PacketIO packetIO = new PacketIO(services.packetMapper, services.identityStore.createCypher());
+        ClientIdentity identity = services.sessions.getIdentity(session).orElse(null);
         try {
-            ClientIdentity identity = services.sessions.getIdentity(session).orElse(null);
             ProtocolRequest packet = packetIO.decode(identity, message, ProtocolRequest.class);
             if (packet.identity != null && identity != null && !packet.identity.equals(identity)) {
                 throw new IllegalStateException("Identity associated with this session was different to decoded packet");
             }
-            return packet;
-        } catch (IOException e) {
+            return Optional.of(packet);
+        } catch (InvalidCipherSessionException e) {
+            send(session, new ResendPreKeysResponse(services.identityStore.getIdentity()));
+            return Optional.empty();
+        } catch (IOException|CipherException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -233,7 +242,7 @@ public class CollarServer {
                 try {
                     ClientIdentity identity = services.sessions.getIdentity(session).orElseThrow(() -> new IllegalStateException("Could not find identity"));
                     bytes = packetIO.encodeEncrypted(identity, resp);
-                } catch (IOException e) {
+                } catch (IOException | CipherException e) {
                     throw new IllegalStateException(e);
                 }
             } else {

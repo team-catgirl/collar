@@ -13,7 +13,7 @@ import team.catgirl.collar.protocol.ProtocolResponse;
 import team.catgirl.collar.protocol.messaging.SendMessageRequest;
 import team.catgirl.collar.protocol.messaging.SendMessageResponse;
 import team.catgirl.collar.security.cipher.Cipher;
-import team.catgirl.collar.security.mojang.MinecraftPlayer;
+import team.catgirl.collar.security.cipher.CipherException;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                         byte[] messageBytes;
                         try {
                             messageBytes = cipher.crypt(sender.get(), Utils.messagePackMapper().writeValueAsBytes(message));
-                        } catch (JsonProcessingException e) {
+                        } catch (JsonProcessingException | CipherException e) {
                             throw new IllegalStateException(collar.identity() + " could not process private message from " + sender, e);
                         }
                         this.sender.accept(new SendMessageRequest(collar.identity(), sender.get(), null, messageBytes));
@@ -97,11 +97,11 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
             SendMessageResponse response = (SendMessageResponse) resp;
             if (response.group != null && response.sender != null) {
                 collar.groups().findGroupById(response.group).ifPresent(group -> {
-                    byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.message);
                     Message message;
                     try {
+                        byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, group, response.message);
                         message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);
-                    } catch (IOException e) {
+                    } catch (IOException | CipherException e) {
                         // We don't throw an exception here in case someone is doing something naughty to disrupt the group and cause the client to exit
                         LOGGER.log(Level.SEVERE, collar.identity() + "could not read group message from group " + group.id, e);
                         message = null;
@@ -114,11 +114,11 @@ public class MessagingApi extends AbstractApi<MessagingListener> {
                     }
                 });
             } else if (response.sender != null) {
-                byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, response.message);
                 Message message;
                 try {
+                    byte[] decryptedBytes = identityStore().createCypher().decrypt(response.sender, response.message);
                     message = Utils.messagePackMapper().readValue(decryptedBytes, Message.class);
-                } catch (IOException e) {
+                } catch (IOException | CipherException e) {
                     throw new IllegalStateException(collar.identity() + "Could not read private message from " + response.sender, e);
                 }
                 fireListener("onPrivateMessageReceived", listener -> {

@@ -3,6 +3,7 @@ package team.catgirl.collar.client.sdht.cipher;
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.cipher.CipherException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +24,7 @@ public final class ContentCiphers implements ContentCipher {
     }
 
     @Override
-    public byte[] crypt(ClientIdentity identity, UUID namespace, Content bytes) {
+    public byte[] crypt(ClientIdentity identity, UUID namespace, Content bytes) throws CipherException {
         ContentCipher cipher = ciphers.stream()
                 .filter(recordCipher -> recordCipher.accepts(namespace))
                 .findFirst().orElseThrow(() -> new IllegalStateException("cannot find cipher for namespace " + namespace));
@@ -31,7 +32,7 @@ public final class ContentCiphers implements ContentCipher {
     }
 
     @Override
-    public Content decrypt(ClientIdentity identity, UUID namespace, byte[] bytes) {
+    public Content decrypt(ClientIdentity identity, UUID namespace, byte[] bytes) throws CipherException {
         ContentCipher cipher = ciphers.stream()
                 .filter(recordCipher -> recordCipher.accepts(namespace))
                 .findFirst().orElseThrow(() -> new IllegalStateException("cannot find cipher for namespace " + namespace));

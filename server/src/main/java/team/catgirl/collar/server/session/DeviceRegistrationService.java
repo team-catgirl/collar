@@ -6,6 +6,7 @@ import team.catgirl.collar.api.profiles.PublicProfile;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.TokenGenerator;
+import team.catgirl.collar.security.cipher.CipherException;
 import team.catgirl.collar.server.services.devices.DeviceService;
 
 import javax.annotation.Nonnull;
@@ -54,7 +55,7 @@ public final class DeviceRegistrationService {
         }
         try {
             sessions.send(session, null, new DeviceRegisteredResponse(identity, profile, resp.device.deviceId));
-        } catch (IOException e) {
+        } catch (IOException | CipherException e) {
             throw new HttpException.ServerErrorException("could not send DeviceRegisteredResponse", e);
         }
     }

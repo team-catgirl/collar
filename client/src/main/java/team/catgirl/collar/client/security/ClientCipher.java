@@ -7,7 +7,8 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Identity;
-import team.catgirl.collar.security.signal.AbstractCipher;
+import team.catgirl.collar.security.cipher.AbstractCipher;
+import team.catgirl.collar.security.cipher.CipherException;
 
 public class ClientCipher extends AbstractCipher {
 
@@ -23,7 +24,7 @@ public class ClientCipher extends AbstractCipher {
     }
 
     @Override
-    public byte[] crypt(Identity sender, Group recipient, byte[] bytes) {
+    public byte[] crypt(Identity sender, Group recipient, byte[] bytes) throws CipherException {
         if (senderKeyStore == null) {
             throw new IllegalStateException("server cannot crypt group messages");
         }
@@ -36,7 +37,7 @@ public class ClientCipher extends AbstractCipher {
     }
 
     @Override
-    public byte[] decrypt(Identity sender, Group group, byte[] bytes) {
+    public byte[] decrypt(Identity sender, Group group, byte[] bytes) throws CipherException {
         if (senderKeyStore == null) {
             throw new IllegalStateException("server cannot decrypt group messages");
         }
@@ -53,12 +54,12 @@ public class ClientCipher extends AbstractCipher {
     }
 
     @Override
-    public byte[] crypt(byte[] bytes) {
+    public byte[] crypt(byte[] bytes) throws CipherException {
         return privateIdentity.encrypt(bytes);
     }
 
     @Override
-    public byte[] decrypt(byte[] bytes) {
+    public byte[] decrypt(byte[] bytes) throws CipherException {
         return privateIdentity.decrypt(bytes);
     }
 }

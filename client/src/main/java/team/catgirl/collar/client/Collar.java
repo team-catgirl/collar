@@ -47,6 +47,7 @@ import team.catgirl.collar.protocol.session.SessionFailedResponse.PrivateIdentit
 import team.catgirl.collar.protocol.session.SessionFailedResponse.SessionErrorResponse;
 import team.catgirl.collar.protocol.session.StartSessionRequest;
 import team.catgirl.collar.protocol.session.StartSessionResponse;
+import team.catgirl.collar.protocol.signal.ResendPreKeysResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.protocol.signal.SendPreKeysResponse;
 import team.catgirl.collar.protocol.trust.CheckTrustRelationshipRequest;
@@ -57,6 +58,7 @@ import team.catgirl.collar.security.PublicKey;
 import team.catgirl.collar.security.ServerIdentity;
 import team.catgirl.collar.security.mojang.MinecraftSession;
 import team.catgirl.collar.security.mojang.Mojang;
+import team.catgirl.collar.security.cipher.CipherException;
 import team.catgirl.collar.utils.Utils;
 
 import java.io.IOException;
@@ -447,13 +449,17 @@ public final class Collar {
                 SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
                 sendRequest(webSocket, request);
             } else if (resp instanceof SendPreKeysResponse) {
-                SendPreKeysResponse response = (SendPreKeysResponse)resp;
+                SendPreKeysResponse response = (SendPreKeysResponse) resp;
                 if (identityStore == null) {
                     throw new IllegalStateException("identity has not been established");
                 }
                 identityStore.trustIdentity(response.identity, response.preKeyBundle);
                 LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
                 sendRequest(webSocket, new IdentifyRequest(identity, identityStore.privateIdentityToken()));
+            } else if (resp instanceof ResendPreKeysResponse) {
+                ResendPreKeysResponse response = (ResendPreKeysResponse) resp;
+                SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
+                sendRequest(webSocket, request);
             } else if (resp instanceof StartSessionResponse) {
                 LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
                 sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
@@ -495,7 +501,7 @@ public final class Collar {
             PacketIO packetIO = new PacketIO(mapper, identityStore == null ? null : identityStore.createCypher());
             try {
                 return packetIO.decode(serverIdentity, buffer, ProtocolResponse.class);
-            } catch (IOException e) {
+            } catch (IOException | CipherException e) {
                 throw new IllegalStateException("Read error ", e);
             }
         }
@@ -509,7 +515,7 @@ public final class Collar {
                         throw new IllegalStateException("identity store should be available by the time the client is CONNECTED");
                     }
                     bytes = packetIO.encodeEncrypted(serverIdentity, req);
-                } catch (IOException e) {
+                } catch (IOException | CipherException e) {
                     throw new IllegalStateException(e);
                 }
             } else {

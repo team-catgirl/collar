@@ -1,5 +1,6 @@
-package team.catgirl.collar.security.signal;
+package team.catgirl.collar.security.cipher;
 
+import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.UntrustedIdentityException;
@@ -14,8 +15,9 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 import team.catgirl.collar.security.Identity;
-import team.catgirl.collar.security.cipher.Cipher;
 import team.catgirl.collar.io.IO;
+import team.catgirl.collar.security.cipher.CipherException.InvalidCipherSessionException;
+import team.catgirl.collar.security.cipher.CipherException.UnknownCipherException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,7 +33,7 @@ public abstract class AbstractCipher implements Cipher {
     }
 
     @Override
-    public byte[] crypt(Identity recipient, byte[] bytes) {
+    public byte[] crypt(Identity recipient, byte[] bytes) throws CipherException {
         SessionCipher sessionCipher = new SessionCipher(signalProtocolStore, signalProtocolAddressFrom(recipient));
         try {
             CiphertextMessage message = sessionCipher.encrypt(bytes);
@@ -53,13 +55,12 @@ public abstract class AbstractCipher implements Cipher {
                 throw new IllegalStateException("Message crypting failed. Recipient " + recipient, e);
             }
         } catch (UntrustedIdentityException e) {
-            // TODO: if we get here, then we need to signal back to client with IsUntrusted
-            throw new IllegalStateException(e);
+            throw new InvalidCipherSessionException("Identity is untrusted", e);
         }
     }
 
     @Override
-    public byte[] decrypt(Identity sender, byte[] bytes) {
+    public byte[] decrypt(Identity sender, byte[] bytes) throws CipherException {
         SignalProtocolAddress remoteAddress = signalProtocolAddressFrom(sender);
         SessionCipher sessionCipher = new SessionCipher(signalProtocolStore, remoteAddress);
         try {
@@ -96,6 +97,12 @@ public abstract class AbstractCipher implements Cipher {
                     default:
                         throw new IllegalStateException("unknown message type '" + type + "'");
                 }
+            }
+        } catch (InvalidMessageException e) {
+            if (e.getMessage().equals("No valid sessions.")) {
+                throw new InvalidCipherSessionException(e.getMessage(), e);
+            } else {
+                throw new UnknownCipherException(e.getMessage(), e);
             }
         } catch (Throwable e) {
             throw new IllegalStateException("Problem decrypting message from " + sender, e);

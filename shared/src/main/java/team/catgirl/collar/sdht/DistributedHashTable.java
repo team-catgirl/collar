@@ -3,6 +3,7 @@ package team.catgirl.collar.sdht;
 import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.sdht.events.*;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.cipher.CipherException;
 import team.catgirl.collar.utils.Utils;
 
 import java.util.*;
@@ -86,7 +87,12 @@ public abstract class DistributedHashTable {
     public void process(AbstractSDHTEvent e) {
         if (e instanceof CreateEntryEvent) {
             CreateEntryEvent event = (CreateEntryEvent) e;
-            Content content = cipher.decrypt(event.sender, event.record.key.namespace, event.content);
+            Content content = null;
+            try {
+                content = cipher.decrypt(event.sender, event.record.key.namespace, event.content);
+            } catch (CipherException ex) {
+                throw new IllegalStateException(ex);
+            }
             add(event.record, content);
         } else if (e instanceof DeleteRecordEvent) {
             DeleteRecordEvent event = (DeleteRecordEvent) e;
@@ -111,7 +117,12 @@ public abstract class DistributedHashTable {
             SyncContentEvent event = (SyncContentEvent) e;
             Optional<Content> content = get(event.record.key);
             if (content.isPresent()) {
-                byte[] bytes = cipher.crypt(owner.get(), event.record.key.namespace, content.get());
+                byte[] bytes;
+                try {
+                    bytes = cipher.crypt(owner.get(), event.record.key.namespace, content.get());
+                } catch (CipherException ex) {
+                    throw new IllegalStateException(ex);
+                }
                 publisher.publish(new CreateEntryEvent(owner.get(), event.sender, event.record, bytes));
             } else {
                 publisher.publish(new CreateEntryEvent(owner.get(), event.sender, event.record, null));

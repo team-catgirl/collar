@@ -3,6 +3,7 @@ package team.catgirl.collar.client.security;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
+import team.catgirl.collar.protocol.signal.ResendPreKeysResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Identity;
@@ -60,6 +61,12 @@ public interface ClientIdentityStore {
      * @return SendPreKeyRequest to send to the server
      */
     SendPreKeysRequest createSendPreKeysRequest(DeviceRegisteredResponse response);
+
+    /**
+     * @param response of the resend request
+     * @return SendPreKeyRequest to send to the server
+     */
+    SendPreKeysRequest createSendPreKeysRequest(ResendPreKeysResponse response);
 
     /**
      * @param identity joining group

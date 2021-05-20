@@ -3,6 +3,7 @@ package team.catgirl.collar.sdht.cipher;
 import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.DistributedHashTable;
 import team.catgirl.collar.security.ClientIdentity;
+import team.catgirl.collar.security.cipher.CipherException;
 
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ public interface ContentCipher {
      * @param bytes of encrupted content
      * @return bytes
      */
-    byte[] crypt(ClientIdentity identity, UUID namespace, Content bytes);
+    byte[] crypt(ClientIdentity identity, UUID namespace, Content bytes) throws CipherException;
 
     /**
      *
@@ -26,7 +27,7 @@ public interface ContentCipher {
      * @param bytes to decrypt
      * @return content
      */
-    Content decrypt(ClientIdentity identity, UUID namespace, byte[] bytes);
+    Content decrypt(ClientIdentity identity, UUID namespace, byte[] bytes) throws CipherException;
 
     /**
      * Accepts decoding of the provided namespace

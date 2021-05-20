@@ -3,21 +3,20 @@ package team.catgirl.collar.security.cipher;
 import team.catgirl.collar.api.groups.Group;
 import team.catgirl.collar.security.Identity;
 
-// TODO: wrap all Throwables into a CypherException to make error handling more consistent where this is used
 public interface Cipher {
 
     /**
      * @param bytes to crypt
      * @return encrypted bytes
      */
-    byte[] crypt(byte[] bytes);
+    byte[] crypt(byte[] bytes) throws CipherException;
 
     /**
      * Crypt a message that can only be decrypted by this user
      * @param bytes to decrypt
      * @return decrypted bytes
      */
-    byte[] decrypt(byte[] bytes);
+    byte[] decrypt(byte[] bytes) throws CipherException;
 
     /**
      * Crypt a message to an individual identity
@@ -25,7 +24,7 @@ public interface Cipher {
      * @param bytes message
      * @return encrypted messaged
      */
-    byte[] crypt(Identity recipient, byte[] bytes);
+    byte[] crypt(Identity recipient, byte[] bytes) throws CipherException;
 
     /**
      * Decrypt a message from an individual identity
@@ -33,7 +32,7 @@ public interface Cipher {
      * @param bytes crypted message
      * @return decrypted message
      */
-    byte[] decrypt(Identity sender, byte[] bytes);
+    byte[] decrypt(Identity sender, byte[] bytes) throws CipherException;
 
     /**
      * Crypt a message to a group
@@ -42,7 +41,7 @@ public interface Cipher {
      * @param bytes of the message
      * @return encrypted message
      */
-    byte[] crypt(Identity sender, Group recipient, byte[] bytes);
+    byte[] crypt(Identity sender, Group recipient, byte[] bytes) throws CipherException;
 
     /**
      * Decrypt a message from a group
@@ -51,5 +50,5 @@ public interface Cipher {
      * @param bytes of the message
      * @return decrypted message
      */
-    byte[] decrypt(Identity sender, Group group, byte[] bytes);
+    byte[] decrypt(Identity sender, Group group, byte[] bytes) throws CipherException;
 }

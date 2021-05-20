@@ -20,6 +20,7 @@ import team.catgirl.collar.io.AtomicFile;
 import team.catgirl.collar.protocol.devices.DeviceRegisteredResponse;
 import team.catgirl.collar.protocol.groups.*;
 import team.catgirl.collar.protocol.identity.CreateTrustRequest;
+import team.catgirl.collar.protocol.signal.ResendPreKeysResponse;
 import team.catgirl.collar.protocol.signal.SendPreKeysRequest;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Identity;
@@ -144,6 +145,20 @@ public final class SignalClientIdentityStore implements ClientIdentityStore {
             throw new IllegalStateException("deviceId has not been negotiated");
         }
         PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(response.profile.id.toString(), deviceId), store);
+        try {
+            return new SendPreKeysRequest(currentIdentity(), PreKeys.preKeyBundleToBytes(bundle));
+        } catch (IOException e) {
+            throw new IllegalStateException("could not generate PreKeyBundle");
+        }
+    }
+
+    @Override
+    public SendPreKeysRequest createSendPreKeysRequest(ResendPreKeysResponse response) {
+        int deviceId = getDeviceId();
+        if (deviceId < 1) {
+            throw new IllegalStateException("deviceId has not been negotiated");
+        }
+        PreKeyBundle bundle = PreKeys.generate(new SignalProtocolAddress(currentIdentity().id().toString(), deviceId), store);
         try {
             return new SendPreKeysRequest(currentIdentity(), PreKeys.preKeyBundleToBytes(bundle));
         } catch (IOException e) {

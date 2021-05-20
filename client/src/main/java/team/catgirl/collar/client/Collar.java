@@ -334,7 +334,7 @@ public final class Collar {
         WeakReference<Collar> collarWeakRef = new WeakReference<>(collar);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Collar instance = collarWeakRef.get();
-            if (instance != null) {
+            if (instance != null && instance.identityStore != null) {
                 try {
                     instance.identityStore.save();
                 } catch (IOException e) {

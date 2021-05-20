@@ -52,7 +52,7 @@ public abstract class AbstractCipher implements Cipher {
                 }
                 return outputStream.toByteArray();
             } catch (Throwable e) {
-                throw new IllegalStateException("Message crypting failed. Recipient " + recipient, e);
+                throw new UnknownCipherException("Message crypting failed. Recipient " + recipient, e);
             }
         } catch (UntrustedIdentityException e) {
             throw new InvalidCipherSessionException("Identity is untrusted", e);
@@ -95,7 +95,7 @@ public abstract class AbstractCipher implements Cipher {
                         sessionRecord.getSessionState().setAliceBaseKey(message.getBaseKey().serialize());
                         return sessionCipher.decrypt(message);
                     default:
-                        throw new IllegalStateException("unknown message type '" + type + "'");
+                        throw new UnknownCipherException("unknown message type '" + type + "'");
                 }
             }
         } catch (InvalidMessageException e) {
@@ -105,7 +105,7 @@ public abstract class AbstractCipher implements Cipher {
                 throw new UnknownCipherException(e.getMessage(), e);
             }
         } catch (Throwable e) {
-            throw new IllegalStateException("Problem decrypting message from " + sender, e);
+            throw new UnknownCipherException("Problem decrypting message from " + sender, e);
         }
     }
 

@@ -7,6 +7,7 @@ import team.catgirl.collar.sdht.Content;
 import team.catgirl.collar.sdht.cipher.ContentCipher;
 import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.cipher.CipherException;
+import team.catgirl.collar.security.cipher.CipherException.UnavailableCipherException;
 
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -23,13 +24,13 @@ public final class GroupContentCipher implements ContentCipher {
 
     @Override
     public byte[] crypt(ClientIdentity identity, UUID namespace, Content content) throws CipherException {
-        Group group = groupsApi.findGroupById(namespace).orElseThrow(() -> new IllegalStateException("could not find group " + namespace));
+        Group group = groupsApi.findGroupById(namespace).orElseThrow(() -> new UnavailableCipherException("could not find group " + namespace));
         return identityStoreSupplier.get().createCypher().crypt(identity, group, content.serialize());
     }
 
     @Override
     public Content decrypt(ClientIdentity identity, UUID namespace, byte[] bytes) throws CipherException {
-        Group group = groupsApi.findGroupById(namespace).orElseThrow(() -> new IllegalStateException("could not find group " + namespace));
+        Group group = groupsApi.findGroupById(namespace).orElseThrow(() -> new UnavailableCipherException("could not find group " + namespace));
         byte[] decryptedBytes = identityStoreSupplier.get().createCypher().decrypt(identity, group, bytes);
         return new Content(decryptedBytes);
     }

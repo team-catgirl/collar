@@ -9,6 +9,7 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.security.Identity;
 import team.catgirl.collar.security.cipher.AbstractCipher;
 import team.catgirl.collar.security.cipher.CipherException;
+import team.catgirl.collar.security.cipher.CipherException.UnknownCipherException;
 
 public class ClientCipher extends AbstractCipher {
 
@@ -32,7 +33,7 @@ public class ClientCipher extends AbstractCipher {
         try {
             return cipher.encrypt(bytes);
         } catch (Throwable e) {
-            throw new IllegalStateException(clientIdentity + " encountered a problem encrypting group message to group " + recipient.id, e);
+            throw new UnknownCipherException(clientIdentity + " encountered a problem encrypting group message to group " + recipient.id, e);
         }
     }
 
@@ -45,7 +46,7 @@ public class ClientCipher extends AbstractCipher {
         try {
             return cipher.decrypt(bytes);
         } catch (Throwable e) {
-            throw new IllegalStateException(clientIdentity + " encountered a problem decrypting group message from " + sender, e);
+            throw new UnknownCipherException(clientIdentity + " encountered a problem decrypting group message from " + sender, e);
         }
     }
 

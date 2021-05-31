@@ -416,94 +416,102 @@ public final class Collar {
 
         @Override
         public void onMessage(WebSocket webSocket, ByteBuffer messageBuffer) {
-            ProtocolResponse resp = readResponse(messageBuffer);
-            LOGGER.log(Level.INFO, resp.getClass().getSimpleName() + " from " + resp.identity);
-            ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
-            if (resp instanceof IdentifyResponse) {
-                IdentifyResponse response = (IdentifyResponse) resp;
-                if (identityStore == null) {
+            Optional<ProtocolResponse> responseOptional = readResponse(messageBuffer);
+            responseOptional.ifPresent(resp -> {
+                LOGGER.log(Level.INFO, resp.getClass().getSimpleName() + " from " + resp.identity);
+                ClientIdentity identity = identityStore == null ? null : identityStore.currentIdentity();
+                if (resp instanceof IdentifyResponse) {
+                    IdentifyResponse response = (IdentifyResponse) resp;
+                    if (identityStore == null) {
+                        identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
+                    }
+                    MinecraftSession session = configuration.sessionSupplier.get();
+                    if (session.mode == MinecraftSession.Mode.MOJANG) {
+                        Mojang authentication = new Mojang(Http.client(), configuration.yggdrasilBaseUrl);
+                        if (!authentication.joinServer(session)) {
+                            throw new ConnectionException("could start session with Mojang");
+                        }
+                    }
+                    StartSessionRequest request = new StartSessionRequest(identity, session);
+                    sendRequest(webSocket, request);
+                    keepAlive.stop();
+                    keepAlive.start(identity);
+                } else if (resp instanceof KeepAliveResponse) {
+                    LOGGER.log(Level.INFO, "KeepAliveResponse received");
+                } else if (resp instanceof RegisterDeviceResponse) {
+                    RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
+                    LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
+                    configuration.listener.onConfirmDeviceRegistration(collar, registerDeviceResponse.approvalToken, registerDeviceResponse.approvalUrl);
+                } else if (resp instanceof DeviceRegisteredResponse) {
+                    DeviceRegisteredResponse response = (DeviceRegisteredResponse)resp;
                     identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
-                }
-                MinecraftSession session = configuration.sessionSupplier.get();
-                if (session.mode == MinecraftSession.Mode.MOJANG) {
-                    Mojang authentication = new Mojang(Http.client(), configuration.yggdrasilBaseUrl);
-                    if (!authentication.joinServer(session)) {
-                        throw new ConnectionException("could start session with Mojang");
+                    identityStore.processDeviceRegisteredResponse(response);
+                    LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);
+                    SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
+                    sendRequest(webSocket, request);
+                } else if (resp instanceof SendPreKeysResponse) {
+                    SendPreKeysResponse response = (SendPreKeysResponse) resp;
+                    if (identityStore == null) {
+                        throw new IllegalStateException("identity has not been established");
+                    }
+                    identityStore.trustIdentity(response.identity, response.preKeyBundle);
+                    LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
+                    sendRequest(webSocket, new IdentifyRequest(identity, identityStore.privateIdentityToken()));
+                } else if (resp instanceof ResendPreKeysResponse) {
+                    ResendPreKeysResponse response = (ResendPreKeysResponse) resp;
+                    SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
+                    sendRequest(webSocket, request);
+                } else if (resp instanceof StartSessionResponse) {
+                    LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
+                    sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
+                } else if (resp instanceof SessionFailedResponse) {
+                    LOGGER.log(Level.INFO, "SessionFailedResponse received");
+                    if (resp instanceof MojangVerificationFailedResponse) {
+                        MojangVerificationFailedResponse response = (MojangVerificationFailedResponse) resp;
+                        LOGGER.log(Level.INFO, "SessionFailedResponse with mojang session verification failure");
+                        configuration.listener.onMinecraftAccountVerificationFailed(collar, response.minecraftSession);
+                    } else if (resp instanceof PrivateIdentityMismatchResponse) {
+                        PrivateIdentityMismatchResponse response = (PrivateIdentityMismatchResponse) resp;
+                        LOGGER.log(Level.INFO, "SessionFailedResponse with private identity mismatch");
+                        configuration.listener.onPrivateIdentityMismatch(collar, response.url);
+                    } else if (resp instanceof SessionErrorResponse) {
+                        LOGGER.log(Level.INFO, "SessionFailedResponse Reason: " + ((SessionErrorResponse) resp).reason);
+                    }
+                    collar.changeState(State.DISCONNECTED);
+                } else if (resp instanceof IsTrustedRelationshipResponse) {
+                    LOGGER.log(Level.INFO, "Server has confirmed a trusted relationship with the client");
+                    if (resp.identity == null) {
+                        throw new IllegalStateException("sever identity was null");
+                    }
+                    this.serverIdentity = resp.identity;
+                    collar.changeState(State.CONNECTED);
+                } else if (resp instanceof IsUntrustedRelationshipResponse) {
+                    LOGGER.log(Level.INFO, "Server has declared the client as untrusted. Consumer should reset the identity store and reconnect.");
+                    collar.changeState(State.DISCONNECTED);
+                    configuration.listener.onClientUntrusted(collar, identityStore);
+                } else {
+                    for (AbstractApi<?> api : collar.apis) {
+                        if (api.handleResponse(resp)) {
+                            break;
+                        }
                     }
                 }
-                StartSessionRequest request = new StartSessionRequest(identity, session);
-                sendRequest(webSocket, request);
-                keepAlive.stop();
-                keepAlive.start(identity);
-            } else if (resp instanceof KeepAliveResponse) {
-                LOGGER.log(Level.INFO, "KeepAliveResponse received");
-            } else if (resp instanceof RegisterDeviceResponse) {
-                RegisterDeviceResponse registerDeviceResponse = (RegisterDeviceResponse)resp;
-                LOGGER.log(Level.INFO, "RegisterDeviceResponse received with registration url " + ((RegisterDeviceResponse) resp).approvalUrl);
-                configuration.listener.onConfirmDeviceRegistration(collar, registerDeviceResponse.approvalToken, registerDeviceResponse.approvalUrl);
-            } else if (resp instanceof DeviceRegisteredResponse) {
-                DeviceRegisteredResponse response = (DeviceRegisteredResponse)resp;
-                identityStore = getOrCreateIdentityKeyStore(webSocket, response.profile.id);
-                identityStore.processDeviceRegisteredResponse(response);
-                LOGGER.log(Level.INFO, "Ready to exchange keys for device " + response.deviceId);
-                SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
-                sendRequest(webSocket, request);
-            } else if (resp instanceof SendPreKeysResponse) {
-                SendPreKeysResponse response = (SendPreKeysResponse) resp;
-                if (identityStore == null) {
-                    throw new IllegalStateException("identity has not been established");
-                }
-                identityStore.trustIdentity(response.identity, response.preKeyBundle);
-                LOGGER.log(Level.INFO, "PreKeys have been exchanged successfully");
-                sendRequest(webSocket, new IdentifyRequest(identity, identityStore.privateIdentityToken()));
-            } else if (resp instanceof ResendPreKeysResponse) {
-                ResendPreKeysResponse response = (ResendPreKeysResponse) resp;
-                SendPreKeysRequest request = identityStore.createSendPreKeysRequest(response);
-                sendRequest(webSocket, request);
-            } else if (resp instanceof StartSessionResponse) {
-                LOGGER.log(Level.INFO, "Session has started. Checking if the client and server are in a trusted relationship");
-                sendRequest(webSocket, new CheckTrustRelationshipRequest(identity));
-            } else if (resp instanceof SessionFailedResponse) {
-                LOGGER.log(Level.INFO, "SessionFailedResponse received");
-                if (resp instanceof MojangVerificationFailedResponse) {
-                    MojangVerificationFailedResponse response = (MojangVerificationFailedResponse) resp;
-                    LOGGER.log(Level.INFO, "SessionFailedResponse with mojang session verification failure");
-                    configuration.listener.onMinecraftAccountVerificationFailed(collar, response.minecraftSession);
-                } else if (resp instanceof PrivateIdentityMismatchResponse) {
-                    PrivateIdentityMismatchResponse response = (PrivateIdentityMismatchResponse) resp;
-                    LOGGER.log(Level.INFO, "SessionFailedResponse with private identity mismatch");
-                    configuration.listener.onPrivateIdentityMismatch(collar, response.url);
-                } else if (resp instanceof SessionErrorResponse) {
-                    LOGGER.log(Level.INFO, "SessionFailedResponse Reason: " + ((SessionErrorResponse) resp).reason);
-                }
-                collar.changeState(State.DISCONNECTED);
-            } else if (resp instanceof IsTrustedRelationshipResponse) {
-                LOGGER.log(Level.INFO, "Server has confirmed a trusted relationship with the client");
-                if (resp.identity == null) {
-                    throw new IllegalStateException("sever identity was null");
-                }
-                this.serverIdentity = resp.identity;
-                collar.changeState(State.CONNECTED);
-            } else if (resp instanceof IsUntrustedRelationshipResponse) {
-                LOGGER.log(Level.INFO, "Server has declared the client as untrusted. Consumer should reset the identity store and reconnect.");
-                collar.changeState(State.DISCONNECTED);
-                configuration.listener.onClientUntrusted(collar, identityStore);
-            } else {
-                for (AbstractApi<?> api : collar.apis) {
-                    if (api.handleResponse(resp)) {
-                        break;
-                    }
-                }
-            }
+            });
         }
 
-        private ProtocolResponse readResponse(ByteBuffer buffer) {
+        private Optional<ProtocolResponse> readResponse(ByteBuffer buffer) {
             PacketIO packetIO = new PacketIO(mapper, identityStore == null ? null : identityStore.createCypher());
             try {
-                return packetIO.decode(serverIdentity, buffer, ProtocolResponse.class);
-            } catch (IOException | CipherException e) {
+                return Optional.of(packetIO.decode(serverIdentity, buffer, ProtocolResponse.class));
+            } catch (CipherException e) {
+                if (identityStore == null) {
+                    throw new IllegalStateException("Could not recover from cipher error", e);
+                }
+                sender.accept(identityStore.createSendPreKeysRequest(identity(), identityStore.getDeviceId()));
+            } catch (IOException e) {
                 throw new IllegalStateException("Read error ", e);
             }
+            return Optional.empty();
         }
 
         public void sendRequest(WebSocket webSocket, ProtocolRequest req) {

@@ -320,14 +320,17 @@ public final class GroupService {
         if (sender.isEmpty()) {
             return Optional.empty();
         }
-        Map<ProtocolResponse, ClientIdentity> responses = members.stream()
+        List<Player> players = members.stream()
                 .filter(member -> member.player == null || member.membershipState == MembershipState.PENDING)
                 .map(member -> member.player)
-                .collect(Collectors.toMap(
-                        o -> new GroupInviteResponse(serverIdentity, group.id, group.name, group.type, sender.get()),
-                        player -> sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("cannot find identity for " + player)))
-                );
-        return new BatchProtocolResponse(serverIdentity, responses).optional();
+                .collect(Collectors.toList());
+        BatchProtocolResponse response = new BatchProtocolResponse(serverIdentity);
+        players.forEach(player -> {
+            sessions.getIdentity(player).ifPresent(identity -> {
+                response.add(identity, new GroupInviteResponse(serverIdentity, group.id, group.name, group.type, sender.get()));
+            });
+        });
+        return response.optional();
     }
 
     public Optional<ProtocolResponse> transferOwnership(TransferGroupOwnershipRequest req) {

@@ -56,6 +56,13 @@ public final class Mojang {
         return http.execute(Request.url(sessionServerBaseUrl + "session/minecraft/profile/" + profileId).get(), Response.json(PlayerPlayerProfile.class));
     }
 
+    /**
+     * Join
+     * @param session
+     * @param serverPublicKey
+     * @param sharedSecret
+     * @return
+     */
     public Optional<JoinServerResponse> joinServer(MinecraftSession session, String serverPublicKey, byte[] sharedSecret) {
         try {
             MessageDigest md;

@@ -42,18 +42,15 @@ public class LocationProtocolHandler extends ProtocolHandler {
             return true;
         } else if (req instanceof StopSharingLocationRequest) {
             StopSharingLocationRequest request = (StopSharingLocationRequest) req;
-            BatchProtocolResponse resp = playerLocations.stopSharing(request);
-            sender.accept(request.identity, resp);
+            playerLocations.stopSharing(request).ifPresent(response -> sender.accept(null, response));
             return true;
         } else if (req instanceof UpdateLocationRequest) {
             UpdateLocationRequest request = (UpdateLocationRequest) req;
-            BatchProtocolResponse resp = playerLocations.updateLocation(request);
-            sender.accept(request.identity, playerLocations.updateLocation(request));
+            playerLocations.updateLocation(request).ifPresent(response -> sender.accept(request.identity, response));
             return true;
         } else if (req instanceof UpdateNearbyRequest) {
             UpdateNearbyRequest request = (UpdateNearbyRequest) req;
-            BatchProtocolResponse resp = playerLocations.updateNearbyGroups(request);
-            sender.accept(null, resp);
+            playerLocations.updateNearbyGroups(request).ifPresent(response -> sender.accept(null, response));
             return true;
         } else if (req instanceof CreateWaypointRequest) {
             CreateWaypointRequest request = (CreateWaypointRequest) req;
@@ -74,8 +71,9 @@ public class LocationProtocolHandler extends ProtocolHandler {
 
     @Override
     public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
-        BatchProtocolResponse resp = playerLocations.stopSharing(player);
-        sender.accept(null, resp);
+        playerLocations.stopSharing(player).ifPresent(response -> {
+            sender.accept(null, response);
+        });
         playerLocations.removePlayerState(player);
     }
 }

@@ -35,7 +35,7 @@ public class MessagingProtocolHandler extends ProtocolHandler {
         if (req instanceof SendMessageRequest) {
             SendMessageRequest request = (SendMessageRequest) req;
             if (request.group != null) {
-                sender.accept(null, groups.createMessages(request));
+                groups.createMessages(request).ifPresent(response -> sender.accept(null, response));
             } else if (request.recipient != null) {
                 sessions.findPlayer(request.identity).ifPresentOrElse(player -> {
                     sender.accept(request.recipient, new SendMessageResponse(this.serverIdentity, req.identity, null, player, request.message));

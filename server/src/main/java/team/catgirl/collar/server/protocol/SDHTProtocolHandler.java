@@ -17,6 +17,7 @@ import team.catgirl.collar.server.services.groups.GroupService;
 import team.catgirl.collar.server.session.SessionManager;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -74,13 +75,16 @@ public class SDHTProtocolHandler extends ProtocolHandler {
 
     private Set<ClientIdentity> findListeners(ClientIdentity sender, UUID namespace) {
         Group group = groups.findGroup(namespace).orElseThrow(() -> new IllegalStateException("could not find group " + namespace));
-        Player sendingPlayer = sessions.findPlayer(sender).orElseThrow(() -> new IllegalStateException("could not find sender " + sender));
-        if (!group.containsPlayer(sendingPlayer)) {
+        Optional<Player> sendingPlayer = sessions.findPlayer(sender);
+        if (sendingPlayer.isEmpty()) {
+            return Set.of();
+        }
+        if (!group.containsPlayer(sendingPlayer.get())) {
             throw new IllegalStateException("sender is not a member of group " + namespace);
         }
         Set<ClientIdentity> listeners = new HashSet<>();
         for (Member member : group.members) {
-            if (member.membershipState != MembershipState.ACCEPTED && sendingPlayer.equals(member.player)) {
+            if (member.membershipState != MembershipState.ACCEPTED && sendingPlayer.get().equals(member.player)) {
                 continue;
             }
             sessions.getIdentity(member.player).ifPresent(listeners::add);

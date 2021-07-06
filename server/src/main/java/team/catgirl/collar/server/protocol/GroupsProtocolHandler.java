@@ -9,6 +9,7 @@ import team.catgirl.collar.security.ClientIdentity;
 import team.catgirl.collar.server.CollarServer;
 import team.catgirl.collar.server.services.groups.GroupService;
 
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,7 +25,7 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
 
     @Override
     public boolean handleRequest(CollarServer collar, ProtocolRequest req, BiConsumer<ClientIdentity, ProtocolResponse> sender) {
-        ProtocolResponse resp;
+        Optional<? extends ProtocolResponse> resp;
         if (req instanceof CreateGroupRequest) {
             LOGGER.log(Level.INFO, "CreateGroupRequest received from " + req.identity);
             CreateGroupRequest request = (CreateGroupRequest)req;
@@ -54,26 +55,26 @@ public final class GroupsProtocolHandler extends ProtocolHandler {
             TransferGroupOwnershipRequest request = (TransferGroupOwnershipRequest) req;
             resp = groups.transferOwnership(request);
         } else {
-            resp = null;
+            resp = Optional.empty();
         }
-        if (resp != null) {
-            sender.accept(req.identity, resp);
-            return true;
-        }
-        return false;
+        resp.ifPresent(protocolResponse -> {
+            sender.accept(req.identity, protocolResponse);
+        });
+        return resp.isPresent();
     }
 
     @Override
     public void onSessionStarted(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
         super.onSessionStarted(identity, player, sender);
-        sender.accept(null, groups.playerIsOnline(identity, player));
+        groups.playerIsOnline(identity, player).ifPresent(response -> sender.accept(null, response));
     }
 
     @Override
     public void onSessionStopping(ClientIdentity identity, Player player, BiConsumer<Session, ProtocolResponse> sender) {
         super.onSessionStopping(identity, player, sender);
-        if (player != null) {
-            sender.accept(null, groups.playerIsOffline(player));
-        }
+        if (player == null) return;
+        groups.playerIsOffline(player).ifPresent(response -> {
+            sender.accept(null, response);
+        });
     }
 }

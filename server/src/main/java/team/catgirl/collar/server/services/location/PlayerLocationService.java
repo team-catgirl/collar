@@ -48,23 +48,28 @@ public class PlayerLocationService {
         });
     }
 
-    public BatchProtocolResponse stopSharing(StopSharingLocationRequest req) {
-        Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
-        return stopSharing(req.groupId, req.identity, player);
+    public Optional<BatchProtocolResponse> stopSharing(StopSharingLocationRequest req) {
+        return sessions.findPlayer(req.identity)
+                .flatMap(player -> stopSharing(req.groupId, req.identity, player));
     }
 
-    public BatchProtocolResponse stopSharing(Player player) {
-        ClientIdentity identity = sessions.getIdentity(player).orElseThrow(() -> new IllegalStateException("could not find session for " + player));
-        BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
-        List<BatchProtocolResponse> allResponses = playersSharing.asMap().entrySet().stream()
-                .filter(candidate -> candidate.getValue().contains(player))
-                .map(Map.Entry::getKey)
-                .map(uuid -> stopSharing(uuid, identity, player))
-                .collect(Collectors.toList());
-        for (BatchProtocolResponse response : allResponses) {
-            responses.concat(response);
-        }
-        return responses;
+    public Optional<BatchProtocolResponse> stopSharing(Player player) {
+        return sessions.getIdentity(player)
+                .map(identity -> {
+                    BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
+                    List<BatchProtocolResponse> allResponses = playersSharing.asMap().entrySet().stream()
+                            .filter(candidate -> candidate.getValue().contains(player))
+                            .map(Map.Entry::getKey)
+                            .map(uuid -> stopSharing(uuid, identity, player))
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .collect(Collectors.toList());
+
+                    for (BatchProtocolResponse response : allResponses) {
+                        responses.concat(response);
+                    }
+                    return responses;
+        });
     }
 
     /**
@@ -72,29 +77,31 @@ public class PlayerLocationService {
      * @param req of the location
      * @return {@link LocationUpdatedResponse} responses to send to clients
      */
-    public BatchProtocolResponse updateLocation(UpdateLocationRequest req) {
-        Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
-        return createLocationResponses(player, new LocationUpdatedResponse(serverIdentity, req.identity, req.group, player, req.location));
+    public Optional<BatchProtocolResponse> updateLocation(UpdateLocationRequest req) {
+        return sessions.findPlayer(req.identity).flatMap(player -> createLocationResponses(player, new LocationUpdatedResponse(serverIdentity, req.identity, req.group, player, req.location)));
     }
 
-    private BatchProtocolResponse stopSharing(UUID groupId, ClientIdentity identity, Player player) {
+    private Optional<BatchProtocolResponse> stopSharing(UUID groupId, ClientIdentity identity, Player player) {
         LOGGER.log(Level.INFO,"Player " + player + " started sharing location with group " + groupId);
         LocationUpdatedResponse locationUpdatedResponse = new LocationUpdatedResponse(serverIdentity, identity, groupId, player, null);
-        BatchProtocolResponse responses = createLocationResponses(player, locationUpdatedResponse);
+        Optional<BatchProtocolResponse> responses = createLocationResponses(player, locationUpdatedResponse);
         synchronized (playersSharing) {
             playersSharing.remove(groupId, player);
         }
         return responses;
     }
 
-    public BatchProtocolResponse updateNearbyGroups(UpdateNearbyRequest req) {
-        Player player = sessions.findPlayer(req.identity).orElseThrow(() -> new IllegalStateException("could not find player " + req.identity));
-        PublicProfile profile = profiles.getById(player.profile).orElseThrow(() -> new IllegalStateException("could not find profile " + player.profile)).toPublic();
-        NearbyGroups.Result result = this.nearbyGroups.updateNearbyGroups(new MemberSource(player, profile), req.nearbyHashes);
+    public Optional<BatchProtocolResponse> updateNearbyGroups(UpdateNearbyRequest req) {
+        Optional<Player> player = sessions.findPlayer(req.identity);
+        if (player.isEmpty()) {
+            return Optional.empty();
+        }
+        PublicProfile profile = profiles.getById(player.get().profile).orElseThrow(() -> new IllegalStateException("could not find profile " + player.get().profile)).toPublic();
+        NearbyGroups.Result result = this.nearbyGroups.updateNearbyGroups(new MemberSource(player.get(), profile), req.nearbyHashes);
         return groups.updateNearbyGroups(result);
     }
 
-    private BatchProtocolResponse createLocationResponses(Player player, LocationUpdatedResponse resp) {
+    private Optional<BatchProtocolResponse> createLocationResponses(Player player, LocationUpdatedResponse resp) {
         BatchProtocolResponse responses = new BatchProtocolResponse(serverIdentity);
         // Find all the groups the requesting player is a member of
         Set<UUID> sharingWithGroups = playersSharing.entries().stream().filter(entry -> player.equals(entry.getValue()))
@@ -113,12 +120,13 @@ public class PlayerLocationService {
                 if (uniquePlayers.contains(memberPlayer) || member.membershipState != MembershipState.ACCEPTED) {
                     continue;
                 }
-                uniquePlayers.add(memberPlayer);
-                ClientIdentity identity = sessions.getIdentity(memberPlayer).orElseThrow(() -> new IllegalStateException("Could not find identity for player " + player));
-                responses.add(identity, resp);
+                sessions.getIdentity(memberPlayer).ifPresent(identity -> {
+                    uniquePlayers.add(memberPlayer);
+                    responses.add(identity, resp);
+                });
             }
         }
-        return responses;
+        return responses.optional();
     }
 
     public void removePlayerState(Player player) {

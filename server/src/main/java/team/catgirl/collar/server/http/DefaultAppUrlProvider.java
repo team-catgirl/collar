@@ -44,7 +44,7 @@ public class DefaultAppUrlProvider implements AppUrlProvider {
 
     @Override
     public String logoUrl(int size) {
-        return this.baseUrl.withPath("/static/logo.png").toString();
+        return this.baseUrl.withPath("/logo.png").toString();
     }
 
     @Override

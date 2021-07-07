@@ -42,7 +42,7 @@ public class CollarWebAppUrlProvider implements AppUrlProvider {
 
     @Override
     public String resetPrivateIdentity() {
-        return builder.withPath("/reset").toString();
+        return builder.withPath("/account/reset").toString();
     }
 
     @Override

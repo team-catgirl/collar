@@ -230,13 +230,6 @@ public final class Collar {
     }
 
     /**
-     * @return debugging enabled
-     */
-    public boolean isDebug() {
-        return configuration.debugMode;
-    }
-
-    /**
      * @return the current clients identity
      */
     public ClientIdentity identity() {

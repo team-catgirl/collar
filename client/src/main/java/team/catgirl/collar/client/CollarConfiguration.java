@@ -3,15 +3,16 @@ package team.catgirl.collar.client;
 import com.google.common.base.MoreObjects;
 import team.catgirl.collar.api.entities.Entity;
 import team.catgirl.collar.api.location.Location;
+import team.catgirl.collar.client.debug.DebugConfiguration;
 import team.catgirl.collar.client.minecraft.Ticks;
 import team.catgirl.collar.security.mojang.MinecraftSession;
-import team.catgirl.collar.security.mojang.Mojang;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -25,6 +26,7 @@ public final class CollarConfiguration {
     public final Supplier<MinecraftSession> sessionSupplier;
     public final Supplier<Set<Entity>> entitiesSupplier;
     public final HomeDirectory homeDirectory;
+    public final DebugConfiguration debugConfiguration;
     public final URL collarServerURL;
     public final CollarListener listener;
     public final Ticks ticks;
@@ -34,13 +36,14 @@ public final class CollarConfiguration {
                                 Supplier<MinecraftSession> sessionSupplier,
                                 Supplier<Set<Entity>> entitiesSupplier,
                                 HomeDirectory homeDirectory,
-                                URL collarServerURL,
+                                DebugConfiguration debugConfiguration, URL collarServerURL,
                                 CollarListener listener,
                                 Ticks ticks) {
         this.playerLocation = playerLocation;
         this.sessionSupplier = sessionSupplier;
         this.entitiesSupplier = entitiesSupplier;
         this.homeDirectory = homeDirectory;
+        this.debugConfiguration = debugConfiguration;
         this.collarServerURL = collarServerURL;
         this.listener = listener;
         this.ticks = ticks;
@@ -166,18 +169,23 @@ public final class CollarConfiguration {
          * @throws IOException if collar state directories cant be created
          */
         public CollarConfiguration build() throws IOException {
+            HomeDirectory homeDirectory = HomeDirectory.from(this.homeDirectory, collarServerURL.getHost());
             Objects.requireNonNull(listener, "Collar listener was not set");
             Objects.requireNonNull(collarServerURL, "Collar server URL must be set");
             Objects.requireNonNull(homeDirectory, "Minecraft home directory must be set");
             Objects.requireNonNull(sessionSupplier, "Session supplier not set");
             Objects.requireNonNull(entitiesSupplier, "Entities supplier not set");
             Objects.requireNonNull(ticks, "Ticks not set");
-            HomeDirectory from = HomeDirectory.from(homeDirectory, collarServerURL.getHost());
+            DebugConfiguration debugging = DebugConfiguration.load(homeDirectory);
+            debugging.serverUrl.ifPresent(collarServerURL -> {
+                LOGGER.log(Level.INFO, "Debug file has specified an alternate collar server url " + collarServerURL + " that will be used instead of " + this.collarServerURL);
+                this.collarServerURL = collarServerURL;
+            });
             Supplier<Location> playerPosition = MoreObjects.firstNonNull(this.playerLocation, () -> {
                 LOGGER.log(Level.WARNING, "Location features are disabled. Consumer did not provide a player position supplier");
                 return Location.UNKNOWN;
             });
-            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, from, collarServerURL, listener, ticks);
+            return new CollarConfiguration(playerPosition, sessionSupplier, entitiesSupplier, homeDirectory, debugging, collarServerURL, listener, ticks);
         }
     }
 }

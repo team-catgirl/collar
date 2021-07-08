@@ -33,11 +33,10 @@ public final class DebugConfiguration {
             properties.load(is);
         }
         String url = properties.getProperty("server.url", null);
-        DebugConfiguration debugConfiguration = new DebugConfiguration(
+        return new DebugConfiguration(
                 (boolean) properties.getOrDefault("tracers", false),
                 (boolean) properties.getOrDefault("waypoints", false),
                 url == null ? null : new URL(url)
         );
-        return debugConfiguration;
     }
 }
